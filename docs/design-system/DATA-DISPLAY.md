@@ -73,10 +73,20 @@ Phase 11H proved the smallest useful abstraction with the Institutions pilot. Th
 
 Institutions retains its native `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, and `<td>` structure. The feature still owns the data projection, fixed column markup, filters, loading and empty states, status rendering, row actions, permissions, confirmation, and any pagination or query state. The shared primitives receive no data, column configuration, fetch logic, or business status knowledge.
 
-Phase 11I migrated the first controlled batch: Staff and Enrollments. Staff contributes two standard table views (members and assignments); Enrollments contributes its enrolled-students table. Phase 11J added Audit Log and Classes. Phase 11K completed the remaining standard views: Study groups, Lookup tables, and Institution users. Audit Log keeps its feature-owned filtering and local/server pagination behavior; Classes and Study groups keep their loading, empty, and row-action behavior; Lookup tables and Institution users keep their feature-owned modal and action flows. Institutions remains on the proven pilot foundation. Students, complex tables, and specialized views remain outside the standard-table architecture. No `ui-table`, `ui-badge`, `ui-empty-state`, or `ui-loading` component was added, and no form-control migration was reopened.
+Phase 11I migrated the first controlled batch: Staff and Enrollments. Staff contributes two standard table views (members and assignments); Enrollments contributes its enrolled-students table. Phase 11J added Audit Log and Classes. Phase 11K completed the remaining standard views: Study groups, Lookup tables, and Institution users. Audit Log keeps its feature-owned filtering and local/server pagination behavior; Classes and Study groups keep their loading, empty, and row-action behavior; Lookup tables and Institution users keep their feature-owned modal and action flows. Institutions remains on the proven pilot foundation. Students, complex tables, and specialized views remain outside the standard-table architecture. No `ui-table` or `ui-loading` component was added, and no form-control migration was reopened.
 
 All classified standard tables now use the shared presentation foundation. The result is reusable for standard tables with fixed columns, row actions, loading/empty states, and differing pagination models. Complex, matrix, specialized, modal-specific, and unusually dense tables remain feature-owned and are not candidates for a generic table engine.
 
-**STANDARD TABLE MIGRATION CLOSED**
+  **STANDARD TABLE MIGRATION CLOSED**
 
-The final standard-table architecture is shared style primitives plus native semantic HTML: `.core-table-wrap` and `.core-table`. No additional standard-table batch is planned; the next design-system work may evaluate status, empty-state, and loading presentation contracts separately.
+  The final standard-table architecture is shared style primitives plus native semantic HTML: `.core-table-wrap` and `.core-table`. No additional standard-table batch is planned; the next design-system work may evaluate status, empty-state, and loading presentation contracts separately.
+
+## Phase 11L decision record
+
+The status, empty, and loading audit found two stable reusable presentation contracts and one intentionally deferred contract:
+
+- `ui-badge` provides generic token-backed status tones, sizes, and variants. Feature screens retain ownership of business-status mapping and projected labels.
+- `ui-empty-state` provides a standalone semantic empty-state shell for icon, title, description, and optional projected actions. Table empty states remain native table rows for valid table semantics.
+- No `ui-loading` component was added. Page, section, table, modal, and button loading patterns have different ownership and interaction requirements; button loading remains in `ui-button`.
+
+The Institutions screen is the bounded pilot for both primitives: its feature-owned institution status mapping now projects through `ui-badge`, and its standalone filtered-empty presentation uses `ui-empty-state`. No table foundation, data contract, permission flow, or business transition changed. No mass migration was performed.

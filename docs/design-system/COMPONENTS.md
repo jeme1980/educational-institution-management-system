@@ -34,3 +34,14 @@ These are native-control wrappers implementing `ControlValueAccessor`. They pres
 - `ui-textarea`: native textarea with vertical resize behavior.
 
 Checkbox, radio, file upload, date picker, and search-specific primitives remain deferred until repeated usage justifies them.
+## Data display primitives
+
+### `ui-badge`
+
+`ui-badge` is a presentational status primitive. It accepts only generic `tone`, `size`, and `variant` inputs (`success`, `warning`, `danger`, `info`, `neutral`, or `disabled`) and projects the feature-owned status label. It does not map business statuses, fetch data, or own permissions. Use it for inline status content outside semantic table structure.
+
+### `ui-empty-state`
+
+`ui-empty-state` is a presentational standalone empty-state shell with optional icon, title, description, compact mode, and projected actions marked with `ui-empty-action`. Keep table empties as native `<tr><td colspan="...">` markup; do not place this component inside `<tbody>`.
+
+There is intentionally no shared `ui-loading` component at this stage. Loading presentation remains feature-owned because the audit found materially different page, section, table, modal, and button contracts. Button loading remains owned by `ui-button`.

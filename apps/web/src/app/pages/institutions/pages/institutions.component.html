@@ -28,14 +28,14 @@
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 class="font-black text-slate-900">دليل المؤسسات والمدارس</h2><p class="mt-1 text-xs text-slate-500">{{ filteredInstitutions().length }} مؤسسة مطابقة للبحث والتصفية</p></div><button type="button" class="secondary-button" (click)="refresh()"><mat-icon>refresh</mat-icon>تحديث</button></div>
     @if (apiService.isLoading()) {<div class="flex items-center justify-center gap-2 p-12 text-sm font-bold text-slate-500"><mat-icon class="animate-spin">progress_activity</mat-icon>جارٍ تحميل البيانات...</div>}
-    @else if (!filteredInstitutions().length) {<div class="p-14 text-center"><mat-icon class="text-5xl text-slate-300">domain_disabled</mat-icon><h3 class="mt-3 font-black text-slate-700">لا توجد مؤسسات</h3><p class="mt-1 text-sm text-slate-500">أضف مؤسسة جديدة أو غيّر خيارات التصفية.</p></div>}
+    @else if (!filteredInstitutions().length) {<ui-empty-state icon="domain_disabled" title="لا توجد مؤسسات" description="أضف مؤسسة جديدة أو غيّر خيارات التصفية." />}
     @else {
       <div class="core-table-wrap"><table class="core-table"><thead><tr><th scope="col">المؤسسة</th><th scope="col">الرمز / Slug</th><th scope="col">النوع والمنطقة</th><th scope="col">الحالة</th><th scope="col">البيانات المرتبطة</th><th scope="col">الإجراءات</th></tr></thead><tbody>
         @for (item of filteredInstitutions(); track item.id) {<tr>
           <td><button type="button" class="flex items-center gap-3 text-right" (click)="viewDetails(item)">@if (item.logoUrl) {<img [src]="item.logoUrl" alt="" class="h-10 w-10 rounded-xl border object-contain" />} @else {<span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><mat-icon>domain</mat-icon></span>}<span><strong class="block text-sm text-slate-800">{{ item.nameAr }}</strong><small class="text-xs text-slate-500">{{ item.nameHe || 'لا يوجد اسم عبري' }}</small></span></button></td>
           <td><code class="text-xs font-bold text-primary">{{ item.schoolCode }}</code><small class="mt-1 block text-xs text-slate-500" dir="ltr">{{ item.slug }}</small></td>
           <td><span class="block text-sm font-bold text-slate-700">{{ typeName(item) }}</span><small class="text-xs text-slate-500">{{ regionName(item) }} @if (item.town) { · {{ item.town.nameAr }}}</small></td>
-          <td><span class="status-pill" [class.status-off]="item.status?.isActive === false"><span></span>{{ statusName(item) }}</span></td>
+          <td><ui-badge [tone]="item.status?.isActive === false ? 'disabled' : 'success'">{{ statusName(item) }}</ui-badge></td>
           <td class="text-xs text-slate-500">{{ item._count?.students || 0 }} طالب · {{ item._count?.classes || 0 }} صف · {{ item._count?.staffMembers || 0 }} موظف</td>
           <td><div class="flex items-center gap-1"><button type="button" class="icon-button" title="تعديل" (click)="openEditModal(item)"><mat-icon>edit</mat-icon></button><button type="button" class="icon-button danger" title="أرشفة" [disabled]="deletingId() === item.id" (click)="delete(item)"><mat-icon>{{ deletingId() === item.id ? 'progress_activity' : 'archive' }}</mat-icon></button></div></td>
         </tr>}

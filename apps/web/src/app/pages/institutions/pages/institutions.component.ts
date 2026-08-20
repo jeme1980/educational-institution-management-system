@@ -10,11 +10,13 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiTextareaComponent } from '../../../shared/components/textarea/ui-textarea.component';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
+import { UiEmptyStateComponent } from '../../../shared/components/ui-empty-state/ui-empty-state.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-institutions',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, InstitutionsHeaderComponent, UiButtonComponent, UiInputComponent, UiSelectComponent, UiTextareaComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, InstitutionsHeaderComponent, UiButtonComponent, UiInputComponent, UiSelectComponent, UiTextareaComponent, UiBadgeComponent, UiEmptyStateComponent],
   templateUrl: './institutions.component.html',
   styleUrl: './institutions.component.css',
 })

@@ -13,10 +13,6 @@ label em { display: block; margin-top: .3rem; color: #e11d48; font-size: .68rem;
 .primary-button:disabled { cursor: not-allowed; opacity: .5; }
 .secondary-button { border: 1px solid #e2e8f0; background: white; color: #475569; padding: .65rem .9rem; }
 .secondary-button:hover { background: #f1f5f9; color: #0f172a; }
-.status-pill { display: inline-flex; align-items: center; gap: .4rem; border-radius: 999px; background: #ecfdf5; padding: .3rem .65rem; color: #047857; font-size: .7rem; font-weight: 800; white-space: nowrap; }
-.status-pill span { height: .4rem; width: .4rem; border-radius: 999px; background: #10b981; }
-.status-pill.status-off { background: #fef2f2; color: #b91c1c; }
-.status-pill.status-off span { background: #ef4444; }
 .detail { border-radius: .75rem; background: #f8fafc; padding: .8rem; }
 .detail small { display: block; color: #94a3b8; font-size: .68rem; font-weight: 700; }
 .detail strong { display: block; margin-top: .25rem; color: #334155; font-size: .8rem; }

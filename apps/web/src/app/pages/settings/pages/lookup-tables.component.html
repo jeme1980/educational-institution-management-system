@@ -30,9 +30,9 @@
         <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="absolute end-3 top-2.5 text-lg text-on-surface-variant">search</mat-icon><ui-input type="search" ariaLabel="البحث في جداول المؤسسة" (input)="onSearch($event)" placeholder="بحث..." /></label>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-right text-sm">
-          <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant"><tr><th class="px-5 py-3">الاسم بالعربية</th><th class="px-5 py-3">الاسم بالعبرية</th><th class="px-5 py-3">الحالة</th><th class="px-5 py-3 text-center">الإجراءات</th></tr></thead>
+      <div class="core-table-wrap">
+        <table class="core-table text-sm">
+          <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant"><tr><th scope="col" class="px-5 py-3">الاسم بالعربية</th><th scope="col" class="px-5 py-3">الاسم بالعبرية</th><th scope="col" class="px-5 py-3">الحالة</th><th scope="col" class="px-5 py-3 text-center">الإجراءات</th></tr></thead>
           <tbody class="divide-y divide-surface-border">
             @for (item of filteredItems(); track item.id) {
               <tr class="min-h-[52px] hover:bg-surface-container-low">

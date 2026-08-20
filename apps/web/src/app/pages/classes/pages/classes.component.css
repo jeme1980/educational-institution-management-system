@@ -1,0 +1,5 @@
+:host { display: block; }
+.field-error { color: #be123c; font-size: .7rem; margin-top: .25rem; }
+.class-row { transition: background-color .18s ease, transform .18s ease; }
+.class-row:hover { background: #f8fafc; }
+.stat-card { background: linear-gradient(135deg, #fff 0%, #f8fafc 100%); }

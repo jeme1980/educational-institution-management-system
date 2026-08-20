@@ -1,0 +1,73 @@
+<div class="min-h-screen bg-background-soft-gray text-on-surface flex flex-col justify-between font-sans selection:bg-primary-fixed selection:text-on-primary-fixed" [attr.dir]="isRtl() ? 'rtl' : 'ltr'" [attr.lang]="isArabic() ? 'ar' : 'he'">
+  <app-login-header
+    [appTitle]="t('appTitle')"
+    [appSubtitle]="t('appSubtitle')"
+    [isArabic]="isArabic()"
+    (toggleLanguage)="toggleLanguage()"
+  ></app-login-header>
+
+  <main class="flex-grow flex items-center justify-center p-6 my-10 animate-fade-in">
+    <div class="w-full max-w-md bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden p-8">
+      <div class="space-y-6">
+        <div class="text-center space-y-2">
+          <span class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100">
+            <mat-icon class="text-2xl">lock_open</mat-icon>
+          </span>
+          <h2 class="text-2xl font-bold tracking-tight text-stone-950">{{ t('loginTitle') }}</h2>
+          <p class="text-sm text-stone-500 max-w-xs mx-auto">{{ t('loginSubtitle') }}</p>
+        </div>
+
+        @if (errorMessage()) {
+          <div class="p-4 rounded-xl bg-red-50 text-red-800 text-xs font-medium border border-red-100 flex items-start gap-3 animate-head-shake">
+            <mat-icon class="text-red-500 shrink-0">error_outline</mat-icon>
+            <div class="leading-relaxed">{{ errorMessage() }}</div>
+          </div>
+        }
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-4">
+          <div class="space-y-1.5">
+            <label for="email" class="block text-xs font-semibold text-stone-700">{{ t('emailLabel') }}</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 start-0 flex items-center ps-3.5 text-stone-400"><mat-icon class="text-lg">mail_outline</mat-icon></span>
+              <input id="email" type="email" dir="ltr" autocomplete="username" formControlName="email" placeholder="admin@school.edu" class="w-full ps-11 pe-4 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950 transition-all placeholder:text-stone-400" />
+            </div>
+            @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('required')) {
+              <p class="text-xs text-red-600 font-medium">{{ t('fieldRequired') }}</p>
+            }
+            @if (loginForm.get('email')?.touched && loginForm.get('email')?.hasError('email')) {
+              <p class="text-xs text-red-600 font-medium">{{ t('invalidEmail') }}</p>
+            }
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="password" class="block text-xs font-semibold text-stone-700">{{ t('passwordLabel') }}</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 start-0 flex items-center ps-3.5 text-stone-400"><mat-icon class="text-lg">vpn_key</mat-icon></span>
+              <input id="password" [type]="showPassword() ? 'text' : 'password'" dir="ltr" autocomplete="current-password" formControlName="password" placeholder="••••••••" class="w-full ps-11 pe-11 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950 transition-all placeholder:text-stone-400" />
+              <button id="password-visibility-toggle" type="button" (click)="togglePasswordVisibility()" class="absolute inset-y-0 end-0 flex items-center pe-3 text-stone-400 hover:text-stone-600 cursor-pointer">
+                <mat-icon class="text-lg">{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
+            </div>
+            @if (loginForm.get('password')?.touched && loginForm.get('password')?.hasError('required')) {
+              <p class="text-xs text-red-600 font-medium">{{ t('fieldRequired') }}</p>
+            }
+          </div>
+
+          <button id="login-submit-btn" type="submit" [disabled]="loginForm.invalid || isSubmitting()" class="w-full py-3.5 px-4 bg-stone-900 hover:bg-stone-950 text-white font-semibold rounded-xl text-sm transition-all focus:outline-none focus:ring-2 focus:ring-stone-900/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-xs mt-2 cursor-pointer">
+            @if (isSubmitting()) {
+              <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span>{{ t('signingIn') }}</span>
+            } @else {
+              <mat-icon class="text-base shrink-0">login</mat-icon>
+              <span>{{ t('signIn') }}</span>
+            }
+          </button>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer class="w-full py-6 text-center border-t border-stone-200 bg-stone-50/50">
+    <p class="text-xs text-stone-400 font-medium">© {{ currentYear }} - {{ t('footerText') }}</p>
+  </footer>
+</div>

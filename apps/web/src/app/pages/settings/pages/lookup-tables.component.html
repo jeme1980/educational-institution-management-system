@@ -1,0 +1,69 @@
+<div dir="rtl" class="mx-auto min-h-[calc(100vh-4rem)] max-w-[1440px] space-y-6 p-4 md:p-6">
+  <header class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+    <div>
+      <div class="mb-2 flex items-center gap-2 text-xs text-on-surface-variant">
+        <a routerLink="/settings" class="hover:text-on-surface">الإعدادات</a>
+        <mat-icon class="text-sm">chevron_left</mat-icon>
+        <span>الجداول المساعدة للمؤسسة</span>
+      </div>
+      <h1 class="text-2xl font-bold text-on-surface">إدارة الجداول المساعدة للمؤسسة</h1>
+      <p class="mt-1 text-sm text-on-surface-variant">هذه البيانات تخص مؤسستك فقط ولا تغيّر القوائم المرجعية المشتركة بين المدارس.</p>
+    </div>
+    <ui-button (activated)="openAddModal()"><mat-icon>add</mat-icon><span>إضافة سجل</span></ui-button>
+  </header>
+
+  <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[260px_1fr]">
+    <aside class="rounded-2xl border border-surface-border bg-surface p-3 shadow-xs">
+      <h2 class="px-3 py-2 text-xs font-bold text-on-surface-variant">بيانات المؤسسة</h2>
+      <nav class="space-y-1" aria-label="الجداول المساعدة للمؤسسة">
+        @for (definition of definitions; track definition.key) {
+          <button type="button" (click)="selectTable(definition.key)" [class.bg-primary-container]="activeTable() === definition.key" [class.text-primary]="activeTable() === definition.key" class="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-on-surface-variant transition hover:bg-surface-container-low">
+            <mat-icon class="text-lg">{{ definition.icon }}</mat-icon><span>{{ definition.label }}</span>
+          </button>
+        }
+      </nav>
+    </aside>
+
+    <main class="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-xs">
+      <div class="flex flex-col justify-between gap-4 border-b border-surface-border p-5 sm:flex-row">
+        <div><h2 class="flex items-center gap-2 text-lg font-bold text-on-surface"><mat-icon class="text-primary">{{ currentDefinition().icon }}</mat-icon>{{ currentDefinition().label }}</h2><p class="mt-1 text-xs text-on-surface-variant">إضافة وتعديل السجلات الخاصة بالمؤسسة الحالية.</p></div>
+        <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="absolute end-3 top-2.5 text-lg text-on-surface-variant">search</mat-icon><input type="search" [value]="searchTerm()" (input)="onSearch($event)" placeholder="بحث..." class="min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low py-2.5 pe-10 ps-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20" /></label>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-sm">
+          <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant"><tr><th class="px-5 py-3">الاسم بالعربية</th><th class="px-5 py-3">الاسم بالعبرية</th><th class="px-5 py-3">الحالة</th><th class="px-5 py-3 text-center">الإجراءات</th></tr></thead>
+          <tbody class="divide-y divide-surface-border">
+            @for (item of filteredItems(); track item.id) {
+              <tr class="min-h-[52px] hover:bg-surface-container-low">
+                <td class="whitespace-nowrap px-5 py-4 font-bold text-on-surface">{{ item.nameAr }}</td>
+                <td class="whitespace-nowrap px-5 py-4 text-on-surface-variant">{{ item.nameHe || '—' }}</td>
+                <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-bold" [class]="item.isActive === false ? 'bg-neutral-container text-neutral' : 'bg-success-container text-success'">{{ item.isActive === false ? 'غير فعال' : 'فعال' }}</span></td>
+                <td class="px-5 py-4"><div class="flex justify-center gap-1"><button type="button" (click)="openEditModal(item)" class="rounded-lg p-2 text-primary hover:bg-primary-container" title="تعديل" aria-label="تعديل"><mat-icon class="text-lg">edit</mat-icon></button><button type="button" (click)="deleteItem(item)" class="rounded-lg p-2 text-error hover:bg-error-container" title="حذف" aria-label="حذف"><mat-icon class="text-lg">delete_outline</mat-icon></button></div></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="4" class="px-5 py-14 text-center text-on-surface-variant"><mat-icon class="mx-auto mb-2 block text-4xl">table_rows</mat-icon>لا توجد سجلات في هذا الجدول.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <ui-modal [open]="showModal()" [title]="(editingItem() ? 'تعديل سجل - ' : 'إضافة سجل - ') + currentDefinition().label" [closeOnBackdrop]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" (closed)="closeModal()">
+    <form ui-modal-body [formGroup]="form" class="space-y-4" (ngSubmit)="saveItem()">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label class="text-sm font-bold text-on-surface">الاسم بالعربية *<input formControlName="nameAr" maxlength="150" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
+        <label class="text-sm font-bold text-on-surface">الاسم بالعبرية<input formControlName="nameHe" maxlength="150" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
+      </div>
+      <label class="block text-sm font-bold text-on-surface">ترتيب العرض<input type="number" formControlName="sortOrder" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
+      <div class="flex flex-wrap gap-5 rounded-xl border border-surface-border bg-surface-container-low p-3">
+        <label class="flex items-center gap-2 text-sm font-bold text-on-surface"><input type="checkbox" formControlName="isActive" />السجل فعال</label>
+        @if (currentDefinition().hasTeachingRole) { <label class="flex items-center gap-2 text-sm font-bold text-on-surface"><input type="checkbox" formControlName="isTeachingRole" />دور تدريسي</label> }
+      </div>
+    </form>
+    <div ui-modal-footer class="flex gap-2"><ui-button variant="secondary" [disabled]="isSubmitting()" (activated)="closeModal()">إلغاء</ui-button><ui-button [loading]="isSubmitting()" [disabled]="form.invalid" (activated)="saveItem()"><mat-icon>save</mat-icon><span>حفظ البيانات</span></ui-button></div>
+  </ui-modal>
+
+  @if (toast(); as message) { <div class="fixed bottom-6 left-6 z-[60] rounded-xl px-5 py-3 text-sm font-bold text-white shadow-xl" [class]="message.type === 'success' ? 'bg-success' : 'bg-error'">{{ message.message }}</div> }
+</div>

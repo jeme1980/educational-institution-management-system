@@ -1,0 +1,5 @@
+.core-badge { display: inline-flex; align-items: center; gap: var(--space-1); border-radius: var(--radius-full); padding: var(--space-1) var(--space-2); font-size: var(--text-label-sm); font-weight: 600; }
+.core-badge-success { background: var(--success-container); color: var(--success); }
+.core-badge-warning { background: var(--warning-container); color: var(--warning); }
+.core-badge-danger { background: var(--danger-container); color: var(--danger); }
+.core-badge-neutral { background: var(--neutral-container); color: var(--neutral); }

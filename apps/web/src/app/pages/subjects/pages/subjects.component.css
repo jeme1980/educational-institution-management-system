@@ -1,0 +1,8 @@
+/* Component styles are provided by the shared utility stylesheet. */
+
+/* Subject, topic and skill codes are not fields in the current Prisma schema. */
+div:has(> input[placeholder*="MATH-101"]),
+div:has(> input[placeholder*="MATH-ALG-1"]),
+div:has(> input[placeholder*="SKILL-ALG-01"]) {
+  display: none;
+}

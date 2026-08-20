@@ -1,0 +1,7 @@
+.core-table-wrap { overflow-x: auto; border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
+.core-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; text-align: start; }
+.core-table th { min-height: var(--table-row-height); background: var(--surface-container-low); color: var(--on-surface-variant); font-size: var(--text-label-sm); font-weight: 600; text-align: start; }
+.core-table th, .core-table td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--outline-variant); vertical-align: middle; }
+.core-table tbody tr { min-height: var(--table-row-height); }
+.core-table tbody tr:hover { background: var(--surface-container-low); }
+.core-table tbody tr:last-child td { border-bottom: 0; }

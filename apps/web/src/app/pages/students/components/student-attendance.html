@@ -1,0 +1,114 @@
+<div class="space-y-4" dir="rtl">
+  <div class="flex items-center justify-between">
+    <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+      <mat-icon class="text-blue-800">event_available</mat-icon>
+      <span>سجل ومعدل انضباط حضور وغياب الطالب</span>
+    </h4>
+    <div class="flex items-center gap-2">
+    <button type="button" (click)="openCreate()" class="flex items-center gap-1 rounded-lg bg-blue-700 px-2 py-1 text-[11px] font-bold text-white hover:bg-blue-800">
+      <mat-icon class="text-[14px] w-[14px] h-[14px]">add</mat-icon>
+      <span>تسجيل حضور</span>
+    </button>
+    <button
+      (click)="loadAttendance(true)"
+      [disabled]="isLoading()"
+      class="flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 px-2 py-1 rounded-lg transition-all cursor-pointer"
+    >
+      <mat-icon class="text-[14px] w-[14px] h-[14px]" [class.animate-spin]="isLoading()">refresh</mat-icon>
+      <span>تحديث البيانات</span>
+    </button>
+    </div>
+  </div>
+
+  @if (showForm()) {
+    <div class="grid grid-cols-1 gap-2 rounded-xl border border-blue-100 bg-blue-50/40 p-3 sm:grid-cols-3" dir="rtl">
+      <label class="text-[11px] font-bold text-slate-700">التاريخ
+        <input type="date" [value]="formDate()" (input)="formDate.set($any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs" />
+      </label>
+      <label class="text-[11px] font-bold text-slate-700">الحالة
+        <select [value]="formStatus()" (change)="formStatus.set($any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs">
+          <option value="PRESENT">حاضر</option><option value="ABSENT">غائب</option><option value="LATE">متأخر</option><option value="EXCUSED">غياب بعذر</option>
+        </select>
+      </label>
+      <label class="text-[11px] font-bold text-slate-700">ملاحظات
+        <input [value]="formNotes()" (input)="formNotes.set($any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs" />
+      </label>
+      <div class="flex items-end gap-2 sm:col-span-3">
+        <button type="button" (click)="saveAttendance()" [disabled]="isSaving()" class="rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">حفظ</button>
+        <button type="button" (click)="cancelForm()" class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">إلغاء</button>
+      </div>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <div class="p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+      <mat-icon class="text-3xl text-slate-400 animate-spin">sync</mat-icon>
+      <p class="text-xs mt-1.5 font-medium">جاري مزامنة بيانات الانضباط والحضور...</p>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="p-6 text-center text-rose-700 bg-rose-50 rounded-xl border border-rose-200">
+      <mat-icon class="text-3xl text-rose-400">error_outline</mat-icon>
+      <p class="text-xs mt-1 font-bold">{{ errorMessage() }}</p>
+    </div>
+  } @else if (attendance().length === 0) {
+    <div class="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+      <mat-icon class="text-4xl text-slate-300">calendar_today</mat-icon>
+      <p class="text-xs font-semibold mt-1">لا توجد بيانات حضور وغياب مسجلة لهذا الطالب في السجلات الحالية.</p>
+    </div>
+  } @else {
+    @let stats = getAttendanceStats();
+    <!-- Stats Cards Grid -->
+    <div class="grid grid-cols-4 gap-2.5">
+      <div class="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-right">
+        <span class="text-[10px] text-slate-500 font-bold block">نسبة الحضور والانضباط</span>
+        <span class="text-lg font-black font-mono text-emerald-700 block mt-0.5">{{ stats.percent }}%</span>
+      </div>
+      <div class="bg-blue-50/40 border border-blue-100 rounded-lg p-3 text-right">
+        <span class="text-[10px] text-slate-500 font-bold block">أيام الحضور والانتظام</span>
+        <span class="text-lg font-black font-mono text-blue-700 block mt-0.5">{{ stats.presentCount }} ي</span>
+      </div>
+      <div class="bg-rose-50/40 border border-rose-100 rounded-lg p-3 text-right">
+        <span class="text-[10px] text-slate-500 font-bold block">أيام الغياب غير المبرر</span>
+        <span class="text-lg font-black font-mono text-rose-700 block mt-0.5">{{ stats.absentCount }} ي</span>
+      </div>
+      <div class="bg-amber-50/40 border border-amber-100 rounded-lg p-3 text-right">
+        <span class="text-[10px] text-slate-500 font-bold block">حالات التأخر عن الطابور</span>
+        <span class="text-lg font-black font-mono text-amber-700 block mt-0.5">{{ stats.lateCount }} ي</span>
+      </div>
+    </div>
+
+    <!-- Attendance Log Table -->
+    <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-xs mt-2">
+      <table class="w-full text-right text-xs bg-white">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+            <th class="p-2.5">التاريخ واليوم</th>
+            <th class="p-2.5 text-center">حالة الطالب باليوم</th>
+            <th class="p-2.5">السبب أو الملاحظة المدرجة بالسجل</th>
+            <th class="p-2.5 text-center">إجراء</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (item of attendance(); track item.id) {
+            <tr class="hover:bg-slate-50/50 transition-colors">
+              <td class="p-2.5 font-mono text-slate-800 font-semibold">
+                {{ item.date }}
+              </td>
+              <td class="p-2.5 text-center">
+                <span [class]="getStatusClass(item.status)">
+                  {{ getStatusLabel(item.status) }}
+                </span>
+              </td>
+              <td class="p-2.5 text-[11px] text-slate-600 font-medium">
+                {{ item.notes || '-' }}
+              </td>
+              <td class="p-2.5 text-center">
+                <button type="button" (click)="openEdit(item)" class="text-blue-700 hover:text-blue-900" aria-label="تعديل سجل الحضور"><mat-icon class="text-base">edit</mat-icon></button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

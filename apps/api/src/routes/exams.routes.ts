@@ -1,0 +1,38 @@
+import express, { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission.middleware';
+import * as controller from '../controllers/exams.controller';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { validateRequest } from '../middleware/validate';
+import { examResultsSchema } from '../validation/exam.schemas';
+import { importExamResults } from '../controllers/exam-results-import.controller';
+
+const router = Router();
+router.get('/exams', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExams));
+router.get('/exams/:id', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamById));
+router.post('/exams', requireAuth, requirePermission('exams', 'create'), asyncHandler(controller.createExams));
+router.put('/exams/:id', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.updateExamsById));
+router.put('/exams/:id/builder', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.saveExamBuilder));
+router.delete('/exams/:id', requireAuth, requirePermission('exams', 'delete'), asyncHandler(controller.deleteExamsById));
+router.get('/exams/:id/results', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdResults));
+router.post('/exams/:id/results/import', requireAuth, requirePermission('exams', 'update'), express.raw({ type: '*/*', limit: '10mb' }), asyncHandler(importExamResults));
+router.post('/exams/:id/results', requireAuth, requirePermission('exams', 'update'), validateRequest(examResultsSchema), asyncHandler(controller.createExamsByIdResultsEnhanced));
+router.get('/exams/:id/results/:studentId', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamStudentResult));
+router.get('/exam-types', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamTypes));
+router.post('/exam-types', requireAuth, requirePermission('exams', 'create'), asyncHandler(controller.createExamTypes));
+router.put('/exam-types/:id', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.updateExamTypesById));
+router.delete('/exam-types/:id', requireAuth, requirePermission('exams', 'delete'), asyncHandler(controller.deleteExamTypesById));
+router.get('/exam-statuses', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamStatuses));
+router.get('/question-types', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getQuestionTypes));
+router.post('/question-types', requireAuth, requirePermission('exams', 'create'), asyncHandler(controller.createQuestionTypes));
+router.put('/question-types/:id', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.updateQuestionTypesById));
+router.delete('/question-types/:id', requireAuth, requirePermission('exams', 'delete'), asyncHandler(controller.deleteQuestionTypesById));
+router.get('/exams/:id/question-context', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdQuestionContext));
+router.get('/exams/:id/questions', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdQuestions));
+router.post('/exams/:id/questions', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.createExamsByIdQuestions));
+router.get('/exams/:id/study-groups', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdStudyGroups));
+router.post('/exams/:id/study-groups', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.createExamsByIdStudyGroups));
+router.get('/exams/:id/study-groups/:sgId/results', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdStudyGroupsBySgIdResults));
+router.post('/exams/:id/study-groups/:sgId/results', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.createExamsByIdStudyGroupsBySgIdResults));
+
+export default router;

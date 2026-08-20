@@ -1,0 +1,51 @@
+<main class="dashboard" dir="rtl">
+  @let stats = apiService.stats();
+  <header class="dashboard__hero">
+    <div class="dashboard__hero-copy"><span class="dashboard__eyebrow"><mat-icon>insights</mat-icon>لوحة المتابعة المدرسية</span><h1>ملخص أداء المدرسة</h1><p>قراءة موحدة للطلاب والكادر والتحصيل والرعاية في السنة الدراسية الحالية.</p></div>
+    <div class="dashboard__hero-actions"><div class="dashboard__year"><mat-icon>calendar_month</mat-icon><span><small>السنة الدراسية</small>{{ stats?.academicYearLabel || 'السنة الدراسية الحالية' }}</span></div><button type="button" class="dashboard__refresh" (click)="refreshDashboard()" aria-label="تحديث بيانات لوحة القيادة"><mat-icon>refresh</mat-icon>تحديث البيانات</button></div>
+  </header>
+
+  <section class="kpi-grid" aria-label="المؤشرات الرئيسية">
+    <app-dashboard-kpi-card label="إجمالي الطلاب النشطين" [value]="stats?.kpis?.activeStudents || 0" icon="groups" toneClass="kpi-tone--primary" />
+    <app-dashboard-kpi-card label="الموظفون والمعلمون" [value]="stats?.kpis?.staffMembers || 0" icon="badge" toneClass="kpi-tone--secondary" />
+    <app-dashboard-kpi-card label="الصفوف والشعب" [value]="stats?.kpis?.classes || 0" icon="meeting_room" toneClass="kpi-tone--success" />
+    <app-dashboard-kpi-card label="أولياء الأمور المرتبطون" [value]="stats?.kpis?.guardians || 0" icon="family_restroom" toneClass="kpi-tone--warning" />
+  </section>
+
+  <section class="dashboard-grid dashboard-grid--wide">
+    <article class="panel analytics-panel">
+      <div class="panel__heading"><div><span class="panel__kicker">تحليلات الطلاب</span><h2>التوزيع الديموغرافي والإداري</h2></div><mat-icon>analytics</mat-icon></div>
+      <nav class="tab-list" aria-label="نوع تحليل الطلاب">
+        <button type="button" [class.is-active]="analyticsTab() === 'gender'" (click)="setAnalyticsTab('gender')">الجنس</button>
+        <button type="button" [class.is-active]="analyticsTab() === 'feature'" (click)="setAnalyticsTab('feature')">المميزات</button>
+        <button type="button" [class.is-active]="analyticsTab() === 'status'" (click)="setAnalyticsTab('status')">حالة التسجيل</button>
+        <button type="button" [class.is-active]="analyticsTab() === 'town'" (click)="setAnalyticsTab('town')">البلدة</button>
+      </nav>
+      @let distribution = analyticsTab() === 'gender' ? (stats?.studentsByGender || []) : analyticsTab() === 'feature' ? (stats?.studentsByFeature || []) : analyticsTab() === 'status' ? (stats?.studentsByEnrollmentStatus || []) : (stats?.studentsByTown || []);
+      <div class="distribution-list">
+        @for (item of distribution; track item.id) { <div class="distribution-row"><div class="distribution-row__label"><span>{{ item.label }}</span><strong>{{ item.count | number }}</strong></div><div class="distribution-bar"><span [style.width.%]="distribution.length ? (item.count / distribution[0].count) * 100 : 0"></span></div></div> } @empty { <div class="empty-state">لا توجد بيانات لهذا التحليل بعد.</div> }
+      </div>
+    </article>
+    <app-dashboard-bar-chart [data]="stats?.studentsByGrade || []" />
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">التوزيع الأكاديمي</span><h2>الكثافة حسب الصف والشعبة</h2></div><mat-icon>school</mat-icon></div><div class="compact-list class-density-list">@for (item of (stats?.classDensity || []); track item.id) {<div class="compact-row"><span>{{ item.label }} · {{ item.className }} @if (item.classCode) {<small>({{ item.classCode }})</small>}</span><strong>{{ item.count }}</strong></div>} @empty {<div class="empty-state">لا توجد بيانات صفوف للسنة الحالية.</div>}</div></article>
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">النطاق الجغرافي</span><h2>توزيع الطلاب حسب البلدة</h2></div><mat-icon>location_on</mat-icon></div><div class="compact-list">@for (item of (stats?.studentsByTown || []).slice(0, 8); track item.id) {<div class="compact-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>} @empty {<div class="empty-state">لا توجد بيانات بلدات.</div>}</div></article>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">الكادر</span><h2>الموظفون حسب الوظيفة</h2></div><mat-icon>work</mat-icon></div><div class="compact-list">@for (item of (stats?.staffByRole || []); track item.id) {<div class="compact-row"><span>{{ item.label }} @if (item.isTeachingRole) {<em>تعليمي</em>}</span><strong>{{ item.count }}</strong></div>} @empty {<div class="empty-state">لا توجد تكليفات نشطة.</div>}</div><div class="metric-footer">نسبة الطلاب للمعلم <strong>{{ stats?.teacherStudentRatio?.studentsPerTeacher || 0 }}</strong></div></article>
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">تغطية المواد</span><h2>إسناد المواد الدراسية</h2></div><mat-icon>menu_book</mat-icon></div><div class="coverage"><div><strong>{{ stats?.subjectCoverage?.assigned || 0 }}</strong><span>مسندة</span></div><div><strong>{{ stats?.subjectCoverage?.unassigned || 0 }}</strong><span>بلا معلم</span></div><div><strong>{{ stats?.subjectCoverage?.total || 0 }}</strong><span>الإجمالي</span></div></div><div class="coverage-bar"><span [style.width.%]="((stats?.subjectCoverage?.assigned || 0) / (stats?.subjectCoverage?.total || 1)) * 100"></span></div></article>
+  </section>
+
+  <section class="dashboard-grid dashboard-grid--wide">
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">الأداء الأكاديمي</span><h2>متوسط النتائج حسب المادة</h2></div><mat-icon>trending_up</mat-icon></div><div class="compact-list">@for (item of (stats?.performance?.bySubject || []); track item.id) {<div class="compact-row"><span>{{ item.label }}</span><strong>{{ item.average | number:'1.0-2' }}</strong></div>} @empty {<div class="empty-state">لا توجد نتائج مرصودة بعد.</div>}</div><div class="metric-footer">المتوسط العام <strong>{{ stats?.performance?.average || 0 | number:'1.0-2' }}</strong></div></article>
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">التقويم الحالي</span><h2>حالة الامتحانات</h2></div><mat-icon>assignment</mat-icon></div><div class="status-cards">@for (item of (stats?.examStatus || []); track item.id) {<div><strong>{{ item.count }}</strong><span>{{ item.label }}</span></div>} @empty {<div class="empty-state">لا توجد امتحانات للسنة الحالية.</div>}</div><h3 class="subheading">أبرز المهارات والمواضيع</h3><div class="compact-list compact-list--small">@for (item of (stats?.skillPerformance || []).slice(0, 5); track item.kind + item.id) {<div class="compact-row"><span>{{ item.label }} <em>{{ item.kind === 'skill' ? 'مهارة' : 'موضوع' }}</em></span><strong>{{ item.average | number:'1.0-2' }}</strong></div>}</div></article>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">الرعاية والدعم</span><h2>اكتمال بيانات الطلاب</h2></div><mat-icon>health_and_safety</mat-icon></div><div class="support-grid"><div><strong>{{ stats?.support?.specialNeeds || 0 }}</strong><span>احتياجات خاصة</span></div><div><strong>{{ stats?.support?.medicalProfiles || 0 }}</strong><span>ملفات طبية</span></div><div><strong>{{ stats?.support?.allergiesOrChronic || 0 }}</strong><span>حساسية/أمراض مزمنة</span></div><div><strong>{{ stats?.support?.guardianCoveragePercent || 0 }}%</strong><span>اكتمال ربط أولياء الأمور</span></div></div></article>
+    <app-dashboard-recent-enrollments [rows]="stats?.recentEnrollments || []" />
+  </section>
+</main>

@@ -1,0 +1,95 @@
+.core-btn {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding-inline: var(--space-4);
+  font: inherit;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+  transition: background-color var(--transition-fast) ease, border-color var(--transition-fast) ease, color var(--transition-fast) ease;
+}
+.core-btn:focus-visible { outline: 2px solid var(--secondary); outline-offset: 2px; }
+.core-btn:disabled { cursor: not-allowed; opacity: .6; }
+.core-btn-primary { background: var(--primary); color: var(--on-primary); }
+.core-btn-primary:hover:not(:disabled) { background: var(--primary-container); }
+.core-btn-secondary { border-color: var(--outline-variant); background: var(--surface-container-lowest); color: var(--primary); }
+.core-btn-secondary:hover:not(:disabled) { background: var(--surface-container-low); }
+.core-btn-ghost { background: transparent; color: var(--on-surface-variant); }
+.core-btn-ghost:hover:not(:disabled) { background: var(--neutral-container); color: var(--primary); }
+.core-btn-danger { background: var(--danger-container); color: var(--danger); }
+
+/* Shared icon-only action control used in tables and compact toolbars. */
+.icon-button,
+.icon-btn,
+.icon-action,
+.action-button,
+.question-tools button,
+table td > div > button:has(> mat-icon):not(:has(> span)) {
+  display: inline-flex;
+  width: var(--control-height);
+  height: var(--control-height);
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 var(--control-height);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--on-surface-variant);
+  padding: 0;
+  transition: background-color var(--transition-fast) ease, border-color var(--transition-fast) ease, color var(--transition-fast) ease, transform var(--transition-fast) ease;
+}
+.icon-button:hover,
+.icon-btn:hover,
+.icon-action:hover,
+.action-button:hover,
+.question-tools button:hover,
+table td > div > button:has(> mat-icon):not(:has(> span)):hover {
+  border-color: var(--outline-variant);
+  background: var(--surface-container-low);
+  color: var(--secondary);
+  transform: translateY(-1px);
+}
+.icon-button:focus-visible,
+.icon-btn:focus-visible,
+.icon-action:focus-visible,
+.action-button:focus-visible,
+.question-tools button:focus-visible,
+table td > div > button:has(> mat-icon):not(:has(> span)):focus-visible {
+  outline: 2px solid var(--secondary);
+  outline-offset: 2px;
+}
+.icon-button mat-icon,
+.icon-btn mat-icon,
+.icon-action mat-icon,
+.action-button mat-icon,
+.question-tools button mat-icon,
+table td > div > button:has(> mat-icon):not(:has(> span)) mat-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.icon-button.danger:hover,
+.icon-btn.danger:hover,
+.icon-action.danger:hover,
+.action-button.danger:hover,
+.question-tools button.danger:hover,
+table td > div > button.text-rose-600:hover {
+  border-color: var(--danger);
+  background: var(--danger-container);
+  color: var(--danger);
+}
+.icon-button:disabled,
+.icon-btn:disabled,
+.icon-action:disabled,
+.action-button:disabled,
+.question-tools button:disabled,
+table td > div > button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+  transform: none;
+}

@@ -1,0 +1,985 @@
+<div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="staff-container">
+      <!-- Page Title & Main Actions -->
+      <app-staff-header [activeTab]="activeTab()" (exportList)="exportStaffList()" (openAddModal)="openAddModal()" (openAddAssignmentModal)="openAddAssignmentModal()"></app-staff-header>
+
+      <!-- Tab Switcher -->
+      <div class="flex items-center gap-2 border-b border-surface-border mb-6">
+        <button
+          (click)="activeTab.set('staff_members'); resetFilters()"
+          [class.border-b-2]="activeTab() === 'staff_members'"
+          [class.border-primary]="activeTab() === 'staff_members'"
+          [class.text-primary]="activeTab() === 'staff_members'"
+          [class.font-bold]="activeTab() === 'staff_members'"
+          [class.text-on-surface-variant]="activeTab() !== 'staff_members'"
+          class="px-5 py-3 text-body-sm font-medium transition-all flex items-center gap-2 focus:outline-none"
+        >
+          <mat-icon class="text-base">badge</mat-icon>
+          <span>سجل الموظفين والمعلمين</span>
+          <span class="px-2 py-0.5 rounded-full text-[11px] bg-surface-container-high text-on-surface font-mono">
+            {{ apiService.staff().length }}
+          </span>
+        </button>
+
+        <button
+          (click)="activeTab.set('staff_assignments'); resetFilters()"
+          [class.border-b-2]="activeTab() === 'staff_assignments'"
+          [class.border-primary]="activeTab() === 'staff_assignments'"
+          [class.text-primary]="activeTab() === 'staff_assignments'"
+          [class.font-bold]="activeTab() === 'staff_assignments'"
+          [class.text-on-surface-variant]="activeTab() !== 'staff_assignments'"
+          class="px-5 py-3 text-body-sm font-medium transition-all flex items-center gap-2 focus:outline-none"
+        >
+          <mat-icon class="text-base">assignment_ind</mat-icon>
+          <span>جدول التعيينات والأدوار</span>
+          <span class="px-2 py-0.5 rounded-full text-[11px] bg-surface-container-high text-on-surface font-mono">
+            {{ apiService.staffAssignments().length }}
+          </span>
+        </button>
+      </div>
+
+      <!-- TAB 1: STAFF MEMBERS (أعضاء الكادر) -->
+      @if (activeTab() === 'staff_members') {
+        <!-- Filters & Controls Bar -->
+        <div class="bg-white border border-surface-border rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-end lg:items-center">
+          <div class="w-full lg:w-1/3">
+            <label class="block text-xs font-semibold text-secondary mb-1">البحث السريع</label>
+            <div class="relative">
+              <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</mat-icon>
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="updateSearchTerm($event)"
+                placeholder="البحث بالاسم، الكود، الهوية..."
+                class="w-full bg-slate-50 border border-surface-border rounded-lg pl-3 pr-10 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              />
+            </div>
+          </div>
+
+          <div class="w-full lg:w-1/4">
+            <label class="block text-xs font-semibold text-secondary mb-1">المسمى الوظيفي</label>
+            <div class="relative">
+              <select
+                [value]="jobTitleFilter()"
+                (change)="updateJobTitleFilter($event)"
+                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              >
+                <option value="ALL">الكل (المعلمين والموظفين)</option>
+                @for (title of uniqueJobTitles(); track title) {
+                  <option [value]="title">{{ title }}</option>
+                }
+              </select>
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <div class="w-full lg:w-1/5">
+            <label class="block text-xs font-semibold text-secondary mb-1">النوع</label>
+            <div class="relative">
+              <select
+                [value]="genderFilter()"
+                (change)="updateGenderFilter($event)"
+                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              >
+                <option value="ALL">الكل</option>
+                <option value="MALE">ذكر</option>
+                <option value="FEMALE">أنثى</option>
+              </select>
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <div class="w-full lg:w-1/5">
+            <label class="block text-xs font-semibold text-secondary mb-1">الحالة</label>
+            <div class="relative">
+              <select
+                [value]="statusFilter()"
+                (change)="updateStatusFilter($event)"
+                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              >
+                <option value="ALL">الكل</option>
+                <option value="ACTIVE">نشط</option>
+                <option value="ARCHIVED">غير نشط / مجاز</option>
+              </select>
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <div class="flex gap-2 w-full lg:w-auto shrink-0 justify-end pt-1">
+            <button
+              (click)="resetFilters()"
+              class="px-4 py-2 text-secondary text-xs font-semibold hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              إعادة ضبط
+            </button>
+            <button
+              (click)="applyFilters()"
+              class="px-4 py-2 bg-slate-100 text-primary hover:bg-[#d0e1fb] text-xs font-semibold rounded-lg transition-colors"
+            >
+              تطبيق الفلاتر
+            </button>
+          </div>
+        </div>
+
+        <!-- Data Table Card -->
+        <div class="bg-white border border-surface-border rounded-xl overflow-hidden shadow-2xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+              <thead>
+                <!-- specialization column is rendered with the staff member row -->
+                <tr class="bg-[#F1F5F9] border-b border-surface-border">
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider">التخصص</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider">الاسم الكامل</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider">الرقم القومي / الهوية</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider">المسمى الوظيفي</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider">الحالة</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary uppercase tracking-wider text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-sm">
+                @for (member of paginatedStaff(); track member.id) {
+                  <tr class="hover:bg-[#F8FAFC] transition-colors">
+                    <td class="py-3 px-4 text-slate-700 font-medium">{{ member.specialization?.nameAr || '-' }}</td>
+                    <td class="py-3 px-4">
+                      <div class="flex items-center gap-3">
+                        <div [class]="getAvatarColor(member.firstNameAr + ' ' + member.familyNameAr) + ' w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs'">
+                          {{ getInitials(member.firstNameAr, member.familyNameAr) }}
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="font-bold text-slate-900">{{ member.firstNameAr }} {{ member.familyNameAr }}</span>
+                          @if (member.firstNameHe) {
+                            <span class="text-[10px] text-slate-400 font-sans" dir="ltr">
+                              {{ member.firstNameHe }} {{ member.familyNameHe }}
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-xs text-secondary tabular-nums">{{ member.nationalId || '-' }}</td>
+                    <td class="py-3 px-4 text-slate-700 font-medium">{{ getPrimaryAssignmentRole(member.id) }}</td>
+                    <td class="py-3 px-4">
+                      @if (!member.archivedAt) {
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-[#10B981] text-[11px] font-semibold border border-emerald-100/60">
+                          <span class="w-1.5 h-1.5 rounded-full bg-[#10B981] ml-1.5"></span>
+                          نشط
+                        </span>
+                      } @else {
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-50 text-slate-500 text-[11px] font-semibold border border-slate-100">
+                          <span class="w-1.5 h-1.5 rounded-full bg-slate-400 ml-1.5"></span>
+                          غير نشط (مجاز)
+                        </span>
+                      }
+                    </td>
+                    <td class="py-3 px-4">
+                      <div class="flex justify-center gap-1">
+                        <button
+                          (click)="openProfileModal(member)"
+                          class="p-1.5 text-slate-500 hover:text-[#00236f] hover:bg-slate-100 rounded-lg transition-colors"
+                          title="عرض الملف والتعيينات"
+                        >
+                          <mat-icon class="text-[18px]">visibility</mat-icon>
+                        </button>
+                        <button
+                          (click)="openEditModal(member)"
+                          class="p-1.5 text-slate-500 hover:text-[#00236f] hover:bg-slate-100 rounded-lg transition-colors"
+                          title="تعديل الموظف"
+                        >
+                          <mat-icon class="text-[18px]">edit</mat-icon>
+                        </button>
+                        <button
+                          (click)="addAssignmentShortcut(member)"
+                          class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          title="إسناد تعيين جديد"
+                        >
+                          <mat-icon class="text-[18px]">assignment_add</mat-icon>
+                        </button>
+                        <button
+                          (click)="openDeleteConfirm(member)"
+                          class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="حذف"
+                        >
+                          <mat-icon class="text-[18px]">delete</mat-icon>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="text-center py-12 text-slate-400 text-xs font-semibold">
+                      لا يوجد موظفون مسجلون يطابقون خيارات التصفية الحالية.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination [page]="currentPage()" [pageSize]="itemsPerPage" [totalItems]="filteredStaff().length" [pageSizeOptions]="[10]" [disabled]="apiService.isLoading()" (pageChange)="currentPage.set($event)" />
+          <!-- Legacy pagination kept hidden while the shared component is authoritative. -->
+          <div class="hidden flex items-center justify-between px-4 py-3 border-t border-surface-border bg-[#F8FAFC]">
+            <div class="text-xs text-secondary font-medium">
+              عرض {{ getStaffRangeStart() }} إلى {{ getStaffRangeEnd() }} من أصل {{ filteredStaff().length }} موظف
+            </div>
+            <div class="flex gap-1">
+              <button
+                [disabled]="currentPage() === 1"
+                (click)="currentPage.set(currentPage() - 1)"
+                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
+              >
+                السابق
+              </button>
+              
+              @for (p of getPageNumbers(totalStaffPages()); track p) {
+                <button
+                  (click)="currentPage.set(p)"
+                  [class.bg-[#00236f]]="currentPage() === p"
+                  [class.text-white]="currentPage() === p"
+                  [class.border-[#00236f]]="currentPage() === p"
+                  [class.bg-white]="currentPage() !== p"
+                  [class.text-secondary]="currentPage() !== p"
+                  class="w-8 h-8 flex items-center justify-center border border-surface-border rounded-lg transition-all text-xs font-semibold"
+                >
+                  {{ p }}
+                </button>
+              }
+
+              <button
+                [disabled]="currentPage() >= totalStaffPages()"
+                (click)="currentPage.set(currentPage() + 1)"
+                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
+              >
+                التالي
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- TAB 2: STAFF ASSIGNMENTS (جدول التعيينات) -->
+      @if (activeTab() === 'staff_assignments') {
+        <!-- Filters Bar -->
+        <div class="bg-white border border-surface-border rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-end lg:items-center">
+          <div class="w-full lg:w-1/3">
+            <label class="block text-xs font-semibold text-secondary mb-1">البحث بالاسم أو الملاحظات</label>
+            <div class="relative">
+              <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</mat-icon>
+              <input
+                type="text"
+                [value]="searchTerm()"
+                (input)="updateSearchTerm($event)"
+                placeholder="البحث باسم الموظف أو الكود..."
+                class="w-full bg-slate-50 border border-surface-border rounded-lg pl-3 pr-10 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              />
+            </div>
+          </div>
+
+          <div class="w-full lg:w-1/4">
+            <label class="block text-xs font-semibold text-secondary mb-1">الدور الوظيفي</label>
+            <div class="relative">
+              <select
+                [value]="assignmentRoleFilter()"
+                (change)="updateAssignmentRoleFilter($event)"
+                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              >
+                <option value="ALL">جميع الأدوار الوظيفية</option>
+                @for (role of apiService.jobRoles(); track role.id) {
+                  <option [value]="role.id">{{ role.nameAr }} ({{ role.code }})</option>
+                }
+              </select>
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <div class="w-full lg:w-1/4">
+            <label class="block text-xs font-semibold text-secondary mb-1">السنة الدراسية</label>
+            <div class="relative">
+              <select
+                [value]="apiService.selectedAcademicYearId() || assignmentYearFilter()"
+                (change)="updateAssignmentYearFilter($event)"
+                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
+              >
+                <option value="ALL">جميع السنوات الدراسية</option>
+                @for (year of apiService.academicYears(); track year.id) {
+                  <option [value]="year.id">{{ year.yearLabel }}</option>
+                }
+              </select>
+              <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
+            </div>
+          </div>
+
+          <div class="flex gap-2 w-full lg:w-auto shrink-0 justify-end pt-1">
+            <button
+              (click)="resetFilters()"
+              class="px-4 py-2 text-secondary text-xs font-semibold hover:bg-slate-50 rounded-lg transition-colors"
+            >
+              إعادة ضبط
+            </button>
+          </div>
+        </div>
+
+        <!-- Assignments Table View -->
+        <div class="bg-white border border-surface-border rounded-xl overflow-hidden shadow-2xs">
+          <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+              <thead>
+                <tr class="bg-[#F1F5F9] border-b border-surface-border">
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary">عضو الكادر</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary">الدور والتعيين الأكاديمي</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary">السنة الدراسية</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary">تاريخ البدء والانتهاء</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary text-center">نوع التعيين</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary text-center">الحالة</th>
+                  <th class="py-3.5 px-4 text-xs font-bold text-secondary text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-sm">
+                @for (assign of paginatedAssignments(); track assign.id) {
+                  <tr class="hover:bg-[#F8FAFC] transition-colors">
+                    <td class="py-3 px-4 font-bold text-slate-900">
+                      {{ getStaffName(assign.staffMemberId, assign) }}
+                    </td>
+                    <td class="py-3 px-4">
+                      <span class="px-2.5 py-1 rounded-lg bg-blue-50 text-[#00236f] border border-blue-100 font-semibold text-xs">
+                        {{ getJobRoleName(assign.jobRoleId, assign) }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-xs font-bold text-slate-600">
+                      {{ getAcademicYearLabel(assign.academicYearId, assign) }}
+                    </td>
+                    <td class="py-3 px-4 font-mono text-xs text-slate-500">
+                      <span>{{ assign.startDate | date:'yyyy-MM-dd' }}</span>
+                      <span class="mx-1">إلى</span>
+                      <span>{{ assign.endDate ? (assign.endDate | date:'yyyy-MM-dd') : 'مستمر' }}</span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      @if (assign.isPrimary) {
+                        <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200/50 text-[10px]">
+                          أساسي
+                        </span>
+                      } @else {
+                        <span class="px-2.5 py-0.5 rounded-full bg-slate-50 text-slate-500 font-semibold border border-slate-200/50 text-[10px]">
+                          إضافي
+                        </span>
+                      }
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      @if (assign.isActive) {
+                        <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-[#10B981] font-bold border border-emerald-100 text-[10px]">نشط</span>
+                      } @else {
+                        <span class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-100 text-[10px]">متوقف</span>
+                      }
+                    </td>
+                    <td class="py-3 px-4">
+                      <div class="flex justify-center gap-1">
+                        <button
+                          (click)="openEditAssignmentModal(assign)"
+                          class="p-1.5 text-slate-500 hover:text-[#00236f] hover:bg-slate-100 rounded-lg transition-colors"
+                          title="تعديل التعيين"
+                        >
+                          <mat-icon class="text-[18px]">edit</mat-icon>
+                        </button>
+                        <button
+                          (click)="openDeleteAssignmentConfirm(assign)"
+                          class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          title="حذف التعيين"
+                        >
+                          <mat-icon class="text-[18px]">delete</mat-icon>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="text-center py-12 text-slate-400 text-xs font-semibold">
+                      لا توجد تعيينات مسجلة تطابق التصفية.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <app-pagination [page]="currentAssignmentPage()" [pageSize]="itemsPerPage" [totalItems]="filteredAssignments().length" [pageSizeOptions]="[10]" [disabled]="apiService.isLoading()" (pageChange)="currentAssignmentPage.set($event)" />
+          <!-- Legacy pagination kept hidden while the shared component is authoritative. -->
+          <div class="hidden flex items-center justify-between px-4 py-3 border-t border-surface-border bg-[#F8FAFC]">
+            <div class="text-xs text-secondary font-medium">
+              عرض {{ getAssignmentRangeStart() }} إلى {{ getAssignmentRangeEnd() }} من أصل {{ filteredAssignments().length }} تعيين
+            </div>
+            <div class="flex gap-1">
+              <button
+                [disabled]="currentAssignmentPage() === 1"
+                (click)="currentAssignmentPage.set(currentAssignmentPage() - 1)"
+                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
+              >
+                السابق
+              </button>
+              
+              @for (p of getPageNumbers(totalAssignmentPages()); track p) {
+                <button
+                  (click)="currentAssignmentPage.set(p)"
+                  [class.bg-[#00236f]]="currentAssignmentPage() === p"
+                  [class.text-white]="currentAssignmentPage() === p"
+                  [class.border-[#00236f]]="currentAssignmentPage() === p"
+                  [class.bg-white]="currentAssignmentPage() !== p"
+                  [class.text-secondary]="currentAssignmentPage() !== p"
+                  class="w-8 h-8 flex items-center justify-center border border-surface-border rounded-lg transition-all text-xs font-semibold"
+                >
+                  {{ p }}
+                </button>
+              }
+
+              <button
+                [disabled]="currentAssignmentPage() >= totalAssignmentPages()"
+                (click)="currentAssignmentPage.set(currentAssignmentPage() + 1)"
+                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
+              >
+                التالي
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL A: MEMBER VIEW PROFILE SIDE-SHEET -->
+      @if (showProfileModal() && selectedProfileStaff()) {
+         <div (click)="showProfileModal.set(false)" (keydown.escape)="showProfileModal.set(false)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Header -->
+            <div class="bg-[#00236f] text-white px-6 py-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div [class]="getAvatarColor(selectedProfileStaff()!.firstNameAr) + ' w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-white/15 text-white'">
+                  {{ getInitials(selectedProfileStaff()!.firstNameAr, selectedProfileStaff()!.familyNameAr) }}
+                </div>
+                <div>
+                  <h3 class="font-bold text-sm">الملف الشخصي والتعيينات</h3>
+                </div>
+              </div>
+              <button (click)="showProfileModal.set(false)" class="text-white/80 hover:text-white">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Profile Details Content -->
+            <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto text-xs">
+              <!-- Summary Grid -->
+              <div class="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-surface-border">
+                <div>
+                  <span class="text-slate-400 block mb-0.5">الاسم بالعربية:</span>
+                  <span class="font-bold text-slate-900 text-sm">
+                    {{ selectedProfileStaff()!.firstNameAr }} {{ selectedProfileStaff()!.familyNameAr }}
+                  </span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">الاسم بالعبرية:</span>
+                  <span class="font-semibold text-slate-700 text-sm font-sans" dir="ltr">
+                    {{ selectedProfileStaff()!.firstNameHe || '-' }} {{ selectedProfileStaff()!.familyNameHe || '' }}
+                  </span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">رقم الهوية:</span>
+                  <span class="font-bold text-slate-900 font-mono">{{ selectedProfileStaff()!.nationalId || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">المسمى الوظيفي:</span>
+                  <span class="font-bold text-[#00236f]">{{ getPrimaryAssignmentRole(selectedProfileStaff()!.id) }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">الجنس:</span>
+                  <span>{{ getGenderName(selectedProfileStaff()!.genderId) }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">المؤسسة التعليمية:</span>
+                  <span class="font-mono text-slate-600">{{ selectedProfileStaff()!.institutionId }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">الهاتف:</span>
+                  <span class="font-mono text-slate-600" dir="ltr">{{ selectedProfileStaff()!.phoneNumber || '-' }}</span>
+                </div>
+                <div>
+                  <span class="text-slate-400 block mb-0.5">البريد الإلكتروني:</span>
+                  <span class="font-mono text-slate-600" dir="ltr">{{ selectedProfileStaff()!.email || '-' }}</span>
+                </div>
+              </div>
+
+              <!-- Assignments Section -->
+              <div>
+                <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
+                  <h4 class="font-bold text-slate-900 flex items-center gap-1">
+                    <mat-icon class="text-base text-[#00236f]">assignment_ind</mat-icon>
+                    <span>سجل التعيينات والأدوار المسندة</span>
+                  </h4>
+                  <button
+                    (click)="addAssignmentShortcut(selectedProfileStaff()!)"
+                    class="px-2.5 py-1 rounded bg-blue-50 text-[#00236f] hover:bg-blue-100 font-bold flex items-center gap-1 transition-all"
+                  >
+                    <mat-icon class="text-xs">add</mat-icon>
+                    <span>إسناد تعيين جديد</span>
+                  </button>
+                </div>
+
+                <div class="space-y-3">
+                  @for (assign of selectedProfileAssignments(); track assign.id) {
+                    <div class="p-3 border border-slate-200/60 rounded-xl space-y-2 hover:bg-slate-50 transition-colors">
+                      <div class="flex items-center justify-between">
+                        <span class="px-2 py-0.5 rounded-md bg-blue-50 text-[#00236f] font-bold">
+                          {{ getJobRoleName(assign.jobRoleId, assign) }}
+                        </span>
+                        <div class="flex items-center gap-1.5">
+                          @if (assign.isPrimary) {
+                            <span class="bg-indigo-50 text-indigo-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-indigo-100">أساسي</span>
+                          }
+                          @if (assign.isActive) {
+                            <span class="bg-emerald-50 text-emerald-700 text-[9px] font-bold px-1.5 py-0.5 rounded border border-emerald-100">نشط</span>
+                          } @else {
+                            <span class="bg-slate-50 text-slate-500 text-[9px] font-bold px-1.5 py-0.5 rounded">متوقف</span>
+                          }
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                        <div>
+                          <span class="text-slate-400">السنة الدراسية:</span>
+                          <span class="font-mono font-bold ml-1">{{ getAcademicYearLabel(assign.academicYearId, assign) }}</span>
+                        </div>
+                        <div>
+                          <span class="text-slate-400">تاريخ البدء:</span>
+                          <span class="font-mono ml-1">{{ assign.startDate | date:'yyyy-MM-dd' }}</span>
+                        </div>
+                      </div>
+                      @if (assign.notes) {
+                        <div class="p-2 bg-white rounded border border-slate-100 text-slate-500 italic">
+                          " {{ assign.notes }} "
+                        </div>
+                      }
+                    </div>
+                  } @empty {
+                    <div class="p-6 text-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                      لا توجد تعيينات مسجلة لهذا الموظف حالياً. اضغط على "إسناد تعيين جديد" بالأعلى لربطه بدور وظيفي وسنة دراسية.
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button
+                (click)="showProfileModal.set(false)"
+                class="px-5 py-2 bg-white border border-surface-border text-slate-700 hover:bg-slate-50 font-bold rounded-lg transition-all"
+              >
+                إغلاق النافذة
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL B: ADD / EDIT STAFF MEMBER -->
+      @if (showModal()) {
+         <div (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            <!-- Header -->
+            <div class="bg-[#00236f] text-white px-6 py-4 flex items-center justify-between">
+              <h3 class="font-bold text-sm flex items-center gap-2">
+                <mat-icon>{{ isEditMode() ? 'edit' : 'person_add' }}</mat-icon>
+                <span>{{ isEditMode() ? 'تعديل بيانات عضو الكادر' : 'إضافة عضو كادر جديد' }}</span>
+              </h3>
+              <button (click)="closeModal()" class="text-white/80 hover:text-white">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="p-6 space-y-4 text-xs">
+              <div class="grid grid-cols-1 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">رقم الهوية الوطنية (national_id)</label>
+                  <input
+                    type="text"
+                    formControlName="nationalId"
+                    placeholder="رقم الهوية المكون من 9 أرقام"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">الاسم الأول بالعربية *</label>
+                  <input
+                    type="text"
+                    formControlName="firstNameAr"
+                    placeholder="مثال: محمد"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">اسم العائلة بالعربية *</label>
+                  <input
+                    type="text"
+                    formControlName="familyNameAr"
+                    placeholder="مثال: الخطيب"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Phone (phone_number)</label>
+                  <input type="tel" formControlName="phoneNumber" dir="ltr" placeholder="05x-xxxxxxx" class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all" />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">Email</label>
+                  <input type="email" formControlName="email" dir="ltr" placeholder="name@example.com" class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all" />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">الاسم الأول بالعبرية</label>
+                  <input
+                    type="text"
+                    formControlName="firstNameHe"
+                    placeholder="مثال: מוחמד"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
+                    dir="ltr"
+                  />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">اسم العائلة بالعبرية</label>
+                  <input
+                    type="text"
+                    formControlName="familyNameHe"
+                    placeholder="مثال: אל-חטיב"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
+                     dir="ltr"
+                   />
+                 </div>
+               </div>
+
+                @if (false) {
+                <div class="hidden">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي بالعربية</label>
+                  <input
+                    type="text"
+                    [value]="getPrimaryAssignmentRole(selectedStaffId() || '')" readonly hidden
+                    placeholder="مثال: معلم أول رياضيات"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي بالعبرية</label>
+                  <input
+                    type="text"
+                    [value]="getPrimaryAssignmentRole(selectedStaffId() || '')" readonly hidden
+                    placeholder="مثال: מורה למתמטיקה"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
+                    dir="ltr"
+                  />
+                </div>
+               </div>
+               }
+
+               <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">الجنس</label>
+                  <select
+                    formControlName="genderId"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white"
+                  >
+                    <option value="">غير محدد</option>
+                    @for (gender of (apiService.lookups()?.genders || []); track gender.id) {
+                      <option [value]="gender.id">{{ gender.nameAr }}</option>
+                    }
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">رمز المؤسسة</label>
+                  <select formControlName="institutionId" class="w-full px-3 py-2 rounded-lg border border-surface-border bg-white focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f]">
+                    <option value="" disabled>اختر المؤسسة التعليمية</option>
+                    @for (inst of apiService.institutions(); track inst.id) {
+                      <option [value]="inst.id">{{ inst.nameAr }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+               <div>
+                 <label class="block font-bold text-slate-700 mb-1">التخصص</label>
+                 <select formControlName="specializationId" class="w-full px-3 py-2 rounded-lg border border-surface-border bg-white focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f]">
+                   <option value="">بدون تخصص</option>
+                   @for (specialization of (apiService.publicLookups()['specializations'] || []); track specialization.id) {
+                     @if (specialization.isActive !== false) {
+                       <option [value]="specialization.id">{{ specialization.nameAr }}</option>
+                     }
+                   }
+                 </select>
+               </div>
+
+               <div class="bg-slate-50 p-3 rounded-lg border border-surface-border">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    formControlName="isArchived"
+                    class="w-4 h-4 text-[#00236f] rounded border-slate-300 focus:ring-[#00236f]"
+                  />
+                  <span class="font-bold text-slate-700">مؤرشف / مجاز (تعطيل النشاط)</span>
+                </label>
+              </div>
+
+              <!-- Action buttons -->
+              @if (apiService.usersApi.staffError()) { <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{{ apiService.usersApi.staffError() }}</div> }
+              <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  (click)="closeModal()"
+                  class="px-4 py-2 text-slate-600 hover:bg-slate-100 font-bold rounded-lg transition-all"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  [disabled]="staffForm.invalid || isSaving()"
+                  class="px-5 py-2.5 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white font-bold transition-all shadow-2xs flex items-center gap-2"
+                >
+                  <mat-icon class="text-base">save</mat-icon>
+                  <span>{{ isSaving() ? 'جاري الحفظ...' : 'حفظ البيانات' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- MODAL C: ADD / EDIT STAFF ASSIGNMENT -->
+      @if (showAssignmentModal()) {
+         <div (click)="closeAssignmentModal()" (keydown.escape)="closeAssignmentModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- Header -->
+            <div class="bg-[#00236f] text-white px-6 py-4 flex items-center justify-between">
+              <h3 class="font-bold text-sm flex items-center gap-2">
+                <mat-icon>{{ isAssignmentEditMode() ? 'edit' : 'add_task' }}</mat-icon>
+                <span>{{ isAssignmentEditMode() ? 'تعديل التعيين الأكاديمي' : 'إسناد تعيين أكاديمي جديد' }}</span>
+              </h3>
+              <button (click)="closeAssignmentModal()" class="text-white/80 hover:text-white">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Form -->
+            <form [formGroup]="assignmentForm" (ngSubmit)="saveAssignment()" class="min-h-0 flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">عضو الكادر والموظف *</label>
+                <select
+                  formControlName="staffMemberId"
+                  class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white"
+                >
+                  <option value="" disabled>-- اختر عضو الكادر --</option>
+                  @for (staffItem of apiService.staff(); track staffItem.id) {
+                    <option [value]="staffItem.id">
+                      {{ staffItem.firstNameAr }} {{ staffItem.familyNameAr }}
+                    </option>
+                  }
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">الدور الوظيفي *</label>
+                  <select
+                    formControlName="jobRoleId"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white"
+                  >
+                    <option value="" disabled>-- اختر الدور --</option>
+                    @for (role of activeJobRoles(); track role.id) {
+                      <option [value]="role.id">{{ role.nameAr }}</option>
+                    }
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">السنة الدراسية *</label>
+                  <select
+                    formControlName="academicYearId"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white"
+                  >
+                    <option value="" disabled>-- اختر السنة الدراسية --</option>
+                    @for (year of apiService.academicYears(); track year.id) {
+                      <option [value]="year.id">
+                        {{ year.yearLabel }} {{ year.isCurrent ? '(الحالية)' : '' }}
+                      </option>
+                    }
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">تاريخ البدء *</label>
+                  <input
+                    type="date"
+                    formControlName="startDate"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">تاريخ الانتهاء (اختياري)</label>
+                  <input
+                    type="date"
+                    formControlName="endDate"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                  />
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block font-bold text-slate-700 mb-1">المؤسسة</label>
+                  <select
+                    formControlName="institutionId"
+                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white font-mono"
+                  >
+                    @for (inst of apiService.institutions(); track inst.id) {
+                      <option [value]="inst.id">{{ inst.nameAr || inst.code || inst.id }}</option>
+                    } @empty {
+                      <option value=""></option>
+                    }
+                  </select>
+                </div>
+                <div class="assignment-status-grid col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="rounded-lg border border-surface-border bg-white p-3">
+                    <label class="block font-bold text-slate-700 mb-2">حالة التعيين</label>
+                    <select formControlName="assignmentStatus" class="w-full px-3 py-2 rounded-lg border border-surface-border bg-white focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all">
+                      <option [ngValue]="'ACTIVE'">نشط وفعال</option>
+                      <option [ngValue]="'INACTIVE'">غير نشط</option>
+                      <option [ngValue]="'ARCHIVED'">مؤرشف</option>
+                    </select>
+                  </div>
+                  <div class="rounded-lg border border-surface-border bg-white p-3">
+                    <span class="block font-bold text-slate-700 mb-2">نوع التعيين</span>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                      <input type="checkbox" formControlName="isPrimary" class="w-4 h-4 text-[#00236f] rounded" />
+                      <span>تعيين أساسي للموظف</span>
+                    </label>
+                  </div>
+                  <div class="rounded-lg border border-surface-border bg-white p-3">
+                    <span class="block font-bold text-slate-700 mb-2">حالة التعيين</span>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <label class="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" formControlName="isActive" class="w-4 h-4 text-[#00236f] rounded" />
+                        <span>نشط ومفعل</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer whitespace-nowrap text-rose-700">
+                        <input type="checkbox" formControlName="isArchived" class="w-4 h-4 text-rose-600 rounded" />
+                        <span>مؤرشف</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">ملاحظات إضافية حول التعيين</label>
+                <div class="grid grid-cols-2 gap-2 rounded-lg border border-surface-border bg-slate-50 p-3 max-h-32 overflow-y-auto mb-4">
+                  @for (subject of apiService.subjects(); track subject.id) {
+                    <label class="flex items-center gap-2 cursor-pointer rounded-md px-2 py-1 hover:bg-white">
+                      <input type="checkbox" [checked]="isSubjectSelected(subject.id)" (change)="toggleSubject(subject.id)" class="w-4 h-4 text-[#00236f] rounded" />
+                      <span>{{ subject.nameAr }}</span>
+                    </label>
+                  } @empty {
+                    <span class="col-span-2 text-slate-400">No subjects found.</span>
+                  }
+                </div>
+                <textarea
+                  formControlName="notes"
+                  rows="2"
+                  placeholder="سجل الفصول والصفوف المسؤولة أو أي ملاحظات هامة..."
+                  class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
+                ></textarea>
+              </div>
+
+              @if (apiService.usersApi.staffAssignmentError()) { <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{{ apiService.usersApi.staffAssignmentError() }}</div> }
+              <!-- Buttons -->
+              <div class="sticky bottom-0 z-10 -mx-6 -mb-6 mt-2 flex items-center justify-end gap-3 border-t border-slate-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
+                <button
+                  type="button"
+                  (click)="closeAssignmentModal()"
+                  class="px-4 py-2 text-slate-600 hover:bg-slate-100 font-bold rounded-lg transition-all"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  [disabled]="assignmentForm.invalid || isSavingAssignment()"
+                  class="px-5 py-2.5 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white font-bold transition-all shadow-2xs flex items-center gap-2"
+                >
+                  <mat-icon class="text-base">save</mat-icon>
+                  <span>{{ isSavingAssignment() ? 'جاري الحفظ...' : 'حفظ التعيين' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+
+      <!-- DELETE CONFIRMATION DIALOG (STAFF MEMBER) -->
+      @if (memberToDelete()) {
+         <div (click)="memberToDelete.set(null)" (keydown.escape)="memberToDelete.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-sm p-6 text-center space-y-4 animate-in fade-in">
+            <div class="w-12 h-12 rounded-full bg-rose-50 text-[#E11D48] flex items-center justify-center mx-auto border border-rose-100">
+              <mat-icon class="text-xl">warning</mat-icon>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">تأكيد حذف الموظف</h3>
+              <p class="text-xs text-slate-500 mt-1">
+                هل أنت متأكد من رغبتك في إزالة الموظف <strong class="text-slate-800">{{ memberToDelete()?.firstNameAr }} {{ memberToDelete()?.familyNameAr }}</strong> من النظام نهائياً؟
+              </p>
+            </div>
+            <div class="flex items-center justify-center gap-3 pt-2 text-xs">
+              <button
+                (click)="memberToDelete.set(null)"
+                class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
+              >
+                تراجع
+              </button>
+              <button
+                (click)="confirmDelete()"
+                class="px-5 py-2 rounded-lg bg-[#E11D48] hover:bg-[#ba1a1a] text-white font-bold shadow-2xs"
+              >
+                تأكيد الحذف
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- DELETE CONFIRMATION DIALOG (ASSIGNMENT) -->
+      @if (assignmentToDelete()) {
+         <div (click)="assignmentToDelete.set(null)" (keydown.escape)="assignmentToDelete.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-sm p-6 text-center space-y-4 animate-in fade-in">
+            <div class="w-12 h-12 rounded-full bg-rose-50 text-[#E11D48] flex items-center justify-center mx-auto border border-rose-100">
+              <mat-icon class="text-xl">warning</mat-icon>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">تأكيد إزالة التعيين</h3>
+              <p class="text-xs text-slate-500 mt-1">
+                هل أنت متأكد من حذف التعيين الوظيفي للموظف <strong class="text-slate-800">{{ getStaffName(assignmentToDelete()?.staffMemberId, assignmentToDelete() || undefined) }}</strong>؟
+              </p>
+            </div>
+            <div class="flex items-center justify-center gap-3 pt-2 text-xs">
+              <button
+                (click)="assignmentToDelete.set(null)"
+                class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
+              >
+                تراجع
+              </button>
+              <button
+                (click)="confirmDeleteAssignment()"
+                class="px-5 py-2 rounded-lg bg-[#E11D48] hover:bg-[#ba1a1a] text-white font-bold shadow-2xs"
+              >
+                تأكيد الإزالة
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>

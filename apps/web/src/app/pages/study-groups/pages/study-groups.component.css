@@ -1,0 +1,8 @@
+:host { display: block; }
+.stat-card { background: linear-gradient(135deg, #fff 0%, #f8fafc 100%); }
+.group-row { transition: background-color .18s ease; }
+.group-row:hover { background: #fafafa; }
+.field-error { display: block; color: #be123c; font-size: .7rem; margin-top: .25rem; }
+.detail-box { border-radius: .5rem; background: #f8fafc; padding: .75rem; }
+.detail-box span { display: block; color: #64748b; font-size: .7rem; }
+.detail-box strong { display: block; margin-top: .25rem; color: #1e293b; }

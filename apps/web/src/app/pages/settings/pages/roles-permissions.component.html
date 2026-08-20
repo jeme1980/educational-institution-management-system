@@ -1,0 +1,329 @@
+<div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="roles-management-container" dir="rtl">
+      
+      <!-- Page Navigation Header -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <a routerLink="/settings" class="hover:text-slate-900 transition-colors">الإعدادات</a>
+            <mat-icon class="text-xs">chevron_left</mat-icon>
+            <span class="text-slate-800">الأدوار وصلاحيات الوصول</span>
+          </div>
+          <h1 class="font-headline-lg text-headline-lg font-bold text-slate-900 mt-1 flex items-center gap-3">
+            <mat-icon class="text-slate-700 text-3xl">security</mat-icon>
+            <span>مصفوفة الأدوار والصلاحيات</span>
+          </h1>
+          <p class="text-xs text-slate-500 mt-1">تعديل وصناعة أدوار مخصصة للتحكم الدقيق في البيانات التي يمكن للمعلمين والموظفين الوصول إليها أو تعديلها.</p>
+        </div>
+
+        <button 
+          id="add-new-role-btn"
+          (click)="openAddRoleModal()" 
+          class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-950 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+        >
+          <mat-icon class="text-sm">add_moderator</mat-icon>
+          <span>صناعة دور أمان جديد</span>
+        </button>
+      </div>
+
+      <!-- Success & Error Alert Boxes -->
+      @if (successMessage()) {
+        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between animate-fade-in">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-emerald-500">check_circle</mat-icon>
+            <span>{{ successMessage() }}</span>
+          </div>
+          <button (click)="successMessage.set(null)" class="text-emerald-500 hover:text-emerald-700">
+            <mat-icon class="text-sm">close</mat-icon>
+          </button>
+        </div>
+      }
+
+      @if (errorMessage()) {
+        <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-semibold flex items-center justify-between animate-fade-in">
+          <div class="flex items-center gap-2">
+            <mat-icon class="text-red-500">error</mat-icon>
+            <span>{{ errorMessage() }}</span>
+          </div>
+          <button (click)="errorMessage.set(null)" class="text-red-500 hover:text-red-700">
+            <mat-icon class="text-sm">close</mat-icon>
+          </button>
+        </div>
+      }
+
+      <!-- Grid layout: Roles List (Right) & Permission Mapping Grid (Left) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- List of Roles (Right / Column 1) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 lg:col-span-1">
+          <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-2.5">قائمة أدوار أمان النظام</h3>
+          
+          @if (isLoading()) {
+            <div class="py-12 text-center space-y-2">
+              <svg class="animate-spin h-5 w-5 text-slate-800 mx-auto" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p class="text-[11px] text-slate-400">تحميل الأدوار...</p>
+            </div>
+          } @else {
+            <div class="space-y-2">
+              @for (role of roles(); track role.id) {
+                <div 
+                  [class]="selectedRole()?.id === role.id ? 'border-slate-800 bg-slate-50' : 'border-slate-200/75 hover:bg-slate-50/50'"
+                  class="p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between"
+                  (click)="selectRole(role)"
+                  (keydown.enter)="selectRole(role)"
+                  tabindex="0"
+                  id="role-item-{{role.id}}"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <mat-icon [class]="role.isSystem ? 'text-indigo-600' : 'text-slate-500'" class="text-sm">verified_user</mat-icon>
+                      <span class="font-bold text-slate-900 text-xs">{{ role.nameAr }}</span>
+                    </div>
+                    
+                    @if (role.isSystem) {
+                      <span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[9px] font-bold border border-indigo-100">نظامي مدمج</span>
+                    } @else {
+                      <span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 text-[9px] font-bold border border-stone-200">مخصص</span>
+                    }
+                  </div>
+
+                  <p class="text-[10px] text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                    {{ role.descriptionAr || 'لا يوجد وصف تعريفي لهذا الدور.' }}
+                  </p>
+
+                  <div class="flex items-center justify-between mt-3.5 pt-2 border-t border-slate-100">
+                    <span class="text-[10px] text-slate-400 font-bold">
+                      <mat-icon class="text-[10px] w-3.5 h-3.5 align-middle">vpn_key</mat-icon>
+                      صلاحية مفعلة: {{ role.permissionIds.length }}
+                    </span>
+
+                    <div class="flex gap-1.5" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
+                      @if (!role.isSystem) {
+                        <button 
+                          (click)="openEditRoleModal(role)" 
+                          class="p-1.5 text-slate-500 hover:text-slate-950 hover:bg-slate-200/50 rounded-lg transition-all"
+                          title="تعديل تفاصيل المسمى"
+                        >
+                          <mat-icon class="text-xs">edit</mat-icon>
+                        </button>
+                        <button 
+                          (click)="deleteRole(role)" 
+                          class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                          title="حذف الدور"
+                        >
+                          <mat-icon class="text-xs">delete</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Matrix Matrix Grid Panel (Left / Column 2-3) -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4 lg:col-span-2">
+          @if (!selectedRole()) {
+            <div class="py-32 text-center space-y-3">
+              <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-slate-50 text-slate-400">
+                <mat-icon class="text-2xl">security</mat-icon>
+              </div>
+              <h4 class="text-xs font-bold text-slate-800">يرجى تحديد دور أمني لاستعراض مصفوفة صلاحياته</h4>
+              <p class="text-[11px] text-slate-400 max-w-xs mx-auto">انقر على أحد الأدوار المسجلة في القائمة الجانبية للتحكم بصلاحياتها وتعيينها.</p>
+            </div>
+          } @else {
+            <div class="space-y-4 animate-fade-in" id="permission-matrix-panel">
+              <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">مصفوفة حوكمة الوصول الأمنية</div>
+                  <h3 class="font-bold text-slate-900 text-base">الدور المحدد: {{ selectedRole()?.nameAr }}</h3>
+                  <p class="text-xs text-slate-500 leading-relaxed mt-0.5">{{ selectedRole()?.descriptionAr }}</p>
+                </div>
+
+                @if (selectedRole()?.isSystem) {
+                  <div class="p-2.5 rounded-xl bg-amber-50 text-amber-800 text-[10px] leading-relaxed border border-amber-100 max-w-[240px]">
+                    ⚠️ هذا الدور نظامي مدمج ومحمي برمجياً. لا يمكن تحرير أو تعديل مصفوفتة لمنع شلل النظام.
+                  </div>
+                }
+              </div>
+
+              <!-- Permission Modules Groups -->
+              <div class="space-y-5">
+                @for (module of modules(); track module.code) {
+                  <div class="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                    <!-- Module Group Header with "Select All" Option -->
+                    <div class="px-4 py-3 bg-slate-50/70 border-b border-slate-100 flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <mat-icon class="text-slate-600 text-sm">folder_open</mat-icon>
+                        <span class="font-bold text-slate-900 text-xs">{{ module.name }}</span>
+                      </div>
+
+                      @if (!selectedRole()?.isSystem) {
+                        <label class="flex items-center gap-2 text-[10px] font-bold text-indigo-700 cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            [checked]="isAllModulePermissionsSelected(module.code)"
+                            (change)="toggleAllModulePermissions($event, module.code)"
+                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-600/20"
+                          />
+                          <span>تحديد الكل في هذا القسم</span>
+                        </label>
+                      }
+                    </div>
+
+                    <!-- Individual Permissions Checkboxes inside Module -->
+                    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      @for (perm of getPermissionsByModule(module.code); track perm.id) {
+                        <label 
+                          [class]="selectedRole()?.isSystem ? 'opacity-85 pointer-events-none' : 'cursor-pointer hover:bg-slate-50/60'"
+                          class="p-2.5 rounded-lg border border-slate-100 flex items-start gap-3 transition-colors"
+                        >
+                          <input 
+                            type="checkbox" 
+                            [checked]="isPermissionSelected(perm.id)"
+                            [disabled]="selectedRole()?.isSystem || false"
+                            (change)="togglePermissionSelection($event, perm.id)"
+                            class="rounded border-slate-300 text-slate-900 focus:ring-slate-900/20 mt-0.5"
+                          />
+                          <div>
+                            <span class="block text-xs font-bold text-slate-900">{{ perm.nameAr }}</span>
+                            <span class="block text-[10px] text-slate-400 font-normal leading-tight mt-0.5">{{ perm.descriptionAr }}</span>
+                          </div>
+                        </label>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Save Changes Bar (Only for Custom Roles) -->
+              @if (!selectedRole()?.isSystem) {
+                <div class="flex justify-end pt-4 border-t border-slate-100 gap-3">
+                  <button 
+                    (click)="resetSelectedRolePermissions()"
+                    class="py-2.5 px-4 rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    استعادة الحالة الأصلية
+                  </button>
+
+                  <button 
+                    id="save-permissions-matrix-btn"
+                    [disabled]="isSavingMatrix()"
+                    (click)="savePermissionsMatrix()"
+                    class="py-2.5 px-5 rounded-xl text-white bg-slate-900 hover:bg-slate-950 text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    @if (isSavingMatrix()) {
+                      <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    } @else {
+                      <mat-icon class="text-sm">save_alt</mat-icon>
+                    }
+                    <span>حفظ وتطبيق الصلاحيات</span>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+      </div>
+
+      <!-- ADD / EDIT ROLE MODAL -->
+      @if (showRoleFormModal()) {
+        <div class="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" id="role-form-modal">
+          <div class="w-full max-w-sm bg-white rounded-2xl border border-stone-200/80 shadow-2xl overflow-hidden p-6 space-y-4">
+            
+            <div class="flex items-center gap-3 border-b border-stone-100 pb-3">
+              <div class="w-10 h-10 rounded-full bg-slate-50 text-slate-800 flex items-center justify-center">
+                <mat-icon class="text-xl">add_moderator</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-stone-950">
+                  {{ isEditMode() ? 'تعديل مسمى دور الأمان' : 'صناعة دور أمان جديد' }}
+                </h3>
+                <p class="text-[11px] text-stone-500">توفير مسمى فريد يطابق الرتبة الوظيفية</p>
+              </div>
+            </div>
+
+            <form [formGroup]="roleForm" class="space-y-4">
+              <!-- Code (Only for new roles) -->
+              <div class="space-y-1.5">
+                <label for="code" class="block text-xs font-semibold text-stone-700">رمز الدور الفني (Code)</label>
+                <input 
+                  id="code" 
+                  type="text" 
+                  formControlName="code"
+                  placeholder="مثال: SECRETARY"
+                  [readonly]="isEditMode()"
+                  class="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950 uppercase"
+                  [class.opacity-50]="isEditMode()"
+                />
+                <span class="text-[9px] text-slate-400 block">رمز أحرف إنجليزية فريدة يستخدمه النظام داخلياً للتحقق من الموثوقية.</span>
+                @if (roleForm.get('code')?.touched && roleForm.get('code')?.invalid) {
+                  <p class="text-[11px] text-red-600 font-medium">الرمز مطلوب ويجب أن يتكون من أحرف إنجليزية فقط</p>
+                }
+              </div>
+
+              <!-- Name Arabic -->
+              <div class="space-y-1.5">
+                <label for="nameAr" class="block text-xs font-semibold text-stone-700">الاسم الوظيفي (عربي)</label>
+                <input 
+                  id="nameAr" 
+                  type="text" 
+                  formControlName="nameAr"
+                  placeholder="مثال: سكرتير المدرسة"
+                  class="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950"
+                />
+                @if (roleForm.get('nameAr')?.touched && roleForm.get('nameAr')?.invalid) {
+                  <p class="text-[11px] text-red-600 font-medium">اسم الدور مطلوب بالعربية</p>
+                }
+              </div>
+
+              <!-- Description -->
+              <div class="space-y-1.5">
+                <label for="descriptionAr" class="block text-xs font-semibold text-stone-700">وصف موجز للصلاحيات والمسؤوليات</label>
+                <textarea 
+                  id="descriptionAr" 
+                  formControlName="descriptionAr"
+                  placeholder="اكتب خلاصة مهام هذا الدور ليكون واضحاً..."
+                  rows="2"
+                  class="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950 resize-none"
+                ></textarea>
+              </div>
+            </form>
+
+            <div class="flex gap-3 pt-2">
+              <button 
+                (click)="showRoleFormModal.set(false)"
+                class="flex-1 py-2 px-4 rounded-xl text-stone-700 bg-stone-100 hover:bg-stone-200 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button 
+                id="submit-role-form-btn"
+                [disabled]="roleForm.invalid || isSubmittingForm()"
+                (click)="saveRole()"
+                class="flex-1 py-2 px-4 rounded-xl text-white bg-slate-900 hover:bg-slate-950 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                @if (isSubmittingForm()) {
+                  <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                } @else {
+                  <mat-icon class="text-xs">done</mat-icon>
+                }
+                <span>حفظ المسمى</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      }
+
+    </div>

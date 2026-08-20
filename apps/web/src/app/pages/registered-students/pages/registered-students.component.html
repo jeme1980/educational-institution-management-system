@@ -1,0 +1,79 @@
+<div class="registered-page" dir="rtl">
+  @if (toast(); as message) { <div class="toast" [class.error]="message.type === 'error'"><mat-icon>{{message.type === 'success' ? 'check_circle' : 'error'}}</mat-icon>{{message.message}}</div> }
+  <div class="page-shell">
+    <header class="page-header"><div><div class="eyebrow"><mat-icon>assignment_ind</mat-icon>إدارة السجلات</div><h1>الطلاب المسجلون</h1><p>قائمة الطلاب المسجلين ضمن المؤسسة والسنة الدراسية المحددتين.</p></div><div class="context"><span>{{institution()?.nameAr || 'المؤسسة التعليمية'}}</span><strong>{{year()?.yearLabel || 'السنة الحالية'}}</strong></div></header>
+    <section class="filters"><div class="filter-title"><mat-icon>filter_alt</mat-icon><strong>تصفية الطلاب</strong><button type="button" (click)="search.set(''); classCodeFilter.set(''); genderId.set(''); featureId.set('')">مسح الفلاتر</button></div><div class="filter-grid"><label class="search"><span>بحث بالاسم أو الهوية</span><input [value]="search()" (input)="search.set($any($event.target).value)" placeholder="اكتب اسم الطالب أو رقم الهوية" /></label><label><span>اسم الصف (classCode)</span><select [value]="classCodeFilter()" (change)="classCodeFilter.set($any($event.target).value)"><option value="">كل الصفوف</option>@for (code of classCodes(); track code) {<option [value]="code">{{code}}</option>}</select></label><label><span>الجنس</span><select [value]="genderId()" (change)="genderId.set($any($event.target).value)"><option value="">كل الجنس</option>@for (item of genders(); track item.id) {<option [value]="item.id">{{item.nameAr}}</option>}</select></label><label><span>ميزة الطالب</span><select [value]="featureId()" (change)="featureId.set($any($event.target).value)"><option value="">كل الميزات</option>@for (item of features(); track item.id) {<option [value]="item.id">{{item.nameAr}}</option>}</select></label></div></section>
+    <section class="table-card">
+      <div class="table-head"><div><h2>سجل الطلاب</h2><p>{{rows().length}} طالب مطابق للفلاتر</p></div><span class="count">{{rows().length}} سجل</span></div>
+      @if (loading()) { <div class="empty">جاري تحميل البيانات...</div> }
+      @else if (error()) { <div class="empty error-text">{{error()}}<button type="button" (click)="ngOnInit()">إعادة المحاولة</button></div> }
+      @else {
+        <div class="table-scroll registered-clean-table">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الطالب</th>
+                <th>رقم الهوية</th>
+                <th>الصف</th>
+                <th>الجنس</th>
+                <th>ميزة الطالب</th>
+                <th>تاريخ الميلاد</th>
+                <th>الإجراء</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.enrollment.id; let rowIndex = $index) {
+                <tr>
+                  <td>{{ rowIndex + 1 }}</td>
+                  <td class="strong">{{ (row.student?.firstNameAr || '') + ' ' + (row.student?.lastNameAr || '') }}</td>
+                  <td>{{ row.student?.nationalId || '—' }}</td>
+                  <td>
+                    @if (editingId() === row.enrollment.id) {
+                      <select class="inline-select" [value]="editClassId()" (change)="editClassId.set($any($event.target).value)">
+                        @for (item of classes(); track item.id) { <option [value]="item.id">{{ item.classCode || (item.gradeLevelInfo?.codeNumber + '-' + item.parallelNumber) }}</option> }
+                      </select>
+                    } @else { <span class="strong">{{ classCode(row) || 'غير محدد' }}</span> }
+                  </td>
+                  <td>{{ genderName(row) }}</td>
+                  <td>
+                    @if (editingId() === row.enrollment.id) {
+                      <select class="inline-select" [value]="editFeatureId()" (change)="editFeatureId.set($any($event.target).value)">
+                        <option value="">بدون ميزة</option>
+                        @for (item of features(); track item.id) { <option [value]="item.id">{{ item.nameAr }}</option> }
+                      </select>
+                    } @else { {{ featureName(row) }} }
+                  </td>
+                  <td>{{ row.student?.birthDate ? (row.student.birthDate | date:'yyyy-MM-dd') : '—' }}</td>
+                  <td>
+                    @if (editingId() === row.enrollment.id) {
+                      <button class="icon-btn save" type="button" (click)="saveEdit()" [disabled]="saving()"><mat-icon>check</mat-icon></button>
+                      <button class="icon-btn" type="button" (click)="cancelEdit()"><mat-icon>close</mat-icon></button>
+                    } @else {
+                      <button class="icon-btn" type="button" (click)="openEdit(row)" title="تعديل الصف والميزة"><mat-icon>edit</mat-icon></button>
+                    }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="8" class="empty">لا توجد سجلات مطابقة للفلاتر.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="table-scroll"><table><thead><tr><th>اسم المدرسة</th><th>السنة الدراسية</th><th>الاسم الأول</th><th>الاسم الثاني</th><th>الاسم الكامل</th><th>الصف</th><th>الجنس</th><th>تاريخ الميلاد</th><th>مميزات الطالب</th><th>المدينة</th><th>إجراء</th></tr></thead>
+          <tbody>
+            @for (row of rows(); track row.enrollment.id) {
+              <tr><td>{{institution()?.nameAr || '—'}}</td><td>{{year()?.yearLabel || '—'}}</td><td>{{row.student?.firstNameAr || '—'}}</td><td>{{row.student?.lastNameAr || '—'}}</td><td class="strong">{{row.student?.firstNameAr || ''}} {{row.student?.lastNameAr || ''}}</td>
+                <td>@if (editingId() === row.enrollment.id) { <select class="inline-select" [value]="editClassId()" (change)="editClassId.set($any($event.target).value)">@for (item of classes(); track item.id) { <option [value]="item.id">{{item.classCode || (item.gradeLevelInfo?.codeNumber + '-' + item.parallelNumber)}}</option> }</select> } @else { <span class="strong">{{classCode(row) || 'غير محدد'}}</span> }</td>
+                <td>{{genderName(row)}}</td><td>{{row.student?.birthDate ? (row.student.birthDate | date:'yyyy-MM-dd') : '—'}}</td>
+                <td>@if (editingId() === row.enrollment.id) { <select class="inline-select" [value]="editFeatureId()" (change)="editFeatureId.set($any($event.target).value)"><option value="">بدون ميزة</option>@for (item of features(); track item.id) { <option [value]="item.id">{{item.nameAr}}</option> }</select> } @else { {{featureName(row)}} }</td>
+                <td>{{row.student?.town?.nameAr || '—'}}</td>
+                <td>@if (editingId() === row.enrollment.id) { <button class="icon-btn save" type="button" (click)="saveEdit()" [disabled]="saving()"><mat-icon>check</mat-icon></button><button class="icon-btn" type="button" (click)="cancelEdit()"><mat-icon>close</mat-icon></button> } @else { <button class="icon-btn" type="button" (click)="openEdit(row)" title="تعديل الصف والميزة"><mat-icon>edit</mat-icon></button> }</td>
+              </tr>
+            } @empty { <tr><td colspan="11" class="empty">لا توجد سجلات مطابقة للفلاتر.</td></tr> }
+          </tbody>
+        </table></div>
+      }
+    </section>
+  </div>
+</div>

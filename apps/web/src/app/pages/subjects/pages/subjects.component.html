@@ -1,0 +1,734 @@
+<div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="subjects-container" dir="rtl">
+  
+  <!-- Toast Notification -->
+  @if (toast()) {
+    <div class="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-w-sm">
+      @if (toast()?.type === 'success') {
+        <mat-icon class="text-emerald-400">check_circle</mat-icon>
+      } @else if (toast()?.type === 'error') {
+        <mat-icon class="text-rose-400">error</mat-icon>
+      } @else {
+        <mat-icon class="text-blue-400">info</mat-icon>
+      }
+      <span class="text-xs font-bold leading-relaxed">{{ toast()?.message }}</span>
+      <button type="button" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
+        <mat-icon class="text-sm block">close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+    <div>
+      <span class="text-[11px] font-extrabold text-[#00236f] bg-[#00236f]/5 px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">بوابة شؤون المناهج</span>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">المواد الدراسية والمناهج</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">تخطيط وتوجيه المقررات التعليمية، الوحدات التفصيلية، المهارات التعليمية، والمخرجات المعتمدة بذكاء.</p>
+    </div>
+    <button 
+      type="button"
+      (click)="openCreateSubjectModal()" 
+      class="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#00236f] hover:bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer font-bold text-xs"
+    >
+      <mat-icon class="text-[18px]">add_circle</mat-icon>
+      <span>إضافة مادة تعليمية جديدة</span>
+    </button>
+  </div>
+
+  <!-- Quick Metrics Dashboard (Bento Grid) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+    <!-- Metric 1: Total Subjects -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 min-h-[104px] flex items-center justify-between gap-3 shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-0.5 min-w-0">
+        <span class="text-xs font-bold text-slate-400">المواد الأكاديمية</span>
+        <div class="text-2xl font-black text-slate-800">{{ totalSubjects() }}</div>
+        <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block">مادة دراسية مقيدة</span>
+      </div>
+      <div class="h-10 w-10 shrink-0 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-lg">menu_book</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 2: Total Topics/Units -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 min-h-[104px] flex items-center justify-between gap-3 shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-0.5 min-w-0">
+        <span class="text-xs font-bold text-slate-400">الوحدات والدروس التفصيلية</span>
+        <div class="text-2xl font-black text-[#00236f]">{{ totalTopics() }}</div>
+        <span class="text-[10px] text-sky-600 font-bold bg-sky-50 px-2 py-0.5 rounded-md inline-block">موضوع مسجل في المناهج</span>
+      </div>
+      <div class="h-10 w-10 shrink-0 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-lg">list_alt</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 3: Total Skills -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 min-h-[104px] flex items-center justify-between gap-3 shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-0.5 min-w-0">
+        <span class="text-xs font-bold text-slate-400">المهارات والمخرجات</span>
+        <div class="text-2xl font-black text-slate-800">{{ totalSkills() }}</div>
+        <span class="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-md inline-block">مخرج تعليمي يتم تقييمه</span>
+      </div>
+      <div class="h-10 w-10 shrink-0 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-lg">psychology</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 4: Avg topics per Subject -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-4 min-h-[104px] flex items-center justify-between gap-3 shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-0.5 min-w-0">
+        <span class="text-xs font-bold text-slate-400">كثافة المنهاج التقريبية</span>
+        <div class="text-2xl font-black text-slate-800">{{ avgTopicsPerSubject() }}</div>
+        <span class="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md inline-block">مواضيع لكل مادة كمتوسط</span>
+      </div>
+      <div class="h-10 w-10 shrink-0 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-lg">analytics</mat-icon>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters / Search section -->
+  <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
+    <div class="relative w-full md:w-96">
+      <mat-icon class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</mat-icon>
+      <input
+        type="text"
+        [value]="searchQuery()"
+        (input)="searchQuery.set($any($event.target).value)"
+        placeholder="ابحث عن مادة، كود، موضوع، أو مهارة تعليمية..."
+        class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+      />
+    </div>
+
+    <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+      <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+        <button
+          type="button"
+          (click)="statusFilter.set('all')"
+          [class]="statusFilter() === 'all' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        >
+          الكل
+        </button>
+        <button
+          type="button"
+          (click)="statusFilter.set('active')"
+          [class]="statusFilter() === 'active' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        >
+          نشطة
+        </button>
+        <button
+          type="button"
+          (click)="statusFilter.set('inactive')"
+          [class]="statusFilter() === 'inactive' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
+        >
+          غير نشطة
+        </button>
+      </div>
+
+      @if (searchQuery() || statusFilter() !== 'all') {
+        <button
+          type="button"
+          (click)="resetFilters()"
+          class="text-xs text-rose-600 font-bold hover:underline px-2 cursor-pointer flex items-center gap-1"
+        >
+          <mat-icon class="text-sm block">refresh</mat-icon>
+          <span>تفريغ</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Master Detail Layout (2 Columns) -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- Left Column: Master List of Subjects -->
+    <div class="lg:col-span-5 space-y-3">
+      <div class="flex items-center justify-between px-1 mb-1">
+        <span class="text-xs font-extrabold text-slate-500">سجل المواد دراسية ({{ filteredSubjects().length }})</span>
+        <span class="text-[10px] text-slate-400 font-bold">انقر على المادة للتحكم بالتفاصيل</span>
+      </div>
+
+      <div class="space-y-3 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
+        @for (subject of filteredSubjects(); track subject.id) {
+        @let colorScheme = getSubjectColor(subject.nameAr);
+          @let topicsCount = getSubjectTopics(subject.id).length;
+          @let skillsCount = getSubjectSkills(subject.id).length;
+          @let isSelected = selectedSubject().id === subject.id;
+
+          <div
+            (click)="selectedSubjectId.set(subject.id)"
+            (keydown.enter)="selectedSubjectId.set(subject.id)"
+            tabindex="0"
+            [class]="isSelected ? 'bg-white border-[#00236f] ring-2 ring-[#00236f]/10 shadow-md' : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
+            class="p-4 rounded-2xl border transition-all cursor-pointer relative group"
+          >
+            <!-- Top Status Row -->
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span [class]="colorScheme.bg" class="w-2.5 h-2.5 rounded-full inline-block"></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span [class]="subject.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-500 border-slate-200'" class="px-2 py-0.5 rounded-md text-[10px] font-black border">
+                  {{ subject.isActive ? 'مفعلة' : 'غير مفعلة' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Subject Title -->
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-black text-slate-800 group-hover:text-[#00236f] transition-colors">
+                {{ subject.nameAr }}
+              </h3>
+              <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                <button
+                  type="button"
+                  (click)="$event.stopPropagation(); openEditSubjectModal(subject)"
+                  title="تعديل المادة"
+                  class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-[#00236f] transition-all cursor-pointer"
+                >
+                  <mat-icon class="text-base block">edit</mat-icon>
+                </button>
+                <button
+                  type="button"
+                  (click)="$event.stopPropagation(); confirmDelete('subject', subject.id, subject.nameAr)"
+                  title="حذف المادة"
+                  class="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
+                >
+                  <mat-icon class="text-base block">delete_outline</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <!-- Stats badges -->
+            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
+              <span class="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md font-bold">
+                <mat-icon class="text-xs text-slate-400 block">list_alt</mat-icon>
+                <span>{{ topicsCount }} موضوع</span>
+              </span>
+              <span class="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md font-bold">
+                <mat-icon class="text-xs text-slate-400 block">psychology</mat-icon>
+                <span>{{ skillsCount }} مهارة ومخرج</span>
+              </span>
+            </div>
+          </div>
+        } @empty {
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-3">
+            <mat-icon class="text-4xl text-slate-300">menu_book</mat-icon>
+            <p class="text-xs font-bold text-slate-500">لا توجد مواد دراسية تطابق خيارات البحث الحالية.</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Column: Detail View for Selected Subject (Topics & Skills) -->
+    <div class="lg:col-span-7">
+      @if (selectedSubject(); as activeSubject) {
+        @let colorScheme = getSubjectColor(activeSubject.nameAr);
+        @let topicsList = getSubjectTopics(activeSubject.id);
+        @let skillsList = getSubjectSkills(activeSubject.id);
+
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-6 space-y-6 shadow-xs">
+          
+          <!-- Detail Header -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div [class]="colorScheme.lightBg + ' ' + colorScheme.text" class="h-12 w-12 rounded-xl flex items-center justify-center font-black text-xl shrink-0">
+                <mat-icon class="text-2xl">auto_stories</mat-icon>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-lg font-black text-slate-800">{{ activeSubject.nameAr }}</h2>
+                  <span class="text-xs font-extrabold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5 font-bold">إدارة مفصلة لوحدات المقرر والمهارات التعليمية التابعة.</p>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="openEditSubjectModal(activeSubject)"
+                class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <mat-icon class="text-sm block">edit</mat-icon>
+                <span>تعديل المادة</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 1: Topics & Modules (الوحدات والمواضيع الدراسية) -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-sky-600 text-lg">list_alt</mat-icon>
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider">الوحدات والدروس التفصيلية ({{ topicsList.length }})</h3>
+              </div>
+              <button
+                type="button"
+                (click)="openCreateTopicModal()"
+                class="text-xs text-[#00236f] font-extrabold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <mat-icon class="text-sm block">add</mat-icon>
+                <span>إضافة موضوع جديد</span>
+              </button>
+            </div>
+
+            <div class="space-y-2">
+              @for (topic of topicsList; track topic.id) {
+                <div class="bg-slate-50/70 hover:bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex items-center justify-between transition-all group">
+                  <div class="flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-sky-500 shrink-0"></span>
+                    <div>
+                      <div class="text-xs font-black text-slate-800 flex items-center gap-2">
+                        <span>{{ topic.nameAr }}</span>
+                        @if (topic.nameHe) {
+                          <span class="text-[10px] text-slate-400 font-normal">({{ topic.nameHe }})</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <span [class]="topic.isActive ? 'text-emerald-600 bg-emerald-50' : 'text-slate-400 bg-slate-100'" class="text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      {{ topic.isActive ? 'نشط' : 'معطل' }}
+                    </span>
+                    <button
+                      type="button"
+                      (click)="openEditTopicModal(topic)"
+                      class="p-1 text-slate-400 hover:text-[#00236f] hover:bg-white rounded-md transition-all cursor-pointer"
+                      title="تعديل الموضوع"
+                    >
+                      <mat-icon class="text-sm block">edit</mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="confirmDelete('topic', topic.id, topic.nameAr)"
+                      class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
+                      title="حذف الموضوع"
+                    >
+                      <mat-icon class="text-sm block">delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="border border-dashed border-slate-200 rounded-xl p-6 text-center space-y-2">
+                  <mat-icon class="text-2xl text-slate-300">note_add</mat-icon>
+                  <p class="text-xs font-bold text-slate-500">لا توجد مواضيع أو دروس مسجلة لهذه المادة بعد.</p>
+                  <button
+                    type="button"
+                    (click)="openCreateTopicModal()"
+                    class="text-xs text-[#00236f] font-black underline cursor-pointer inline-block"
+                  >
+                    انقر هنا لإضافة أول موضوع
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Section 2: Learning Skills & Outcomes (المهارات والمخرجات التعليمية) -->
+          <div class="space-y-3 pt-4 border-t border-slate-100">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-violet-600 text-lg">psychology</mat-icon>
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider">المهارات والمخرجات المكتسبة ({{ skillsList.length }})</h3>
+              </div>
+              <button
+                type="button"
+                (click)="openCreateSkillModal()"
+                class="text-xs text-[#00236f] font-extrabold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <mat-icon class="text-sm block">add</mat-icon>
+                <span>إضافة مهارة جديدة</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              @for (skill of skillsList; track skill.id) {
+                <div class="bg-violet-50/40 hover:bg-violet-50/80 border border-violet-100 rounded-xl p-3 flex items-center justify-between transition-all group">
+                  <div class="flex items-center gap-2 min-w-0 pr-1">
+                    <mat-icon class="text-violet-500 text-base shrink-0">check_circle_outline</mat-icon>
+                    <div class="truncate">
+                      <span class="text-xs font-black text-slate-800 block truncate">{{ skill.nameAr }}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      (click)="openEditSkillModal(skill)"
+                      class="p-1 text-slate-400 hover:text-[#00236f] hover:bg-white rounded-md transition-all cursor-pointer"
+                      title="تعديل المهارة"
+                    >
+                      <mat-icon class="text-sm block">edit</mat-icon>
+                    </button>
+                    <button
+                      type="button"
+                      (click)="confirmDelete('skill', skill.id, skill.nameAr)"
+                      class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
+                      title="حذف المهارة"
+                    >
+                      <mat-icon class="text-sm block">delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="sm:col-span-2 border border-dashed border-slate-200 rounded-xl p-6 text-center space-y-2">
+                  <mat-icon class="text-2xl text-slate-300">verified</mat-icon>
+                  <p class="text-xs font-bold text-slate-500">لا توجد مهارات أو مخرجات تعلم مسجلة لهذه المادة.</p>
+                  <button
+                    type="button"
+                    (click)="openCreateSkillModal()"
+                    class="text-xs text-[#00236f] font-black underline cursor-pointer inline-block"
+                  >
+                    إضافة مهارة جديدة للتقييم
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+      } @else {
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-12 text-center space-y-3">
+          <mat-icon class="text-5xl text-slate-300">touch_app</mat-icon>
+          <h3 class="text-sm font-black text-slate-700">لم يتم اختيار أي مادة تعليمية</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto font-bold">اختر مادة دراسية من القائمة المقابلة لعرض وتحديث تفاصيل الدروس والمخرجات التعليمية المعتمدة.</p>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- Subject Creator / Editor Modal -->
+  @if (showSubjectModal()) {
+    <div (click)="closeSubjectModal()" (keydown.escape)="closeSubjectModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
+        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
+          <h3 class="font-extrabold text-sm flex items-center gap-2">
+            <mat-icon class="block">{{ isEditingSubject() ? 'edit' : 'add_circle' }}</mat-icon>
+            <span>{{ isEditingSubject() ? 'تعديل بيانات المادة الدراسية' : 'إضافة مادة تعليمية جديدة' }}</span>
+          </h3>
+          <button type="button" (click)="closeSubjectModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
+            <mat-icon class="block">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="subjectForm" (ngSubmit)="saveSubject()" class="p-6 space-y-4 font-bold" dir="rtl">
+          <select formControlName="academicYearId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
+            <option value="">اختر السنة الدراسية</option>
+            @for (year of apiService.academicYears(); track year.id) { <option [value]="year.id">{{ year.yearLabel }}</option> }
+          </select>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">اسم المادة الأكاديمية (بالعربية) *</label>
+            <input
+              type="text"
+              formControlName="nameAr"
+              placeholder="مثال: الرياضيات التطبيقية"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (subjectForm.get('nameAr')?.touched && subjectForm.get('nameAr')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">اسم المادة بالعربية مطلوب.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">كود / رمز المادة (Subject Code) *</label>
+            <input
+              type="text"
+              placeholder="مثال: MATH-101"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (subjectForm.get('code')?.touched && subjectForm.get('code')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">رمز المادة مطلوب.</p>
+            }
+          </div>
+
+          <!-- Active status toggle -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between mt-2">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs font-extrabold text-slate-700">حالة المادة نشطة</span>
+              <span class="text-[10px] text-slate-400">إتاحة المادة في جداول الامتحانات والحصص</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+            </label>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+            <button
+              type="button"
+              (click)="closeSubjectModal()"
+              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              type="submit"
+              [disabled]="subjectForm.invalid || isProcessing()"
+              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              @if (isProcessing()) {
+                <mat-icon class="animate-spin text-sm block">sync</mat-icon>
+                <span>جاري الحفظ...</span>
+              } @else {
+                <mat-icon class="text-sm block">save</mat-icon>
+                <span>حفظ المادة</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Topic Creator / Editor Modal -->
+  @if (showTopicModal()) {
+    <div (click)="closeTopicModal()" (keydown.escape)="closeTopicModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
+        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
+          <h3 class="font-extrabold text-sm flex items-center gap-2">
+            <mat-icon class="block">{{ isEditingTopic() ? 'edit' : 'add_task' }}</mat-icon>
+            <span>{{ isEditingTopic() ? 'تعديل الموضوع / الوحدة الدراسية' : 'إضافة وحدة دراسية جديدة' }}</span>
+          </h3>
+          <button type="button" (click)="closeTopicModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
+            <mat-icon class="block">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="topicForm" (ngSubmit)="saveTopic()" class="p-6 space-y-4 font-bold" dir="rtl">
+          <input type="hidden" formControlName="academicYearId" /><input type="hidden" formControlName="subjectId" />
+          <label class="block text-xs font-bold text-slate-600">الطبقة *</label>
+          <select formControlName="gradeLevelId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
+            <option value="">اختر الطبقة</option>
+            @for (grade of (apiService.lookups()?.gradeLevels || []); track grade.id) {
+              <option [value]="grade.id">{{ grade.nameAr }} ({{ grade.codeNumber }})</option>
+            }
+          </select>
+          <div class="bg-[#00236f]/5 p-3 rounded-xl border border-[#00236f]/10 mb-2">
+            <span class="text-[10px] text-slate-400 block font-bold">المادة الملحق بها</span>
+            <span class="text-xs font-black text-[#00236f]">{{ selectedSubject().nameAr }}</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">اسم الوحدة الدراسية (بالعربية) *</label>
+            <input
+              type="text"
+              formControlName="nameAr"
+              placeholder="مثال: علم الجبر والهندسة التحليلية"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (topicForm.get('nameAr')?.touched && topicForm.get('nameAr')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">اسم الوحدة مطلوب.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">اسم الوحدة بالعبرية (اختياري)</label>
+            <input
+              type="text"
+              formControlName="nameHe"
+              placeholder="مثال: אלגברה וגאומטריה"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">رمز موضوع فرعي (Code)</label>
+            <input
+              type="text"
+              placeholder="مثال: MATH-ALG-1"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          <!-- Active status toggle -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between mt-2">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs font-extrabold text-slate-700">حالة موضوع الوحدة نشط</span>
+              <span class="text-[10px] text-slate-400">إتاحة الموضوع في الخطط والوحدات التعليمية المدرسية</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+            </label>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+            <button
+              type="button"
+              (click)="closeTopicModal()"
+              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              type="submit"
+              [disabled]="topicForm.invalid || isProcessing()"
+              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              @if (isProcessing()) {
+                <mat-icon class="animate-spin text-sm block">sync</mat-icon>
+                <span>جاري الحفظ...</span>
+              } @else {
+                <mat-icon class="text-sm block">save</mat-icon>
+                <span>حفظ الوحدة الدراسية</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Skill Creator / Editor Modal -->
+  @if (showSkillModal()) {
+    <div (click)="closeSkillModal()" (keydown.escape)="closeSkillModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
+        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
+          <h3 class="font-extrabold text-sm flex items-center gap-2">
+            <mat-icon class="block">{{ isEditingSkill() ? 'edit' : 'psychology' }}</mat-icon>
+            <span>{{ isEditingSkill() ? 'تعديل المهارة / المخرج التعليمي' : 'تسجيل مهارة تعليمية جديدة' }}</span>
+          </h3>
+          <button type="button" (click)="closeSkillModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
+            <mat-icon class="block">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="skillForm" (ngSubmit)="saveSkill()" class="p-6 space-y-4 font-bold" dir="rtl">
+          <input type="hidden" formControlName="academicYearId" /><input type="hidden" formControlName="subjectId" />
+          <label class="block text-xs font-bold text-slate-600">الطبقة *</label>
+          <select formControlName="gradeLevelId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
+            <option value="">اختر الطبقة</option>
+            @for (grade of (apiService.lookups()?.gradeLevels || []); track grade.id) {
+              <option [value]="grade.id">{{ grade.nameAr }} ({{ grade.codeNumber }})</option>
+            }
+          </select>
+          <div class="bg-[#00236f]/5 p-3 rounded-xl border border-[#00236f]/10 mb-2">
+            <span class="text-[10px] text-slate-400 block font-bold">المادة الأكاديمية التابعة</span>
+            <span class="text-xs font-black text-[#00236f]">{{ selectedSubject().nameAr }}</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">عنوان المهارة أو المخرج التعليمي *</label>
+            <input
+              type="text"
+              formControlName="nameAr"
+              placeholder="مثال: القدرة على حل المعادلات الأُسية بسرعة"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (skillForm.get('nameAr')?.touched && skillForm.get('nameAr')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">عنوان المهارة مطلوب.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">رمز المهارة المرجعي (Code)</label>
+            <input
+              type="text"
+              placeholder="مثال: SKILL-ALG-01"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          <!-- Active status toggle -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between mt-2">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs font-extrabold text-slate-700">تفعيل المهارة بالتقييم</span>
+              <span class="text-[10px] text-slate-400">إدراج المهارة ضمن بنود ومخرجات نواتج التعلم</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+            </label>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+            <button
+              type="button"
+              (click)="closeSkillModal()"
+              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              type="submit"
+              [disabled]="skillForm.invalid || isProcessing()"
+              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              @if (isProcessing()) {
+                <mat-icon class="animate-spin text-sm block">sync</mat-icon>
+                <span>جاري الحفظ...</span>
+              } @else {
+                <mat-icon class="text-sm block">save</mat-icon>
+                <span>حفظ المهارة</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Overlay Modal -->
+  @if (confirmDeleteTarget(); as target) {
+    <div (click)="confirmDeleteTarget.set(null)" (keydown.escape)="confirmDeleteTarget.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right font-bold" dir="rtl">
+        <div class="p-6 space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+            <mat-icon class="text-2xl">warning_amber</mat-icon>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-800">تأكيد عملية الحذف النهائية</h3>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              هل أنت متأكد من رغبتك في حذف 
+              <span class="text-rose-600 font-black">"{{ target.name }}"</span>؟
+              @if (target.type === 'subject') {
+                <span class="block text-[10px] text-rose-500 font-bold mt-1 bg-rose-50 p-2 rounded-lg border border-rose-100">
+                  تنبيه: سيتم حذف جميع المواضيع والمهارات المرتبطة بهذه المادة الدراسية تلقائياً!
+                </span>
+              } @else {
+                <span class="block text-[10px] text-slate-400 mt-1">لا يمكن التراجع عن هذا الإجراء لاحقاً.</span>
+              }
+            </p>
+          </div>
+        </div>
+        <div class="bg-slate-50 p-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          <button 
+            type="button"
+            (click)="confirmDeleteTarget.set(null)"
+            class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs transition-all cursor-pointer font-bold border border-transparent hover:border-slate-200"
+          >
+            إلغاء التراجع
+          </button>
+          <button 
+            type="button"
+            (click)="executeDelete()"
+            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs transition-all shadow-md font-bold cursor-pointer"
+          >
+            تأكيد الحذف النهائي
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

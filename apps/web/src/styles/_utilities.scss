@@ -1,0 +1,57 @@
+.core-container { width: min(100% - 4rem, 90rem); margin-inline: auto; }
+.core-stack-sm > * + * { margin-block-start: var(--space-2); }
+.core-stack-md > * + * { margin-block-start: var(--space-4); }
+.core-stack-lg > * + * { margin-block-start: var(--space-6); }
+.core-ltr-value { direction: ltr; unicode-bidi: plaintext; font-variant-numeric: tabular-nums; }
+
+/* Main navigation follows the user's natural work sequence. */
+.nav-sequence { display: flex; flex-direction: column; }
+.nav-sequence a:nth-child(1) { order: 1; }  /* Dashboard */
+.nav-sequence a:nth-child(2) { order: 7; }  /* Students */
+.nav-sequence a:nth-child(3) { order: 8; }  /* Enrollments */
+.nav-sequence a:nth-child(4) { order: 9; }  /* Registered students */
+.nav-sequence a:nth-child(5) { order: 10; } /* Staff */
+.nav-sequence a:nth-child(6) { order: 11; } /* Staff development */
+.nav-sequence a:nth-child(7) { order: 4; }  /* Classes */
+.nav-sequence a:nth-child(8) { order: 5; }  /* Study groups */
+.nav-sequence a:nth-child(9) { order: 6; }  /* Subjects */
+.nav-sequence a:nth-child(10) { order: 12; } /* Exams */
+.nav-sequence a:nth-child(11) { order: 13; } /* Exam analysis */
+.nav-sequence a:nth-child(12) { order: 2; } /* Academic years */
+.nav-sequence a:nth-child(13) { order: 3; } /* Institutions */
+.nav-sequence a:nth-child(14) { order: 14; } /* Settings */
+.nav-sequence a:nth-child(12),
+.nav-sequence a:nth-child(2),
+.nav-sequence a:nth-child(10),
+.nav-sequence a:nth-child(14) { margin-block-start: var(--space-3); }
+
+/* Shared modal layout: keeps every add/edit form readable on short screens. */
+[class~="fixed"][class~="inset-0"] > div {
+  max-height: calc(100vh - 2rem);
+}
+
+[class~="fixed"][class~="inset-0"] > div > form {
+  min-height: 0;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+[class~="fixed"][class~="inset-0"] > div > form > div:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+@media (max-width: 767px) {
+  [class~="fixed"][class~="inset-0"] > div {
+    max-height: calc(100vh - 1rem);
+  }
+
+  [class~="fixed"][class~="inset-0"] > div > form {
+    max-height: calc(100vh - 6rem);
+  }
+}
+
+@media (max-width: 767px) { .core-container { width: min(100% - 2rem, 90rem); } }

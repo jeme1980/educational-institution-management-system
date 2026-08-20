@@ -1,0 +1,128 @@
+<div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="students-container">
+  <!-- Page Header Area -->
+  <app-student-header
+    (exportTemplate)="exportTemplate()"
+    (importFile)="importExcel($event)"
+    (addStudent)="openCreateModal()"
+  ></app-student-header>
+
+  <!-- Metrics Bento Grid -->
+  <app-student-metrics
+    [totalCount]="apiService.studentsTotal()"
+    [activeCount]="activeStudentsCount()"
+    [filteredCount]="studentStateService.totalItems()"
+    [guardiansCount]="studentsWithGuardiansCount()"
+  ></app-student-metrics>
+
+  <!-- Main Data Table Container Section -->
+  <app-student-table
+    [students]="paginatedStudents()"
+    [totalCount]="studentStateService.totalItems()"
+    [serverTotalPages]="studentStateService.totalPages()"
+    [searchTerm]="searchTerm()"
+    [classFilter]="classFilter()"
+    [statusFilter]="statusFilter()"
+    [genderFilter]="genderFilter()"
+    [sortBy]="sortBy()"
+    [sortOrder]="sortOrder()"
+    [currentPage]="currentPage()"
+    [pageSize]="pageSize()"
+    [isLoading]="apiService.isLoading()"
+    (searchChange)="onSearchChange($event)"
+    (classFilterChange)="onClassFilterChange($event)"
+    (statusFilterChange)="onStatusFilterChange($event)"
+    (genderFilterChange)="onGenderFilterChange($event)"
+    (sortByChange)="sortBy.set($event); loadCurrentPage()"
+    (sortOrderChange)="sortOrder.set($event); loadCurrentPage()"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+    (clearFiltersChange)="onClearFilters()"
+    (viewDetails)="viewStudentDetails($event)"
+    (edit)="openEditModal($event)"
+    (delete)="deleteStudent($event)"
+  ></app-student-table>
+
+  <!-- Add / Edit Student Modal (ALL SCHEMA FIELDS INCLUDED) -->
+  <app-student-form-modal
+    [show]="showModal()"
+    [isEditing]="isEditing()"
+    [activeTab]="activeTab()"
+    [studentForm]="studentForm"
+    (closeForm)="closeModal()"
+    (tabChange)="activeTab.set($event)"
+    (saveForm)="saveStudent()"
+  ></app-student-form-modal>
+
+  <!-- Detailed View Modal -->
+  <app-student-details-modal
+    [show]="showDetailsModal()"
+    [student]="selectedStudentDetails()"
+    [activeTab]="activeDetailTab()"
+    (closeModal)="showDetailsModal.set(false)"
+    (tabChange)="activeDetailTab.set($event)"
+  ></app-student-details-modal>
+
+  <!-- Custom Toast Notification System -->
+  @if (toast()) {
+    <div class="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-w-sm" dir="rtl" id="students-toast">
+      @if (toast()?.type === 'success') {
+        <mat-icon class="text-emerald-400 block">check_circle</mat-icon>
+      } @else if (toast()?.type === 'error') {
+        <mat-icon class="text-rose-400 block">error</mat-icon>
+      } @else {
+        <mat-icon class="text-blue-400 block">info</mat-icon>
+      }
+      <span class="text-xs font-bold leading-relaxed">{{ toast()?.message }}</span>
+      <button type="button" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer bg-transparent border-0 flex items-center">
+        <mat-icon class="text-sm block">close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- CSV Import Errors Modal -->
+  @if (importErrors().length > 0) {
+    <div (click)="importErrors.set([])" (keydown.escape)="importErrors.set([])" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto" id="import-errors-modal-wrapper">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right font-bold" dir="rtl">
+        
+        <!-- Header -->
+        <div class="bg-rose-600 text-white p-4 flex items-center justify-between">
+          <h3 class="font-extrabold text-xs flex items-center gap-2 text-white">
+            <mat-icon class="text-white block font-black">error_outline</mat-icon>
+            <span>فشل استيراد قالب الطلاب</span>
+          </h3>
+          <button type="button" (click)="importErrors.set([])" class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-all cursor-pointer bg-transparent border-0 flex items-center">
+            <mat-icon class="text-xl block">close</mat-icon>
+          </button>
+        </div>
+
+        <!-- Body list of errors -->
+        <div class="p-5 space-y-3 max-h-[50vh] overflow-y-auto">
+          <p class="text-xs text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-100 leading-relaxed">
+            لم نتمكن من استيراد الملف المرفق لوجود بعض الأخطاء في البيانات والتحقق من التبعية للمدرسة النشطة. يرجى تصحيح الأخطاء التالية في الملف وإعادة المحاولة:
+          </p>
+          
+          <ul class="space-y-2 text-xs text-slate-700">
+            @for (err of importErrors(); track $index) {
+              <li class="flex items-start gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <span class="w-1.5 h-1.5 rounded-full bg-rose-500 mt-1.5 shrink-0"></span>
+                <span class="leading-relaxed">{{ err }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-slate-50 p-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          <button 
+            type="button"
+            (click)="importErrors.set([])"
+            class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs transition-all shadow-md font-bold cursor-pointer"
+          >
+            حسناً، سأقوم بالتعديل
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+</div>

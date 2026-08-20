@@ -1,0 +1,46 @@
+<div class="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 animate-in fade-in duration-150" dir="rtl">
+  <div>
+    <span class="font-semibold text-slate-500 block">رقم الهوية (national_id):</span>
+    <span class="font-mono text-slate-900 font-bold">{{ student().nationalId || 'غير مدخل' }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">الجنس (gender_id):</span>
+    <span class="text-slate-900 font-bold">{{ student().genderId === 'gnd-female' ? 'أنثى' : 'ذكر' }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">البلدة / المدينة (town_id):</span>
+    <span class="text-slate-900 font-bold">{{ student().town?.nameAr || '-' }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">تاريخ الميلاد (birth_date):</span>
+    <span class="font-mono text-slate-900 font-bold">{{ formatDate(student().birthDate) }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">حالة الحساب (is_active):</span>
+    <span class="text-slate-900 font-bold">{{ student().isActive ? 'نشط' : 'غير نشط' }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">الهاتف (phone_number):</span>
+    <span class="font-mono text-slate-900 font-bold">{{ student().phoneNumber || '-' }}</span>
+  </div>
+  <div>
+    <span class="font-semibold text-slate-500 block">البريد الإلكتروني (email):</span>
+    <span class="text-slate-900 font-bold truncate block">{{ student().email || '-' }}</span>
+  </div>
+  <div class="col-span-2">
+    <span class="font-semibold text-slate-500 block">العنوان العربي (address_ar):</span>
+    <span class="text-slate-900 font-bold">{{ student().addressAr || '-' }}</span>
+  </div>
+  @if (student().addressHe) {
+    <div class="col-span-2">
+      <span class="font-semibold text-slate-500 block">العنوان العبري (address_he):</span>
+      <span class="text-slate-900 font-bold">{{ student().addressHe }}</span>
+    </div>
+  }
+  @if (student().notes) {
+    <div class="col-span-2 pt-2 border-t border-slate-200">
+      <span class="font-semibold text-slate-500 block">ملاحظات النظام (notes):</span>
+      <p class="text-slate-800 mt-1 whitespace-pre-wrap">{{ student().notes }}</p>
+    </div>
+  }
+</div>

@@ -1,0 +1,50 @@
+<div class="exam-create-page min-h-[calc(100vh-4rem)] bg-slate-50 p-4 pb-24 md:p-6" dir="rtl">
+  <div class="mx-auto max-w-5xl space-y-4">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <div>
+        <nav class="mb-2 flex items-center gap-2 text-xs font-bold text-slate-500" aria-label="مسار الصفحة">
+          <a routerLink="/exams" class="text-blue-700 hover:underline">الامتحانات</a><mat-icon class="text-sm">chevron_left</mat-icon><span>إنشاء امتحان جديد</span>
+        </nav>
+        <h1 class="text-xl font-black text-slate-900">إنشاء امتحان جديد</h1>
+        <p class="mt-1 text-xs text-slate-500">أدخل بيانات الامتحان الأساسية، ثم تابع إلى بناء الأسئلة.</p>
+      </div>
+      <button type="button" (click)="cancel()" class="secondary-action"><mat-icon>arrow_forward</mat-icon>العودة إلى جدول الامتحانات</button>
+    </header>
+
+    @if (loading()) {
+      <section class="grid gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2"><div class="h-12 animate-pulse rounded-xl bg-slate-100"></div><div class="h-12 animate-pulse rounded-xl bg-slate-100"></div><div class="h-12 animate-pulse rounded-xl bg-slate-100"></div><div class="h-12 animate-pulse rounded-xl bg-slate-100"></div><div class="h-28 animate-pulse rounded-xl bg-slate-100 md:col-span-2"></div></section>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div class="mb-5 flex items-start gap-3 border-b border-slate-100 pb-4"><span class="section-number">1</span><div><h2 class="text-base font-black text-slate-900">بيانات الامتحان الأساسية</h2><p class="mt-1 text-xs text-slate-500">البيانات التي سيتم إنشاء سجل الامتحان بها.</p></div></div>
+          <div class="mb-4 grid gap-3 rounded-xl bg-blue-50 p-4 text-sm text-blue-900 md:grid-cols-2">
+            <div><span class="block text-[11px] font-bold text-blue-600">السنة الدراسية الحالية</span><strong>{{currentYear()?.yearLabel || 'غير محددة'}}</strong></div>
+            <div><span class="block text-[11px] font-bold text-blue-600">السياق</span><strong>سيتم استخدام السنة والمؤسسة المحددتين حاليًا</strong></div>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <label>الفصل الدراسي *<select formControlName="academicPeriodId">@for (item of api.academicPeriods(); track item.id) {<option [value]="item.id">{{item.nameAr}}</option>} @empty {<option value="" disabled>لا توجد فترات دراسية</option>}</select>@if(form.controls.academicPeriodId.touched && form.controls.academicPeriodId.invalid){<small class="field-error">اختر الفصل الدراسي.</small>}</label>
+            <label>المادة *<select formControlName="subjectId">@for (item of api.subjects(); track item.id) {<option [value]="item.id">{{item.nameAr}}</option>} @empty {<option value="" disabled>لا توجد مواد متاحة</option>}</select>@if(form.controls.subjectId.touched && form.controls.subjectId.invalid){<small class="field-error">اختر المادة.</small>}</label>
+            <label>نوع الامتحان *<select formControlName="examTypeId">@for (item of api.examTypes(); track item.id) {<option [value]="item.id">{{item.nameAr}}</option>} @empty {<option value="" disabled>لا توجد أنواع امتحانات</option>}</select>@if(form.controls.examTypeId.touched && form.controls.examTypeId.invalid){<small class="field-error">اختر نوع الامتحان.</small>}</label>
+            <label>تاريخ الامتحان *<input type="date" formControlName="examDate" />@if(form.controls.examDate.touched && form.controls.examDate.invalid){<small class="field-error">أدخل تاريخ الامتحان.</small>}</label>
+            <label>عنوان الامتحان *<input formControlName="titleAr" autocomplete="off" placeholder="مثال: امتحان الرياضيات للفصل الأول" />@if(form.controls.titleAr.touched && form.controls.titleAr.invalid){<small class="field-error">عنوان الامتحان مطلوب.</small>}</label>
+            <label>العنوان العبري<input formControlName="titleHe" dir="ltr" /></label>
+            <label>الدرجة القصوى *<input type="number" min="0.01" step="0.01" formControlName="maxScore" />@if(form.controls.maxScore.touched && form.controls.maxScore.invalid){<small class="field-error">يجب أن تكون الدرجة أكبر من صفر.</small>}</label>
+            <label>الوزن النسبي<input type="number" min="0" step="0.01" formControlName="weight" /></label>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+          <div class="mb-4 flex items-start gap-3 border-b border-slate-100 pb-4"><span class="section-number">2</span><div><h2 class="text-base font-black text-slate-900">مجموعات التعلم</h2><p class="mt-1 text-xs text-slate-500">اختر مجموعة أو أكثر سيطبق عليها الامتحان.</p></div><b class="mr-auto rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{{selectedGroupIds().length}} محددة</b></div>
+          @if (selectedGroupIds().length) {<div class="mb-3 flex flex-wrap gap-2">@for (id of selectedGroupIds(); track id) {<span class="group-chip">{{groupName(id)}}<button type="button" (click)="removeGroup(id)" [attr.aria-label]="'إزالة ' + groupName(id)"><mat-icon>close</mat-icon></button></span>}</div>}
+          @if (availableGroups().length) {<div class="grid gap-2 md:grid-cols-2">@for (group of availableGroups(); track group.id) {<label class="group-option"><input type="checkbox" [checked]="selectedGroupIds().includes(group.id)" (change)="toggleGroup(group.id,$event)" /><span><strong>{{group.nameAr}}</strong><small>{{group.classRoom?.nameAr || 'بدون صف محدد'}} · {{group._count?.students || 0}} طالب</small></span></label>}</div>} @else {<div class="empty-inline"><mat-icon>groups</mat-icon><span>لا توجد مجموعات تعليمية متاحة للمادة والسنة الدراسية الحالية.</span></div>}
+          @if (!selectedGroupIds().length) {<small class="field-error mt-3">اختر مجموعة تعلم واحدة على الأقل.</small>}
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"><label>ملاحظات اختيارية<textarea formControlName="notes" rows="3" placeholder="أضف أي ملاحظات تساعدك أثناء بناء الامتحان..."></textarea></label></section>
+        @if (error()) {<div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700" role="alert">{{error()}}</div>}
+        <div class="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-lg backdrop-blur"><button type="button" (click)="cancel()" class="secondary-action">إلغاء</button><button type="submit" [disabled]="saving()" class="primary-action"><mat-icon>arrow_back</mat-icon>{{saving() ? 'جارٍ إنشاء الامتحان...' : 'حفظ ومتابعة إلى بناء الأسئلة'}}</button></div>
+      </form>
+    }
+    @if (toast()) {<div role="status" class="fixed bottom-5 left-5 z-50 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg">{{toast()}}</div>}
+  </div>
+</div>

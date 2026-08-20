@@ -1,0 +1,558 @@
+<div class="bg-surface border border-surface-border rounded-xl overflow-hidden flex flex-col shadow-sm" id="student-table-section">
+  <!-- Table Section Header & Search Bar -->
+  <div class="p-5 border-b border-surface-border bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-2 bg-primary-6 rounded-r"></div>
+      <h2 class="text-sm font-black text-slate-800">سجل الطلاب الشامل</h2>
+    </div>
+
+    <div class="flex flex-col sm:flex-row items-stretch gap-2 w-full md:w-auto">
+      <div class="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm">
+        <button
+          type="button"
+          (click)="setViewMode('table')"
+          [class]="viewMode() === 'table' ? 'px-3 py-1.5 rounded-lg bg-primaryt-white text-[11px] font-bold shadow-sm' : 'px-3 py-1.5 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-white'"
+        >
+          <span class="flex items-center gap-1.5">
+            <mat-icon class="text-base">table_view</mat-icon>
+            جدول
+          </span>
+        </button>
+        <button
+          type="button"
+          (click)="setViewMode('cards')"
+          [class]="viewMode() === 'cards' ? 'px-3 py-1.5 rounded-lg bg-primaryt-white text-[11px] font-bold shadow-sm' : 'px-3 py-1.5 rounded-lg text-slate-600 text-[11px] font-bold hover:bg-white'"
+        >
+          <span class="flex items-center gap-1.5">
+            <mat-icon class="text-base">view_module</mat-icon>
+            بطاقات
+          </span>
+        </button>
+      </div>
+
+      <div class="relative w-full md:w-96">
+        <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</mat-icon>
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="onSearchInput($event)"
+          placeholder="البحث باسم الطالب، الهوية، الهاتف..."
+          class="w-full pr-9 pl-10 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-right font-semibold text-slate-700"
+          id="student-search-input"
+          dir="rtl"
+        />
+        @if (searchTerm()) {
+          <button
+            (click)="searchChange.emit('')"
+            class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 bg-transparent border-0 p-0 flex items-center cursor-pointer"
+            title="مسح البحث"
+          >
+            <mat-icon class="text-sm">close</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced Interactive Filters Section -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-slate-50/50 border-b border-slate-100">
+    <!-- Class Selector -->
+    <div class="relative">
+      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">school</mat-icon>
+      <select
+        [value]="classFilter()"
+        (change)="classFilterChange.emit($any($event.target).value)"
+        class="w-full pr-8 pl-8 py-2 text-[11px] bg-white rounded-lg border border-slate-200 text-slate-700 font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 appearance-none transition-all cursor-pointer"
+      >
+        <option value="">كل الشعب والصفوف</option>
+        @for (c of apiService.classes(); track c.id) {
+          <option [value]="c.id">{{ c.nameAr }} (الصف {{ c.gradeLevel }})</option>
+        }
+      </select>
+      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
+    </div>
+
+    <!-- Status Selector -->
+    <div class="relative">
+      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">check_circle_outline</mat-icon>
+      <select
+        [value]="statusFilter()"
+        (change)="statusFilterChange.emit($any($event.target).value)"
+        class="w-full pr-8 pl-8 py-2 text-[11px] bg-white rounded-lg border border-slate-200 text-slate-700 font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 appearance-none transition-all cursor-pointer"
+      >
+        <option value="">كل الحالات الأكاديمية</option>
+        <option value="ACTIVE">منتظم ومستمر</option>
+        <option value="GRADUATED">متخرج</option>
+        <option value="SUSPENDED">موقوف</option>
+        <option value="INACTIVE">منقطع</option>
+      </select>
+      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
+    </div>
+
+    <!-- Gender Selector -->
+    <div class="relative">
+      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">people_outline</mat-icon>
+      <select
+        [value]="genderFilter()"
+        (change)="genderFilterChange.emit($any($event.target).value)"
+        class="w-full pr-8 pl-8 py-2 text-[11px] bg-white rounded-lg border border-slate-200 text-slate-700 font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 appearance-none transition-all cursor-pointer"
+      >
+        <option value="">جميع الأجناس</option>
+        <option value="gnd-male">ذكر</option>
+        <option value="gnd-female">أنثى</option>
+      </select>
+      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
+    </div>
+
+    <!-- Sort selector -->
+    <div class="relative">
+      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">sort_by_alpha</mat-icon>
+      <select
+        [value]="sortBy()"
+        (change)="sortByChange.emit($any($event.target).value)"
+        class="w-full pr-8 pl-8 py-2 text-[11px] bg-white rounded-lg border border-slate-200 text-slate-700 font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 appearance-none transition-all cursor-pointer"
+      >
+        <option value="nameAr">ترتيب أبجدي (عربي)</option>
+        <option value="birthDate">ترتيب حسب تاريخ الميلاد</option>
+        <option value="nationalId">ترتيب حسب رقم الهوية</option>
+      </select>
+      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
+    </div>
+  </div>
+
+  <!-- Active Applied Filter Tags/Chips -->
+  @if (hasActiveFilters()) {
+    <div class="px-5 py-2 bg-slate-100/50 border-b border-slate-100 flex flex-wrap items-center gap-2 text-xs" id="active-filters-chips">
+      <span class="text-slate-500 font-bold">التصفيات النشطة:</span>
+      
+      @if (searchTerm()) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-primary border border-blue-100 text-[10px] font-bold">
+          <span>بحث: "{{ searchTerm() }}"</span>
+          <button (click)="searchChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+            <mat-icon class="text-sm scale-75 block">close</mat-icon>
+          </button>
+        </span>
+      }
+
+      @if (classFilter()) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-primaryorder border-blue-100 text-[10px] font-bold">
+          <span>الشعبة: {{ getClassName(classFilter()) }}</span>
+          <button (click)="classFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+            <mat-icon class="text-sm scale-75 block">close</mat-icon>
+          </button>
+        </span>
+      }
+
+      @if (statusFilter()) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-primary border border-blue-100 text-[10px] font-bold">
+          <span>الحالة: {{ getStatusLabel(statusFilter()) }}</span>
+          <button (click)="statusFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+            <mat-icon class="text-sm scale-75 block">close</mat-icon>
+          </button>
+        </span>
+      }
+
+      @if (genderFilter()) {
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-primaryorder border-blue-100 text-[10px] font-bold">
+          <span>الجنس: {{ genderFilter() === 'gnd-male' ? 'ذكر' : 'أنثى' }}</span>
+          <button (click)="genderFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+            <mat-icon class="text-sm scale-75 block">close</mat-icon>
+          </button>
+        </span>
+      }
+
+      <button
+        (click)="clearFilters()"
+        class="mr-auto text-[10px] text-rose-600 hover:text-rose-800 font-black hover:underline bg-transparent border-0 cursor-pointer"
+      >
+        إعادة تعيين كافة المرشحات
+      </button>
+    </div>
+  }
+
+  <!-- Data Display State -->
+  @if (isLoading()) {
+    <div class="p-16 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-3" id="student-table-loader">
+      <mat-icon class="animate-spin text-primary text-3xl">sync</mat-icon>
+      <span class="font-bold text-slate-600">جاري تحميل وتحديث سجلات الطلاب...</span>
+    </div>
+  } @else if (students().length === 0) {
+    <div class="p-16 text-center text-slate-400 space-y-3" id="student-table-empty">
+      <mat-icon class="text-6xl text-slate-300">person_off</mat-icon>
+      <div class="text-base font-bold text-slate-700">لم يتم العثور على أي طالب متطابق مع الاختيارات</div>
+      <div class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+        قم بتعديل حقول البحث والتصفية بالأعلى أو انقر فوق "إضافة طالب جديد" لتسجيل طالب جديد بالمنظومة بالكامل.
+      </div>
+    </div>
+  } @else {
+    @if (viewMode() === 'table') {
+      <div class="overflow-x-auto" id="student-table-scroll-container">
+        <table class="w-full table-fixed text-right text-xs whitespace-nowrap [&_th]:align-middle [&_td]:align-middle">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+            <tr>
+              <th class="w-12 py-3 px-2 text-center">#</th>
+              <th (click)="toggleSort('nameAr')" class="w-[30%] py-3 px-4 text-right cursor-pointer hover:bg-slate-100/70 transition-colors">
+                <div class="flex items-center gap-1">
+                  <span>الطالب</span>
+                  @if (sortBy() === 'nameAr') {
+                    <mat-icon class="text-sm text-primary font-black">{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  } @else {
+                    <mat-icon class="text-sm text-slate-300">swap_vert</mat-icon>
+                  }
+                </div>
+              </th>
+              <th class="w-[22%] py-3 px-4 text-right">الصف والشعبة</th>
+              <th class="w-[13%] py-3 px-4 text-right">الجنس</th>
+              <th class="w-[17%] py-3 px-4 text-right">التواصل</th>
+              <th class="w-[12%] py-3 px-4 text-right">الحالة</th>
+              <th class="w-24 py-3 px-2 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            @for (student of students(); track student.id; let rowIndex = $index) {
+              <tr class="hover:bg-slate-50/50 transition-all group">
+                <td class="py-3.5 px-2 text-center text-slate-400 font-mono">{{ rowNumber(rowIndex) }}</td>
+                <td class="py-3.5 px-4 overflow-hidden">
+                  <div class="flex min-w-0 items-center gap-3">
+                    @if (student.photoUrl) {
+                      <img [src]="student.photoUrl" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200" referrerpolicy="no-referrer" />
+                    } @else {
+                      <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female' ? 'h-9 w-9 shrink-0 rounded-full bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center' : 'h-9 w-9 shrink-0 rounded-full bg-blue-50 text-primary border border-blue-100 flex items-center justify-center'">
+                        <mat-icon class="text-base">{{ getGenderIcon(student.genderId) }}</mat-icon>
+                      </div>
+                    }
+                    <div class="min-w-0 truncate">
+                      <div class="truncate text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
+                      <div class="mt-0.5 truncate text-xs text-slate-400 font-mono">{{ student.nationalId || '—' }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex max-w-full items-center rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-primary border border-blue-100 truncate">{{ getClassCode(student.classId) }}</span>
+                </td>
+                <td class="py-3.5 px-4 text-[11px] font-bold text-slate-700">
+                  <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
+                    <mat-icon class="text-base" [class.text-rose-600]="student.genderId === 'gnd-female' || student.genderId === 'female'" [class.text-blue-700]="student.genderId !== 'gnd-female' && student.genderId !== 'female'">{{ getGenderIcon(student.genderId) }}</mat-icon>
+                    {{ getGenderLabel(student.genderId) }}
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 whitespace-nowrap text-sm font-mono text-slate-700">{{ getContactPhone(student) }}</td>
+                <td class="py-3.5 px-4">
+                  <span [class]="getStatusClass(student.studentStatusId) + ' text-[10px] leading-none py-0.5 inline-block text-center min-w-21.25'">
+                    {{ student.isActive ? 'نشط' : 'غير نشط' }}
+                  </span>
+                </td>
+                <td class="relative py-3.5 px-2">
+                  <div class="flex items-center justify-center gap-1">
+                    <button type="button" (click)="viewDetails.emit(student)" class="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-primary hover:bg-blue-50 transition-all cursor-pointer border-0 bg-transparent" title="عرض التفاصيل">
+                      <mat-icon class="text-base">visibility</mat-icon>
+                      <span class="hidden lg:inline">عرض</span>
+                    </button>
+                    <button type="button" (click)="toggleActionMenu(student.id)" [attr.aria-expanded]="actionMenuId() === student.id" aria-haspopup="menu" class="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer border-0 bg-transparent" title="المزيد">
+                      <mat-icon class="text-base">more_vert</mat-icon>
+                    </button>
+                  </div>
+                  @if (actionMenuId() === student.id) {
+                    <div class="absolute left-2 top-12 z-30 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-right shadow-xl" role="menu">
+                      <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                        <mat-icon class="text-base text-amber-700">edit</mat-icon>
+                        تعديل الطالب
+                      </button>
+                      <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                        <mat-icon class="text-base text-blue-700">toggle_on</mat-icon>
+                        تعديل الحالة
+                      </button>
+                      <button type="button" (click)="delete.emit(student.id); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50" role="menuitem">
+                        <mat-icon class="text-base">delete</mat-icon>
+                        أرشفة/حذف
+                      </button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <table class="hidden w-full text-right text-xs whitespace-nowrap [&_th]:align-middle [&_td]:align-middle">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
+            <tr>
+              <th (click)="toggleSort('nameAr')" class="py-3 px-4 text-right cursor-pointer hover:bg-slate-100/70 transition-colors">
+                <div class="flex items-center gap-1">
+                  <span>الطالب</span>
+                  @if (sortBy() === 'nameAr') {
+                    <mat-icon class="text-sm text-primary font-black">{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  } @else {
+                    <mat-icon class="text-sm text-slate-300">swap_vert</mat-icon>
+                  }
+                </div>
+              </th>
+              <th class="py-3 px-4 text-right w-24">الجنس</th>
+              <th class="py-3 px-4 text-right w-44">الصف والشعبة</th>
+              <th class="py-3 px-4 text-right w-36 whitespace-nowrap">التواصل</th>
+              <th (click)="toggleSort('birthDate')" class="py-3 px-4 text-right cursor-pointer hover:bg-slate-100/70 transition-colors w-40">
+                <div class="flex items-center gap-1">
+                  <span>تاريخ الميلاد</span>
+                  @if (sortBy() === 'birthDate') {
+                    <mat-icon class="text-sm text-primary font-black">{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+                  } @else {
+                    <mat-icon class="text-sm text-slate-300">swap_vert</mat-icon>
+                  }
+                </div>
+              </th>
+              <th class="py-3 px-4 text-right w-36">الحالة</th>
+              <th class="py-3 px-4 text-center w-28">إجراءات التحكم</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            @for (student of students(); track student.id) {
+              <tr class="hover:bg-slate-50/50 transition-all group">
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <div class="flex items-center gap-3">
+                    @if (student.photoUrl) {
+                      <img [src]="student.photoUrl" alt="" class="h-9 w-9 shrink-0 rounded-full object-cover border border-slate-200" referrerpolicy="no-referrer" />
+                    } @else {
+                      <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female' ? 'h-9 w-9 shrink-0 rounded-full bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center' : 'h-9 w-9 shrink-0 rounded-full bg-blue-50 text-primary border border-blue-100 flex items-center justify-center'">
+                        <mat-icon class="text-base">{{ getGenderIcon(student.genderId) }}</mat-icon>
+                      </div>
+                    }
+                    <div class="min-w-0">
+                      <div class="font-medium text-slate-800 text-sm group-hover:text-primary transition-colors">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
+                  @if (student.firstNameHe || student.lastNameHe) {
+                    <div class="text-[10px] text-slate-400 font-semibold font-sans mt-0.5" dir="ltr">
+                      {{ student.firstNameHe || '' }} {{ student.lastNameHe || '' }}
+                    </div>
+                  }
+                      <div class="mt-0.5 text-xs text-slate-400 font-mono">{{ student.nationalId || '—' }}</div>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="py-3.5 px-4 text-[11px] font-bold text-slate-700">
+                  <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 whitespace-nowrap">
+                    <mat-icon class="text-base" [class.text-rose-600]="student.genderId === 'gnd-female' || student.genderId === 'female'" [class.text-blue-700]="student.genderId !== 'gnd-female' && student.genderId !== 'female'">{{ getGenderIcon(student.genderId) }}</mat-icon>
+                    {{ getGenderLabel(student.genderId) }}
+                  </span>
+                </td>
+
+                <td class="py-3.5 px-4 whitespace-nowrap">
+                  <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-primary border border-blue-100">{{ getClassCode(student.classId) }}</span>
+                </td>
+
+                <td class="py-3.5 px-4 whitespace-nowrap text-sm font-mono text-slate-700">
+                  {{ getContactPhone(student) }}
+                </td>
+
+                <td class="py-3.5 px-4 whitespace-nowrap text-center text-sm font-mono text-slate-600">
+                  {{ formatDate(student.birthDate) }}
+                </td>
+
+                <td class="py-3.5 px-4">
+                  <span [class]="getStatusClass(student.studentStatusId) + ' text-[10px] leading-none py-0.5 inline-block text-center min-w-21.25'">
+                    {{ student.isActive ? 'نشط' : 'غير نشط' }}
+                  </span>
+                </td>
+
+                <td class="py-3.5 px-4">
+                  <div class="flex items-center justify-center gap-0.5">
+                    <button
+                      (click)="viewDetails.emit(student)"
+                      class="p-1.5 rounded-lg hover:bg-blue-50 text-primary transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
+                      title="عرض التفاصيل الكاملة"
+                    >
+                      <mat-icon class="text-base block">visibility</mat-icon>
+                    </button>
+                    <button
+                      (click)="edit.emit(student)"
+                      class="p-1.5 rounded-lg hover:bg-amber-50 text-amber-700 transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
+                      title="تعديل حقول الطالب"
+                    >
+                      <mat-icon class="text-base block">edit</mat-icon>
+                    </button>
+                    <button
+                      (click)="delete.emit(student.id)"
+                      class="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
+                      title="حذف الطالب"
+                    >
+                      <mat-icon class="text-base block">delete</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 bg-slate-50/40" id="student-cards-view">
+        @for (student of students(); track student.id) {
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                @if (student.photoUrl) {
+                  <img [src]="student.photoUrl" alt="Photo" class="w-12 h-12 rounded-full object-cover border border-slate-200" referrerpolicy="no-referrer" />
+                } @else {
+                  <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female'
+                    ? 'w-12 h-12 rounded-full bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center font-bold'
+                    : 'w-12 h-12 rounded-full bg-blue-50 text-primary border border-blue-100 flex items-center justify-center font-bold'">
+                    <mat-icon class="text-lg leading-none block">{{ getGenderIcon(student.genderId) }}</mat-icon>
+                  </div>
+                }
+                <div>
+                  <div class="font-black text-slate-800 text-sm">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
+                  @if (student.firstNameHe || student.lastNameHe) {
+                    <div class="text-[11px] text-slate-400 font-semibold font-sans" dir="ltr">{{ student.firstNameHe || '' }} {{ student.lastNameHe || '' }}</div>
+                  }
+                </div>
+              </div>
+              <span [class]="getStatusClass(student.studentStatusId) + ' text-[10px] leading-none py-0.5 inline-block text-center min-w-21.25'">
+                {{ getStatusLabel(student.studentStatusId) }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
+              <div class="rounded-lg bg-slate-50 px-3 py-2">
+                <div class="text-[10px] text-slate-400 mb-1">رقم الهوية</div>
+                <div class="font-bold text-slate-700 font-mono">{{ student.nationalId ? student.nationalId : '—' }}</div>
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2">
+                <div class="text-[10px] text-slate-400 mb-1">الشعبة</div>
+                <div class="font-bold text-slate-700">{{ getClassName(student.classId) }}</div>
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2">
+                <div class="text-[10px] text-slate-400 mb-1">الهاتف</div>
+                <div class="font-bold text-slate-700 font-mono">{{ student.phoneNumber || 'لا يوجد هاتف' }}</div>
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2">
+                <div class="text-[10px] text-slate-400 mb-1">البريد</div>
+                <div class="font-bold text-slate-700 font-mono truncate">{{ student.email || '—' }}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+              <div>
+                <div class="font-bold text-slate-700">{{ getInstitutionName(student.institutionId) }}</div>
+                <div class="text-[10px] text-slate-400">{{ formatDate(student.birthDate) }}</div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button
+                  (click)="viewDetails.emit(student)"
+                  class="p-1.5 rounded-lg hover:bg-blue-50 text-primaryransition-all cursor-pointer border-0 bg-transparent"
+                  title="عرض التفاصيل"
+                >
+                  <mat-icon class="text-base block">visibility</mat-icon>
+                </button>
+                <button
+                  (click)="edit.emit(student)"
+                  class="p-1.5 rounded-lg hover:bg-amber-50 text-amber-700 transition-all cursor-pointer border-0 bg-transparent"
+                  title="تعديل"
+                >
+                  <mat-icon class="text-base block">edit</mat-icon>
+                </button>
+                <button
+                  (click)="delete.emit(student.id)"
+                  class="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition-all cursor-pointer border-0 bg-transparent"
+                  title="حذف"
+                >
+                  <mat-icon class="text-base block">delete</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <app-pagination
+      [page]="currentPage()"
+      [pageSize]="pageSize()"
+      [totalItems]="totalCount()"
+      [totalPagesInput]="serverTotalPages()"
+      [pageSizeOptions]="[10, 25, 50, 100]"
+      [disabled]="false"
+      (pageChange)="pageChange.emit($event)"
+      (pageSizeChange)="pageSizeChange.emit($event)"
+    />
+
+    <!-- Legacy controls kept temporarily for template compatibility; the shared controls above are authoritative. -->
+    <div class="hidden p-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-semibold text-slate-600" style="display: none !important;">
+      <!-- Showing status range info -->
+      <div class="flex flex-wrap items-center gap-4">
+        <span class="text-slate-500 text-[11px] font-bold">
+          عرض السجلات من <span class="font-extrabold text-slate-800 font-mono">{{ getDisplayRangeStart() }}</span> إلى <span class="font-extrabold text-slate-800 font-mono">{{ getDisplayRangeEnd() }}</span> من أصل <span class="font-black text-primary font-mono">{{ totalCount() }}</span> طالباً مسجلاً
+        </span>
+
+        <!-- Page sizing selector dropdown -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-slate-400 text-[11px]">الصفوف بالصفحة:</span>
+          <select
+            [value]="pageSize()"
+            (change)="pageSizeChange.emit(+$any($event.target).value)"
+            class="border border-slate-200 rounded-lg px-2 py-1 bg-white text-[11px] font-bold text-slate-700 outline-none focus:border-primaryocus:ring-1 focus:ring-primary cursor-pointer transition-all"
+          >
+            <option [value]="10">10 طلاب</option>
+            <option [value]="25">25 طالباً</option>
+            <option [value]="50">50 طالباً</option>
+            <option [value]="-1">الكل</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Page navigation selectors -->
+      @if (pageSize() !== -1 && totalPages() > 1) {
+        <div class="flex items-center gap-1">
+          <!-- First Page button -->
+          <button
+            [disabled]="currentPage() === 1"
+            (click)="pageChange.emit(1)"
+            class="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs flex items-center justify-center cursor-pointer"
+            title="الصفحة الأولى"
+          >
+            <mat-icon class="text-base block">first_page</mat-icon>
+          </button>
+
+          <!-- Previous Page button -->
+          <button
+            [disabled]="currentPage() === 1"
+            (click)="pageChange.emit(currentPage() - 1)"
+            class="p-1.5 rounded-lg border-slate-200 bg-white hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all border-0 shadow-xs flex items-center justify-center cursor-pointer"
+            title="الصفحة السابقة"
+          >
+            <mat-icon class="text-base block">chevron_right</mat-icon>
+          </button>
+
+          <!-- Middle Page Numbers buttons -->
+          @for (pageNum of getPagesArray(); track pageNum) {
+            <button
+              (click)="pageChange.emit(pageNum)"
+              [class]="pageNum === currentPage() 
+                ? 'px-3 py-1.5 rounded-lg bg-primary text-white font-extrabold transition-all shadow-xs border-0 cursor-pointer' 
+                : 'px-3 py-1.5 rounded-lg border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-bold transition-all border-0 shadow-xs cursor-pointer'"
+            >
+              {{ pageNum }}
+            </button>
+          }
+
+          <!-- Next Page button -->
+          <button
+            [disabled]="currentPage() === totalPages()"
+            (click)="pageChange.emit(currentPage() + 1)"
+            class="p-1.5 rounded-lg border-slate-200 bg-white hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all border-0 shadow-xs flex items-center justify-center cursor-pointer"
+            title="الصفحة التالية"
+          >
+            <mat-icon class="text-base block">chevron_left</mat-icon>
+          </button>
+
+          <!-- Last Page button -->
+          <button
+            [disabled]="currentPage() === totalPages()"
+            (click)="pageChange.emit(totalPages())"
+            class="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs flex items-center justify-center cursor-pointer"
+            title="الصفحة الأخيرة"
+          >
+            <mat-icon class="text-base block">last_page</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+  }
+</div>

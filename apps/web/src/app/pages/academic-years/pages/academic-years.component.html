@@ -1,0 +1,596 @@
+<div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="academic-years-container" dir="rtl">
+  
+  <!-- Custom Toast Notification -->
+  @if (toast()) {
+    <div class="fixed bottom-6 left-6 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom duration-300 max-w-sm">
+      @if (toast()?.type === 'success') {
+        <mat-icon class="text-emerald-400">check_circle</mat-icon>
+      } @else if (toast()?.type === 'error') {
+        <mat-icon class="text-rose-400">error</mat-icon>
+      } @else {
+        <mat-icon class="text-blue-400">info</mat-icon>
+      }
+      <span class="text-xs font-bold leading-relaxed">{{ toast()?.message }}</span>
+      <button type="button" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
+        <mat-icon class="text-sm block">close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+    <div>
+      <span class="text-[11px] font-extrabold text-[#00236f] bg-[#00236f]/5 px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">الهيكل الزمني والأرشفة</span>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">الأعوام الأكاديمية والفترات</h1>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">إدارة الهيكل الزمني والفصول الدراسية للمؤسسة التعليمية وتحديد وتوجيه الفترات التقييمية النشطة بذكاء.</p>
+    </div>
+    <button
+      type="button"
+      (click)="openYearModal()"
+      class="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#00236f] hover:bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer font-bold text-xs"
+    >
+      <mat-icon class="text-[18px]">add_circle</mat-icon>
+      <span>إضافة عام أكاديمي جديد</span>
+    </button>
+  </div>
+
+  <!-- Quick Metrics Dashboard (Bento Grid) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+    <!-- Metric 1: Total Years -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-slate-400">الأعوام المسجلة</span>
+        <div class="text-2xl font-black text-slate-800">{{ totalYears() }}</div>
+        <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block">عام دراسي مدرج</span>
+      </div>
+      <div class="h-12 w-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-xl">calendar_today</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 2: Current Year -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-slate-400">العام النشط الحالي</span>
+        <div class="text-base font-black text-[#00236f] truncate max-w-[150px]">{{ activeYearLabel() }}</div>
+        <span class="text-[10px] text-sky-600 font-bold bg-sky-50 px-2 py-0.5 rounded-md inline-block">المرجع الحالي للنظام</span>
+      </div>
+      <div class="h-12 w-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-xl">star</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 3: Total Periods -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-slate-400">إجمالي الفترات الدراسية</span>
+        <div class="text-2xl font-black text-slate-800">{{ totalPeriodsCount() }}</div>
+        <span class="text-[10px] text-violet-600 font-bold bg-violet-50 px-2 py-0.5 rounded-md inline-block">فصل دراسي مخصص</span>
+      </div>
+      <div class="h-12 w-12 bg-violet-50 text-violet-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-xl">date_range</mat-icon>
+      </div>
+    </div>
+
+    <!-- Metric 4: Closed Years -->
+    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
+      <div class="space-y-1">
+        <span class="text-xs font-bold text-slate-400">الأعوام المؤرشفة</span>
+        <div class="text-2xl font-black text-slate-800">{{ closedYearsCount() }}</div>
+        <span class="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md inline-block">مغلق ومؤرشف نهائياً</span>
+      </div>
+      <div class="h-12 w-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
+        <mat-icon class="text-xl">archive</mat-icon>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bento Grid Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Right/Master: List of Academic Years (5 cols) -->
+    <div class="lg:col-span-5 space-y-4">
+      <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+        
+        <!-- Search bar -->
+        <div class="relative">
+          <mat-icon class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</mat-icon>
+          <input
+            type="text"
+            [value]="searchQuery()"
+            (input)="updateSearch($event)"
+            placeholder="بحث باسم العام الأكاديمي..."
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+          />
+        </div>
+
+        <div class="flex items-center justify-between text-xs font-bold text-slate-500 px-1 pt-1">
+          <span>سجل الأعوام ({{ filteredYears().length }})</span>
+          <span class="text-[10px] text-slate-400">حدد عاماً لعرض فتراته الدراسية</span>
+        </div>
+
+        <!-- Years List -->
+        <div class="space-y-2.5 max-h-[calc(100vh-22rem)] overflow-y-auto pr-1">
+          @for (year of filteredYears(); track year.id) {
+            @let isSelected = selectedYear()?.id === year.id;
+            <div
+              (click)="selectYear(year)"
+              (keydown.enter)="selectYear(year)"
+              tabindex="0"
+              [class]="isSelected ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-[1.01]' : 'bg-white text-slate-800 border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
+              class="p-4 rounded-2xl border transition-all duration-200 cursor-pointer space-y-3"
+            >
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-extrabold text-sm tracking-tight">{{ year.yearLabel }}</span>
+                  @if (year.isCurrent) {
+                    <span [class]="isSelected ? 'bg-amber-400 text-slate-950 font-black' : 'bg-amber-50 text-amber-700 border border-amber-200'" class="px-2 py-0.5 rounded-md text-[10px]">
+                      العام الحالي
+                    </span>
+                  }
+                </div>
+
+                <div class="flex items-center gap-1">
+                  <span [class]="year.isClosed ? 'bg-slate-200/20 text-slate-400' : 'bg-emerald-500/10 text-emerald-600'" class="px-2 py-0.5 rounded-md text-[10px] font-bold">
+                    {{ year.isClosed ? 'مغلق' : 'نشط' }}
+                  </span>
+                  
+                  <button
+                    type="button"
+                    (click)="$event.stopPropagation(); openYearModal(year)"
+                    title="تعديل العام"
+                    [class]="isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-[#00236f] hover:bg-slate-100'"
+                    class="p-1 rounded-lg transition-all cursor-pointer"
+                  >
+                    <mat-icon class="text-base block">edit</mat-icon>
+                  </button>
+
+                  @if (!year.isCurrent && !year.isClosed) {
+                    <button
+                      type="button"
+                      (click)="$event.stopPropagation(); makeCurrent(year)"
+                      title="تعيين كعام دراسي حالي"
+                      [class]="isSelected ? 'text-amber-300 hover:text-amber-100 hover:bg-white/10' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'"
+                      class="p-1 rounded-lg transition-all cursor-pointer"
+                    >
+                      <mat-icon class="text-base block">star</mat-icon>
+                    </button>
+                  }
+
+                  <button
+                    type="button"
+                    (click)="$event.stopPropagation(); confirmDelete('year', year.id, year.yearLabel)"
+                    title="حذف العام"
+                    [class]="isSelected ? 'text-rose-300 hover:text-rose-100 hover:bg-rose-500/20' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'"
+                    class="p-1 rounded-lg transition-all cursor-pointer"
+                  >
+                    <mat-icon class="text-base block">delete_outline</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Date ranges -->
+              <div class="flex items-center justify-between text-[11px] font-bold pt-2 border-t" [class]="isSelected ? 'border-white/10 text-slate-300' : 'border-slate-100 text-slate-500'">
+                <div class="flex items-center gap-1">
+                  <mat-icon class="text-xs block opacity-70">event</mat-icon>
+                  <span>{{ formatDate(year.startDate) }}</span>
+                </div>
+                <span>حتى</span>
+                <div class="flex items-center gap-1">
+                  <mat-icon class="text-xs block opacity-70">event_available</mat-icon>
+                  <span>{{ formatDate(year.endDate) }}</span>
+                </div>
+              </div>
+            </div>
+          } @empty {
+            <div class="p-8 text-center text-slate-400 font-bold text-xs space-y-2">
+              <mat-icon class="text-3xl block mx-auto text-slate-300">calendar_today</mat-icon>
+              <span>لا توجد أعوام أكاديمية مطابقة للبحث.</span>
+            </div>
+          }
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Left/Detail: Academic Periods & Terms for Selected Year (7 cols) -->
+    <div class="lg:col-span-7">
+      @if (selectedYear(); as activeYear) {
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs space-y-6">
+          
+          <!-- Detail Header -->
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg font-black text-slate-800">تفاصيل: {{ activeYear.yearLabel }}</h2>
+                @if (activeYear.isCurrent) {
+                  <span class="bg-amber-100 text-amber-800 font-black text-[10px] px-2.5 py-0.5 rounded-full border border-amber-200">
+                    نشط حالياً
+                  </span>
+                }
+              </div>
+              <p class="text-xs text-slate-500 mt-1 font-bold">إدارة الفصول، الفترات الدراسية، والمدد التقييمية لهذا العام الأكاديمي.</p>
+            </div>
+
+            <button
+              type="button"
+              (click)="openPeriodModal()"
+              class="flex items-center gap-2 bg-[#00236f] hover:bg-[#1e3a8a] text-white px-4 py-2 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer font-bold text-xs shrink-0"
+            >
+              <mat-icon class="text-sm">add_circle</mat-icon>
+              <span>إضافة فترة دراسية جديدة</span>
+            </button>
+          </div>
+
+          <!-- Periods list -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between text-xs font-extrabold text-slate-700">
+              <span class="flex items-center gap-1.5">
+                <mat-icon class="text-sky-600 text-sm">date_range</mat-icon>
+                <span>الفترات والفصول التقييمية التابعة ({{ selectedYearPeriods().length }})</span>
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              @for (period of selectedYearPeriods(); track period.id) {
+                <div class="bg-slate-50/80 border border-slate-200/70 rounded-2xl p-4 transition-all hover:bg-slate-50 hover:border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-black text-sm text-slate-800">{{ period.nameAr }}</span>
+                      @if (period.nameHe) {
+                        <span class="text-[10px] font-bold text-slate-400">({{ period.nameHe }})</span>
+                      }
+                      <span class="bg-slate-200 text-slate-700 font-mono font-bold text-[10px] px-1.5 py-0.5 rounded-md">
+                      </span>
+                    </div>
+
+                    <div class="flex items-center gap-3 text-[11px] font-bold text-slate-500 pt-1">
+                      <span class="flex items-center gap-1">
+                        <mat-icon class="text-xs text-slate-400">event</mat-icon>
+                        <span>البدء: {{ formatDate(period.startDate) }}</span>
+                      </span>
+                      <span>-</span>
+                      <span class="flex items-center gap-1">
+                        <mat-icon class="text-xs text-slate-400">event_available</mat-icon>
+                        <span>الانتهاء: {{ formatDate(period.endDate) }}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-200/60 justify-end">
+                    <span [class]="period.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'" class="px-2.5 py-1 rounded-lg text-[10px] font-extrabold border">
+                      {{ period.isActive ? 'مفعلة' : 'غير مفعلة' }}
+                    </span>
+
+                    <button
+                      type="button"
+                      (click)="openPeriodModal(period)"
+                      title="تعديل الفترة"
+                      class="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 hover:text-[#00236f] transition-all cursor-pointer"
+                    >
+                      <mat-icon class="text-sm block">edit</mat-icon>
+                    </button>
+
+                    <button
+                      type="button"
+                      (click)="confirmDelete('period', period.id, period.nameAr)"
+                      title="حذف الفترة"
+                      class="p-1.5 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
+                    >
+                      <mat-icon class="text-sm block">delete_outline</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="p-8 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl space-y-2">
+                  <mat-icon class="text-3xl text-slate-300 block mx-auto">event_note</mat-icon>
+                  <p class="text-xs font-bold text-slate-500">لم يتم إضافة فصول أو فترات دراسية لهذا العام حتى الآن.</p>
+                  <button
+                    type="button"
+                    (click)="openPeriodModal()"
+                    class="text-xs text-[#00236f] font-black underline cursor-pointer inline-block"
+                  >
+                    اضغط هنا لإضافة أول فصل دراسي
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+      } @else {
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-12 text-center space-y-3">
+          <mat-icon class="text-5xl text-slate-300">touch_app</mat-icon>
+          <h3 class="text-sm font-black text-slate-700">لم يتم اختيار عام أكاديمي</h3>
+          <p class="text-xs text-slate-500 max-w-sm mx-auto font-bold">حدد عاماً دراسياً من القائمة الجانبية لإدارة وتنظيم فتراته وفصوله الدراسية المختلفة.</p>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- Academic Year Creator & Editor Modal -->
+  @if (showYearModal()) {
+    <div (click)="closeYearModal()" (keydown.escape)="closeYearModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
+        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
+          <h3 class="font-extrabold text-sm flex items-center gap-2">
+            <mat-icon class="block">{{ editingYear() ? 'edit' : 'calendar_today' }}</mat-icon>
+            <span>{{ editingYear() ? 'تعديل بيانات العام الأكاديمي' : 'إضافة عام أكاديمي جديد' }}</span>
+          </h3>
+          <button type="button" (click)="closeYearModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
+            <mat-icon class="block">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="yearForm" (ngSubmit)="saveYear()" class="p-6 space-y-4 font-bold" dir="rtl">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">مسمى / عنوان العام الأكاديمي *</label>
+            <input
+              type="text"
+              formControlName="yearLabel"
+              placeholder="2026 - 2027"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (yearForm.get('yearLabel')?.touched && yearForm.get('yearLabel')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">العام الدراسي مطلوب.</p>
+            }
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">تاريخ بدء العام الدراسي *</label>
+              <input
+                type="date"
+                formControlName="startDate"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all"
+              />
+              @if (yearForm.get('startDate')?.touched && yearForm.get('startDate')?.invalid) {
+                <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">تاريخ البدء مطلوب.</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">تاريخ الانتهاء المتوقع *</label>
+              <input
+                type="date"
+                formControlName="endDate"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all"
+              />
+              @if (yearForm.get('endDate')?.touched && yearForm.get('endDate')?.invalid) {
+                <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">تاريخ الانتهاء مطلوب.</p>
+              }
+            </div>
+          </div>
+
+          <!-- Options Stylized Switches -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-xs font-extrabold text-slate-700">تعيين كعام دراسي نشط وحالي</span>
+                <span class="text-[10px] text-slate-400 font-normal">اعتماد هذا العام الدراسي كمرجع أساسي للنظام</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  formControlName="isCurrent"
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+              </label>
+            </div>
+
+            <div class="h-px bg-slate-200"></div>
+
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-xs font-extrabold text-slate-700">إغلاق العام الدراسي وأرشفته</span>
+                <span class="text-[10px] text-slate-400 font-normal">تجميد البيانات السنوية لحماية السجلات</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  formControlName="isClosed"
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+            <button
+              type="button"
+              (click)="closeYearModal()"
+              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              type="submit"
+              [disabled]="yearForm.invalid || isProcessing()"
+              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              @if (isProcessing()) {
+                <mat-icon class="animate-spin text-sm block">sync</mat-icon>
+                <span>جاري الحفظ...</span>
+              } @else {
+                <mat-icon class="text-sm block">save</mat-icon>
+                <span>حفظ بيانات العام</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Period / Term Creator & Editor Modal -->
+  @if (showPeriodModal()) {
+    <div (click)="closePeriodModal()" (keydown.escape)="closePeriodModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
+        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
+          <h3 class="font-extrabold text-sm flex items-center gap-2">
+            <mat-icon class="block">{{ editingPeriod() ? 'edit' : 'date_range' }}</mat-icon>
+            <span>{{ editingPeriod() ? 'تعديل بيانات الفترة الدراسية' : 'إضافة فترة / فصل دراسي جديد' }}</span>
+          </h3>
+          <button type="button" (click)="closePeriodModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
+            <mat-icon class="block">close</mat-icon>
+          </button>
+        </div>
+
+        <form [formGroup]="periodForm" (ngSubmit)="savePeriod()" class="p-6 space-y-4 font-bold" dir="rtl">
+          <div class="bg-[#00236f]/5 p-3 rounded-xl border border-[#00236f]/10 mb-2">
+            <span class="text-[10px] text-slate-400 block font-bold">العام الدراسي الملحق به</span>
+            <span class="text-xs font-black text-[#00236f]">{{ selectedYear()?.yearLabel }}</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">اسم الفصل / الفترة (بالعربية) *</label>
+            <input
+              type="text"
+              formControlName="nameAr"
+              placeholder="مثال: الفصل الدراسي الأول"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+            @if (periodForm.get('nameAr')?.touched && periodForm.get('nameAr')?.invalid) {
+              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">اسم الفصل بالعربية مطلوب.</p>
+            }
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1.5">الاسم بالعبرية (إن وجد)</label>
+            <input
+              type="text"
+              formControlName="nameHe"
+              placeholder="مثال: מחצית א"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+             <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">ترتيب الفرز / العرض</label>
+              <input
+                type="number"
+                formControlName="sortOrder"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">تاريخ البدء الرسمي *</label>
+              <input
+                type="date"
+                formControlName="startDate"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all"
+              />
+              @if (periodForm.get('startDate')?.touched && periodForm.get('startDate')?.invalid) {
+                <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">تاريخ البدء مطلوب.</p>
+              }
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1.5">تاريخ الانتهاء المجدول *</label>
+              <input
+                type="date"
+                formControlName="endDate"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all"
+              />
+              @if (periodForm.get('endDate')?.touched && periodForm.get('endDate')?.invalid) {
+                <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">تاريخ الانتهاء مطلوب.</p>
+              }
+            </div>
+          </div>
+
+          <!-- Options toggle -->
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between mt-2">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-xs font-extrabold text-slate-700">تفعيل هذه الفترة الدراسية فوريّاً</span>
+              <span class="text-[10px] text-slate-400 font-normal">إتاحة الفصل لعمليات التسجيل والتقييم في النظام</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                formControlName="isActive"
+                class="sr-only peer"
+              />
+              <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
+            </label>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+            <button
+              type="button"
+              (click)="closePeriodModal()"
+              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+            >
+              إلغاء التراجع
+            </button>
+            <button
+              type="submit"
+              [disabled]="periodForm.invalid || isProcessing()"
+              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+            >
+              @if (isProcessing()) {
+                <mat-icon class="animate-spin text-sm block">sync</mat-icon>
+                <span>جاري الحفظ...</span>
+              } @else {
+                <mat-icon class="text-sm block">save</mat-icon>
+                <span>حفظ بيانات الفترة</span>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Custom Confirmation Dialog -->
+  @if (confirmDeleteTarget(); as target) {
+    <div (click)="confirmDeleteTarget.set(null)" (keydown.escape)="confirmDeleteTarget.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right font-bold" dir="rtl">
+        <div class="p-5 flex flex-col gap-4">
+          <div class="h-12 w-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-2">
+            <mat-icon class="text-2xl block">warning_amber</mat-icon>
+          </div>
+          <div class="text-center">
+            <h4 class="text-sm font-black text-slate-800">تأكيد عملية الحذف</h4>
+            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+              هل أنت متأكد من رغبتك في حذف 
+              <strong class="text-rose-600">"{{ target.name }}"</strong>؟
+              @if (target.type === 'year') {
+                <span class="block text-[10px] text-amber-600 bg-amber-50 p-2.5 rounded-lg mt-2.5 border border-amber-100">
+                  تحذير: سيؤدي هذا الإجراء إلى حذف جميع الفصول والفترات الدراسية التابعة لهذا العام الدراسي أيضاً بشكل نهائي.
+                </span>
+              } @else {
+                <span class="block text-[10px] text-slate-400 mt-1">لا يمكن التراجع عن هذا الإجراء لاحقاً.</span>
+              }
+            </p>
+          </div>
+        </div>
+        <div class="bg-slate-50 p-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          <button 
+            type="button"
+            (click)="confirmDeleteTarget.set(null)"
+            class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs transition-all cursor-pointer font-bold border border-transparent hover:border-slate-200"
+          >
+            إلغاء التراجع
+          </button>
+          <button 
+            type="button"
+            (click)="executeDelete()"
+            class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs transition-all shadow-md font-bold cursor-pointer"
+          >
+            تأكيد الحذف النهائي
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+</div>

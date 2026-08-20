@@ -1,0 +1,26 @@
+import { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { requirePlatformAdmin } from '../middleware/platform-auth.middleware';
+import { asyncHandler } from '../middleware/asyncHandler';
+import * as controller from '../controllers/platform.controller';
+
+const router = Router();
+const platform = [requireAuth, requirePlatformAdmin];
+router.get('/platform/institutions', ...platform, asyncHandler(controller.listInstitutions));
+router.get('/platform/institutions/:id', ...platform, asyncHandler(controller.getInstitution));
+router.post('/platform/institutions', ...platform, asyncHandler(controller.createInstitution));
+router.patch('/platform/institutions/:id', ...platform, asyncHandler(controller.updateInstitution));
+router.post('/platform/institutions/:id/initial-admin', ...platform, asyncHandler(controller.provisionInitialAdmin));
+router.post('/platform/institutions/:id/initial-admin/reissue', ...platform, asyncHandler(controller.reissueInitialAdmin));
+router.get('/platform/plans', ...platform, asyncHandler(controller.listPlans));
+router.post('/platform/plans', ...platform, asyncHandler(controller.createPlan));
+router.patch('/platform/plans/:id', ...platform, asyncHandler(controller.updatePlan));
+router.get('/platform/providers', ...platform, asyncHandler(controller.listProviders));
+router.post('/platform/providers', ...platform, asyncHandler(controller.createProvider));
+router.patch('/platform/providers/:id', ...platform, asyncHandler(controller.updateProvider));
+router.get('/platform/institutions/:id/subscription', ...platform, asyncHandler(controller.getInstitution));
+router.post('/platform/institutions/:id/subscription', ...platform, asyncHandler(controller.assignSubscription));
+router.patch('/platform/institutions/:id/subscription/status', ...platform, asyncHandler(controller.transitionSubscription));
+router.post('/platform/institutions/:id/subscription/renew', ...platform, asyncHandler(controller.renewSubscription));
+router.get('/platform/audit-logs', ...platform, asyncHandler(controller.getPlatformAudit));
+export default router;

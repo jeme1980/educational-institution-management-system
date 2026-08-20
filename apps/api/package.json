@@ -1,0 +1,63 @@
+{
+  "name": "@school-management-system/api",
+  "version": "0.1.0-rc.1",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:schemas": "npm run build && node dist/validation/schemas.test.js",
+    "test:tenant": "npm run build && node --test dist/middleware/tenantIsolation.spec.js",
+    "test:security:2b": "npm run build && node --test dist/security/phase2b.spec.js",
+    "test:security:4b": "npm run build && node dist/security/phase4b.spec.js",
+    "test:security:5a": "npm run build && node dist/security/password.spec.js",
+    "test:security:5b": "npm run build && node dist/security/session.spec.js",
+    "test:security:7b1": "npm run build && node dist/security/phase7b1.spec.js",
+    "test:security:7b2": "npm run build && node dist/security/phase7b2.spec.js",
+    "test:security:7b3": "npm run build && node dist/security/phase7b3.spec.js",
+    "test:security:8b": "npm run build && node dist/security/phase8b.spec.js",
+    "test:security:8c": "npm run build && node dist/security/phase8c.spec.js",
+    "test:security:8d": "npm run build && node dist/security/phase8d.spec.js",
+    "test:security:8e": "npm run build && node dist/security/phase8e.spec.js",
+    "test:security:8f": "npm run build && node dist/security/phase8f.spec.js",
+    "test:security:9a": "npm run build && node --test dist/security/phase9a.spec.js",
+    "test:security:9b": "npm run build && node --test dist/security/phase9b.spec.js",
+    "test:security:9d1": "npm run build && node --test dist/security/phase9d1.spec.js",
+    "test:security:10b1": "npm run build && node --test dist/security/phase10b1.spec.js",
+    "test:security:10b2": "npm run build && node --test dist/security/phase10b2.spec.js",
+    "test:security:10c1": "npm run build && node --test dist/security/phase10c1.spec.js",
+    "test:security:10c2": "npm run build && node --test dist/security/phase10c2.spec.js",
+    "test:security:10c3": "npm run build && node --test dist/security/phase10c3.spec.js",
+    "test:security:10c6a": "npm run build && node --test dist/security/phase10c6a.spec.js",
+    "test:security:10c6b": "npm run build && node --test dist/security/phase10c6b.spec.js",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:validate": "prisma validate --schema prisma/schema.prisma",
+    "db:format": "prisma format --schema prisma/schema.prisma",
+    "db:setup-runtime-role": "powershell -ExecutionPolicy Bypass -File scripts/setup-runtime-role.ps1",
+    "db:setup-platform-role": "powershell -ExecutionPolicy Bypass -File scripts/setup-runtime-role.ps1 -Profile Platform",
+    "db:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:bootstrap": "npm run build && node dist/db/run-production-bootstrap.js",
+    "db:seed:dev": "npm run build && node dist/db/run-seed.js",
+    "start": "node dist/server.js"
+  },
+  "prisma": {
+    "seed": "npm run db:seed:dev"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "argon2": "^0.45.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.6.2",
+    "exceljs": "^4.4.0",
+    "helmet": "^8.3.0",
+    "jose": "^6.2.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "prisma": "6.19.0"
+  }
+}

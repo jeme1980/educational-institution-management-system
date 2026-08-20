@@ -1,0 +1,19 @@
+:host{display:block}.stat-card{background:linear-gradient(135deg,#fff 0%,#f8fafc 100%)}.exam-row{transition:background-color .18s ease}.exam-row:hover{background:#fffdf5}.action-button{display:inline-flex;height:2.25rem;width:2.25rem;align-items:center;justify-content:center;border-radius:.65rem;font-size:.75rem;transition:background-color .15s ease,transform .15s ease}.action-button:hover{transform:translateY(-1px)}.action-button mat-icon{font-size:18px;height:18px;width:18px}.mobile-action{display:inline-flex;flex:1;align-items:center;justify-content:center;gap:.35rem;border-radius:.7rem;background:#f8fafc;padding:.6rem .7rem;font-size:.7rem;font-weight:800}.mobile-action mat-icon{font-size:17px;height:17px;width:17px}:host > div > div > section:nth-of-type(3){display:none}
+
+/* Compact, spreadsheet-like question editor: keeps large question sets scannable. */
+:host > div.fixed.inset-0.z-50{align-items:flex-start!important;overflow-y:auto;padding:1rem!important}
+:host > div.fixed.inset-0.z-50 > div{display:flex;max-height:calc(100vh - 2rem);flex-direction:column;overflow:hidden}
+:host > div.fixed.inset-0.z-50 > div > div:first-child{flex:none;padding:1rem 1.25rem!important}
+:host > div.fixed.inset-0.z-50 > div > div:first-child h2{font-size:1.05rem;line-height:1.35}
+:host > div.fixed.inset-0.z-50 > div > div:first-child p{margin-top:.15rem;font-size:.7rem}
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto{min-height:0;padding:.75rem 1rem!important}
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid{margin-bottom:.5rem!important;gap:.5rem!important;border-radius:.65rem;padding:.55rem!important;box-shadow:0 1px 2px rgba(15,23,42,.03)}
+@media(min-width:769px){:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid{grid-template-columns:70px 150px minmax(130px,1fr) minmax(130px,1fr) 88px minmax(220px,1.5fr) 38px!important}}
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid input,
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid select{min-height:2.15rem;border-radius:.45rem;padding:.35rem .55rem;font-size:.76rem;line-height:1.2}
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid input[type=number]{text-align:center}
+:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid button{align-self:center;padding:.4rem}
+:host > div.fixed.inset-0.z-50 > div > div.border-t{flex:none;padding:.7rem 1rem!important}
+:host > div.fixed.inset-0.z-50 > div > div.border-b{padding:.65rem 1rem!important}
+:host > div.fixed.inset-0.z-50 > div > div.border-b button{padding:.45rem .7rem;font-size:.75rem}
+@media(max-width:768px){:host > div.fixed.inset-0.z-50{padding:.5rem!important}:host > div.fixed.inset-0.z-50 > div{max-height:calc(100vh - 1rem)}:host > div.fixed.inset-0.z-50 > div > div.overflow-auto{padding:.5rem!important}:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid input:last-of-type{grid-column:1/-1}:host > div.fixed.inset-0.z-50 > div > div.overflow-auto > div.grid button{position:absolute;inset-inline-start:.5rem}}

@@ -1,0 +1,6 @@
+{
+  "name": "Educational Institution Management System",
+  "description": "Comprehensive Educational Institution Management Platform with Angular, Express, and Database Integration",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

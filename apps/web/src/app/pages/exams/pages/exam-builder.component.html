@@ -1,0 +1,69 @@
+<div class="builder-page" dir="rtl">
+  <div class="builder-shell">
+    <header class="page-hero">
+      <div class="hero-copy">
+        <a routerLink="/exams" class="back-link"><mat-icon>arrow_forward</mat-icon> العودة إلى الامتحانات</a>
+        <div class="hero-title-row">
+          <div class="hero-icon"><mat-icon>assignment</mat-icon></div>
+          <div><h1>{{ isEditMode() ? 'تعديل الامتحان والأسئلة' : 'إنشاء امتحان جديد' }}</h1><p>أكمل الخطوات بالترتيب، وستظهر لك حالة الامتحان قبل الحفظ.</p></div>
+        </div>
+      </div>
+      <div class="hero-actions"><span class="save-state" [class.is-dirty]="hasChanges()"><mat-icon>{{ hasChanges() ? 'edit_note' : 'cloud_done' }}</mat-icon>{{ hasChanges() ? 'تعديلات غير محفوظة' : 'محفوظ' }}</span><button type="button" class="ghost-button" (click)="back()">خروج</button></div>
+    </header>
+
+    @if (loading()) { <section class="state-card"><strong>جارٍ تحميل بيانات الامتحان...</strong></section> }
+    @else if (error() && !form.dirty && !questions.length) { <section class="state-card"><mat-icon>error_outline</mat-icon><h2>تعذر تحميل الامتحان</h2><p>{{ error() }}</p><button type="button" class="primary-action" (click)="back()">العودة إلى القائمة</button></section> }
+    @else {
+      <div class="stepper" role="tablist" aria-label="مراحل إعداد الامتحان">
+        <button type="button" [class.active]="activePanel() === 'details'" (click)="setPanel('details')"><span>1</span><strong>بيانات الامتحان</strong><small>المادة والتاريخ والدرجة</small></button>
+        <i></i><button type="button" [class.active]="activePanel() === 'groups'" (click)="setPanel('groups')"><span>2</span><strong>المجموعات</strong><small>{{ selectedGroupIds().length }} محددة</small></button>
+        <i></i><button type="button" [class.active]="activePanel() === 'questions'" (click)="setPanel('questions')"><span>3</span><strong>الأسئلة</strong><small>{{ questions.length }} أسئلة · {{ totalScore() }} درجة</small></button>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()" class="workspace">
+        <main class="main-column">
+          @if (activePanel() === 'details') {
+            <section class="content-card"><div class="card-heading"><div><span class="eyebrow">الخطوة 1</span><h2>بيانات الامتحان</h2><p>حدد السياق الأكاديمي والمعلومات التي ستظهر في سجل الامتحانات.</p></div><mat-icon>info</mat-icon></div>
+              <div class="context-strip"><div><small>السنة الدراسية</small><strong>{{ currentYear()?.yearLabel || 'السنة الحالية' }}</strong></div><div><small>المؤسسة</small><strong>{{ api.selectedInstitutionId() ? 'المؤسسة المحددة' : 'سياق المؤسسة الحالي' }}</strong></div></div>
+              <div class="form-grid">
+                <label class="span-2">عنوان الامتحان *<input formControlName="titleAr" placeholder="مثال: امتحان الرياضيات - الفصل الأول" />@if(form.controls.titleAr.touched && form.controls.titleAr.invalid){<small class="field-error">أدخل عنوانًا صحيحًا لا يتجاوز 250 حرفًا.</small>}</label>
+                <label>المادة *<select formControlName="subjectId">@for (item of api.subjects(); track item.id) {<option [value]="item.id">{{ item.nameAr }}</option>} @empty {<option value="">لا توجد مواد متاحة</option>}</select></label>
+                <label>نوع الامتحان *<select formControlName="examTypeId">@for (item of api.examTypes(); track item.id) {<option [value]="item.id">{{ item.nameAr }}</option>} @empty {<option value="">لا توجد أنواع متاحة</option>}</select></label>
+                <label>الفترة الدراسية *<select formControlName="academicPeriodId">@for (item of api.academicPeriods(); track item.id) {<option [value]="item.id">{{ item.nameAr }}</option>} @empty {<option value="">لا توجد فترات متاحة</option>}</select></label>
+                <label>تاريخ الامتحان *<input type="date" formControlName="examDate" /></label>
+                <label>الدرجة القصوى *<input type="number" min="0.01" step="0.01" formControlName="maxScore" /><small class="hint">يمكن حفظ الأسئلة على مراحل، بشرط ألا يتجاوز مجموعها هذه الدرجة.</small></label>
+                <label>الوزن النسبي <input type="number" min="0" step="0.01" formControlName="weight" placeholder="اختياري" /></label>
+                <label class="span-2">العنوان العبري <input formControlName="titleHe" dir="ltr" placeholder="اختياري" /></label>
+                <label class="span-2">ملاحظات <textarea formControlName="notes" rows="3" placeholder="أضف تعليمات أو ملاحظات للمعلمين..."></textarea></label>
+              </div>
+            </section>
+            <div class="panel-footer"><button type="button" class="primary-action" (click)="setPanel('groups')">التالي: اختيار المجموعات <mat-icon>arrow_back</mat-icon></button></div>
+          }
+
+          @if (activePanel() === 'groups') {
+            <section class="content-card"><div class="card-heading"><div><span class="eyebrow">الخطوة 2</span><h2>المجموعات التعليمية</h2><p>اختر المجموعات التي سيطبّق عليها الامتحان. تظهر فقط مجموعات المادة والسنة الحالية.</p></div><mat-icon>groups</mat-icon></div>
+              @if (questionContextWarning()) { <div class="notice warning"><mat-icon>info</mat-icon><span>{{ questionContextWarning() }}</span></div> }
+              <div class="selection-toolbar"><strong>{{ selectedGroupIds().length }} من {{ availableGroups().length }} مجموعات محددة</strong><button type="button" class="text-button" (click)="toggleAllGroups()">{{ selectedGroupIds().length === availableGroups().length && availableGroups().length ? 'إلغاء تحديد الكل' : 'تحديد الكل' }}</button></div>
+              @if (availableGroups().length) { <div class="group-grid">@for (group of availableGroups(); track group.id) {<label class="group-card" [class.selected]="selectedGroupIds().includes(group.id)"><input type="checkbox" [checked]="selectedGroupIds().includes(group.id)" (change)="toggleGroup(group.id,$event)" /><span class="checkmark"><mat-icon>check</mat-icon></span><span class="group-info"><strong>{{ group.nameAr }}</strong><small>{{ group.classRoom?.nameAr || 'صف غير محدد' }} · {{ group._count?.students || 0 }} طالب</small></span></label>} </div> } @else { <div class="empty-state"><mat-icon>group_off</mat-icon><strong>لا توجد مجموعات متاحة</strong><span>أنشئ مجموعة تعليمية للمادة والسنة الدراسية أولًا.</span></div> }
+            </section>
+            <div class="panel-footer split"><button type="button" class="ghost-button" (click)="setPanel('details')"><mat-icon>arrow_forward</mat-icon> السابق</button><button type="button" class="primary-action" (click)="setPanel('questions')">التالي: بناء الأسئلة <mat-icon>arrow_back</mat-icon></button></div>
+          }
+
+          @if (activePanel() === 'questions') {
+            <div class="question-import-actions"><input id="question-import-file" type="file" accept=".xlsx" class="hidden" (change)="importQuestions($event)" /><button type="button" class="ghost-button import-action" (click)="downloadQuestionTemplate()" [disabled]="importingQuestions()"><mat-icon>download</mat-icon> تنزيل قالب الاستيراد</button><button type="button" class="ghost-button import-action" (click)="openQuestionImport()" [disabled]="importingQuestions()"><mat-icon>upload_file</mat-icon>{{ importingQuestions() ? 'جارٍ الاستيراد...' : 'استيراد من Excel' }}</button></div>
+            <section class="content-card"><div class="card-heading"><div><span class="eyebrow">الخطوة 3</span><h2>بناء الأسئلة</h2><p>أضف الأسئلة على مراحل. يُمنع الحفظ فقط عندما يتجاوز مجموع الدرجات الدرجة القصوى.</p></div><mat-icon>quiz</mat-icon></div>
+              <div class="question-toolbar"><div class="question-count"><strong>{{ questions.length }}</strong><span>أسئلة مضافة</span></div><label class="search-box"><mat-icon>search</mat-icon><input placeholder="ابحث داخل الأسئلة..." (input)="setQuestionSearch($event)" /></label><button type="button" class="primary-action compact" (click)="addQuestion()"><mat-icon>add</mat-icon> إضافة سؤال</button></div>
+              @if (questions.length && filteredQuestionCount() !== questions.length) {<div class="filter-note">يعرض {{ filteredQuestionCount() }} من {{ questions.length }} أسئلة</div>}
+              <div formArrayName="questions" class="questions-list">@for (question of questions.controls; track question; let i = $index) { @if (questionVisible(i)) {<article [formGroupName]="i" class="question-card" [class.question-invalid]="question.invalid && question.touched"><div class="question-head"><span class="question-badge">سؤال {{ i + 1 }}</span><div class="question-tools"><button type="button" (click)="moveQuestion(i,-1)" [disabled]="i===0" title="تحريك لأعلى"><mat-icon>keyboard_arrow_up</mat-icon></button><button type="button" (click)="moveQuestion(i,1)" [disabled]="i===questions.length-1" title="تحريك لأسفل"><mat-icon>keyboard_arrow_down</mat-icon></button><button type="button" (click)="duplicateQuestion(i)" title="تكرار"><mat-icon>content_copy</mat-icon></button><button type="button" class="danger" (click)="removeQuestion(i)" title="حذف"><mat-icon>delete_outline</mat-icon></button></div></div><div class="question-grid"><label>نوع السؤال *<select formControlName="questionTypeId">@for (item of api.questionTypes(); track item.id) {<option [value]="item.id">{{ item.nameAr }}</option>}</select></label><label>الموضوع<select formControlName="topicId"><option value="">بدون موضوع</option>@for (item of topics(); track item.id) {<option [value]="item.id">{{ item.nameAr }}{{ item.gradeLevelName ? ' · ' + item.gradeLevelName : '' }}</option>}</select></label><label>المهارة<select formControlName="skillId"><option value="">بدون مهارة</option>@for (item of skills(); track item.id) {<option [value]="item.id">{{ item.nameAr }}{{ item.gradeLevelName ? ' · ' + item.gradeLevelName : '' }}</option>}</select></label><label>الدرجة *<input type="number" min="0.01" step="0.01" formControlName="maxScore" /></label><label class="span-2">نص السؤال بالعربية<textarea formControlName="contentAr" rows="2" placeholder="اكتب نص السؤال أو اتركه فارغًا لإضافته لاحقًا..."></textarea></label><label class="span-2">نص السؤال بالعبرية<textarea formControlName="contentHe" rows="2" dir="ltr" placeholder="اختياري"></textarea></label></div>@if(question.invalid && question.touched){<div class="field-error question-error">تحقق من نوع السؤال والدرجة.</div>}</article>} } @empty {<div class="empty-state"><mat-icon>playlist_add</mat-icon><strong>لم تتم إضافة أسئلة بعد</strong><span>ابدأ بإضافة السؤال الأول باستخدام الزر أعلاه.</span><button type="button" class="primary-action" (click)="addQuestion()"><mat-icon>add</mat-icon> إضافة أول سؤال</button></div>}</div>
+            </section>
+            @if (error()) {<div class="notice error"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span></div>}
+            <div class="panel-footer split"><button type="button" class="ghost-button" (click)="setPanel('groups')"><mat-icon>arrow_forward</mat-icon> السابق</button><button type="submit" class="primary-action" [disabled]="saving()"><mat-icon>{{ saving() ? 'hourglass_top' : 'save' }}</mat-icon>{{ saving() ? 'جارٍ حفظ الامتحان...' : 'حفظ الامتحان والأسئلة' }}</button></div>
+          }
+        </main>
+
+        <aside class="summary-card"><div class="summary-title"><div><span class="eyebrow">مراجعة سريعة</span><h2>جاهزية الامتحان</h2></div><mat-icon>fact_check</mat-icon></div><div class="score-ring"><strong>{{ totalScore() }}</strong><span>من {{ form.controls.maxScore.value || 0 }} درجة</span></div><div class="summary-stats"><div><strong>{{ questions.length }}</strong><span>أسئلة</span></div><div><strong>{{ selectedGroupIds().length }}</strong><span>مجموعات</span></div><div><strong>{{ invalidQuestionCount() }}</strong><span>أخطاء</span></div></div><div class="check-list"><p [class.ok]="form.valid"><mat-icon>{{ form.valid ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>بيانات الامتحان مكتملة</p><p [class.ok]="selectedGroupIds().length > 0"><mat-icon>{{ selectedGroupIds().length ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>ربط مجموعة تعليمية</p><p [class.ok]="questions.length > 0 && !invalidQuestionCount()"><mat-icon>{{ questions.length > 0 && !invalidQuestionCount() ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>أسئلة صحيحة</p><p [class.ok]="questions.length > 0 && !scoreMismatch()"><mat-icon>{{ questions.length > 0 && !scoreMismatch() ? 'check_circle' : 'warning' }}</mat-icon>{{ scoreMismatch() ? 'مجموع الدرجات أكبر من الحد' : (totalScore() < (form.controls.maxScore.value || 0) ? 'يمكن إضافة أسئلة أخرى' : 'الدرجة مكتملة') }}</p></div><button type="button" class="primary-action full" [disabled]="saving() || !hasChanges()" (click)="save()"><mat-icon>save</mat-icon>{{ saving() ? 'جارٍ الحفظ...' : 'حفظ التعديلات' }}</button></aside>
+      </form>
+    }
+    @if (toast()) { <div class="toast"><mat-icon>check_circle</mat-icon>{{ toast() }}</div> }
+  </div>
+</div>

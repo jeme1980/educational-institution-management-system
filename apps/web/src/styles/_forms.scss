@@ -1,0 +1,8 @@
+.core-field { display: grid; gap: var(--space-1); }
+.core-field > label { color: var(--on-surface-variant); font-size: var(--text-label-sm); font-weight: 600; }
+.core-input,
+.core-select,
+.core-textarea { min-height: var(--control-height); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); background: var(--surface-container-lowest); color: var(--on-surface); padding-inline: var(--space-3); font: inherit; }
+.core-textarea { min-height: 6rem; padding-block: var(--space-2); resize: vertical; }
+.core-input:focus, .core-select:focus, .core-textarea:focus { border-color: var(--secondary); outline: 2px solid color-mix(in srgb, var(--secondary) 18%, transparent); outline-offset: 0; }
+.core-input:disabled, .core-select:disabled, .core-textarea:disabled { background: var(--neutral-container); color: var(--neutral); cursor: not-allowed; }

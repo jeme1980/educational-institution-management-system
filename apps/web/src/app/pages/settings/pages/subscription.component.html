@@ -1,0 +1,18 @@
+<div dir="rtl" class="mx-auto min-h-[calc(100vh-4rem)] max-w-[1200px] space-y-5 p-4 md:p-6">
+  <header class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+    <div class="flex items-center gap-3">
+      <span class="rounded-xl bg-blue-50 p-2 text-[#00236f]"><mat-icon>verified</mat-icon></span>
+      <div><h1 class="text-2xl font-bold text-slate-900">اشتراك المؤسسة</h1><p class="mt-1 text-sm text-slate-500">عرض حالة الخطة والحدود الحالية للمؤسسة.</p></div>
+    </div>
+  </header>
+  @if (loading()) { <section class="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">جارٍ تحميل بيانات الاشتراك...</section> }
+  @if (error()) { <section class="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{{ error() }}</section> }
+  @if (subscription(); as data) {
+    <section class="grid gap-4 md:grid-cols-3">
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"><p class="text-sm text-slate-500">الخطة الحالية</p><p class="mt-2 text-xl font-bold text-slate-900">{{ data.plan?.nameAr || data.plan?.code || 'غير محددة' }}</p></article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"><p class="text-sm text-slate-500">الحالة</p><p class="mt-2 text-xl font-bold" [class.text-emerald-700]="data.isActive" [class.text-rose-700]="!data.isActive">{{ statusLabel(data.status) }}</p></article>
+      <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"><p class="text-sm text-slate-500">الفترة</p><p class="mt-2 text-sm font-semibold text-slate-900">{{ data.startsAt | date:'yyyy-MM-dd' }} — {{ data.endsAt ? (data.endsAt | date:'yyyy-MM-dd') : 'غير محددة' }}</p></article>
+    </section>
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"><h2 class="mb-4 text-lg font-bold text-slate-900">الاستخدام والحدود</h2><div class="grid gap-3 sm:grid-cols-3">@for (item of [{key:'students',label:'الطلاب',limit:'maxStudents'},{key:'staff',label:'الكادر',limit:'maxStaff'},{key:'users',label:'المستخدمون',limit:'maxUsers'}]; track item.key) {<div class="rounded-xl bg-slate-50 p-4"><p class="text-sm text-slate-500">{{ item.label }}</p><p class="mt-1 text-lg font-bold text-slate-900">{{ data.usage?.[item.key] || 0 }} / {{ data.limits?.[item.limit] ?? 'غير محدود' }}</p></div>}</div></section>
+  }
+</div>

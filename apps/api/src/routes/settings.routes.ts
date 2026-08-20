@@ -1,0 +1,30 @@
+import { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission.middleware';
+import * as controller from '../controllers/settings.controller';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { validateRequest } from '../middleware/validate';
+import { institutionSettingsUpdateSchema } from '../validation/institution-settings.schemas';
+
+const router = Router();
+router.get('/settings/institution-profile', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getInstitutionProfile));
+router.patch('/settings/institution-profile', requireAuth, requirePermission('settings', 'update'), validateRequest(institutionSettingsUpdateSchema), asyncHandler(controller.updateInstitutionProfile));
+router.patch('/settings/academic-years/:id/current', requireAuth, requirePermission('settings', 'update'), asyncHandler(controller.setCurrentAcademicYear));
+router.get('/institutions', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getInstitutions));
+router.get('/academic-years', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getAcademicYears));
+router.post('/academic-years', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.createAcademicYears));
+router.put('/academic-years/:id', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.updateAcademicYearsById));
+router.delete('/academic-years/:id', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.deleteAcademicYearsById));
+router.patch('/academic-years/:id/archive', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.archiveAcademicYearsById));
+router.patch('/academic-years/:id/restore', requireAuth, requirePermission('settings', 'update'), asyncHandler(controller.restoreAcademicYearsById));
+router.get('/academic-periods', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getAcademicPeriods));
+router.post('/academic-periods', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.createAcademicPeriods));
+router.put('/academic-periods/:id', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.updateAcademicPeriodsById));
+router.delete('/academic-periods/:id', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.deleteAcademicPeriodsById));
+router.get('/languages', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getLanguages));
+router.get('/education-types', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getEducationTypes));
+router.get('/regions', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getRegions));
+router.get('/app-state', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getAppState));
+router.put('/app-state', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.updateAppState));
+
+export default router;

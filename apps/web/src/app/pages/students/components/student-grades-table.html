@@ -1,0 +1,84 @@
+<div class="space-y-3" dir="rtl">
+  <div class="flex items-center justify-between">
+    <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+      <mat-icon class="text-[#00236f]">grade</mat-icon>
+      <span>كشف العلامات والنتائج الامتحانية للمواد</span>
+    </h4>
+    <button
+      (click)="loadGrades(true)"
+      [disabled]="isLoading()"
+      class="flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 px-2 py-1 rounded-lg transition-all cursor-pointer"
+    >
+      <mat-icon class="text-[14px] w-[14px] h-[14px]" [class.animate-spin]="isLoading()">refresh</mat-icon>
+      <span>تحديث البيانات</span>
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+      <mat-icon class="text-3xl text-slate-400 animate-spin">sync</mat-icon>
+      <p class="text-xs mt-1.5 font-medium">جاري تحميل كشف الدرجات من الخادم...</p>
+    </div>
+  } @else if (errorMessage()) {
+    <div class="p-6 text-center text-rose-700 bg-rose-50 rounded-xl border border-rose-200">
+      <mat-icon class="text-3xl text-rose-400">error_outline</mat-icon>
+      <p class="text-xs mt-1 font-bold">{{ errorMessage() }}</p>
+    </div>
+  } @else if (grades().length === 0) {
+    <div class="p-8 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+      <mat-icon class="text-4xl text-slate-300">assignment</mat-icon>
+      <p class="text-xs font-semibold mt-1">لا توجد درجات أو نتائج امتحانية مسجلة لهذا الطالب في السجلات الحالية.</p>
+    </div>
+  } @else {
+    <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-xs">
+      <table class="w-full text-right text-xs bg-white">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+            <th class="p-3">المادة الدراسية</th>
+            <th class="p-3">الامتحان والتقييم</th>
+            <th class="p-3 text-center">الدرجة</th>
+            <th class="p-3 text-center">الدرجة القصوى</th>
+            <th class="p-3 text-center">النسبة المئوية</th>
+            <th class="p-3">حالة الحضور والملاحظات</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (grade of grades(); track grade.id) {
+            <tr class="hover:bg-slate-50/80 transition-colors">
+              <td class="p-3 font-semibold text-slate-900">{{ grade.subjectName }}</td>
+              <td class="p-3 text-slate-600 font-medium">{{ grade.examTitle }}</td>
+              <td class="p-3 text-center font-bold">
+                @if (grade.isAbsent) {
+                  <span class="text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md font-bold">غائب</span>
+                } @else {
+                  <span class="text-slate-900 font-mono">{{ grade.score }}</span>
+                }
+              </td>
+              <td class="p-3 text-center font-mono font-semibold text-slate-500">{{ grade.maxScore }}</td>
+              <td class="p-3 text-center">
+                @if (grade.isAbsent || grade.score === null || grade.score === undefined) {
+                  <span class="text-slate-400 font-mono">-</span>
+                } @else {
+                  <span
+                    [class]="(+grade.score / +grade.maxScore) >= 0.5 ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md font-mono font-bold' : 'text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md font-mono font-bold'"
+                  >
+                    {{ ((+grade.score / +grade.maxScore) * 100) | number:'1.0-0' }}%
+                  </span>
+                }
+              </td>
+              <td class="p-3">
+                @if (grade.isAbsent) {
+                  <span class="text-xs text-rose-500 font-medium">لم يحضر الامتحان - بدون عذر مقبل</span>
+                } @else if (grade.notes) {
+                  <span class="text-slate-500 text-[11px] font-medium">{{ grade.notes }}</span>
+                } @else {
+                  <span class="text-slate-400 text-[11px] font-normal">-</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

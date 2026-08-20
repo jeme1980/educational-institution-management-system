@@ -1,0 +1,21 @@
+<div dir="rtl" class="max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6 space-y-5">
+  <div class="flex items-center justify-between gap-4">
+    <div><h1 class="text-2xl font-bold text-slate-900 flex items-center gap-2"><mat-icon class="text-[#00236f]">history</mat-icon>سجل التدقيق</h1><p class="text-sm text-slate-500 mt-1">سجل للعمليات الحساسة داخل مؤسستك للقراءة فقط.</p></div>
+  </div>
+  <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+      <label class="text-xs font-semibold text-slate-600">العملية<input [(ngModel)]="action" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="UPDATE" /></label>
+      <label class="text-xs font-semibold text-slate-600">نوع السجل<input [(ngModel)]="entityType" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Student" /></label>
+      <label class="text-xs font-semibold text-slate-600">من تاريخ<input type="date" [(ngModel)]="from" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+      <label class="text-xs font-semibold text-slate-600">إلى تاريخ<input type="date" [(ngModel)]="to" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
+      <div class="flex gap-2"><button type="button" (click)="page.set(1); load()" class="rounded-xl bg-[#00236f] px-4 py-2 text-sm font-bold text-white">بحث</button><button type="button" (click)="reset()" class="rounded-xl border border-slate-200 px-4 py-2 text-sm">مسح</button></div>
+    </div>
+  </section>
+  @if (error()) { <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{{ error() }}</div> }
+  <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+    <div class="overflow-x-auto"><table class="min-w-full text-sm"><thead class="bg-slate-50 text-right text-xs text-slate-500"><tr><th class="px-4 py-3">التاريخ</th><th class="px-4 py-3">العملية</th><th class="px-4 py-3">نوع السجل</th><th class="px-4 py-3">معرف السجل</th><th class="px-4 py-3">التفاصيل</th></tr></thead><tbody>
+      @for (row of rows(); track row.id) { <tr class="border-t border-slate-100 align-middle"><td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ row.createdAt | date:'yyyy-MM-dd HH:mm' }}</td><td class="px-4 py-3 font-semibold">{{ row.action }}</td><td class="px-4 py-3">{{ row.entityType }}</td><td class="px-4 py-3 font-mono text-xs">{{ row.entityId || '—' }}</td><td class="px-4 py-3 text-xs text-slate-500">{{ row.metadata | json }}</td></tr> } @empty { <tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد سجلات مطابقة.</td></tr> }
+    </tbody></table></div>
+    <div class="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500"><span>إجمالي السجلات: {{ total() }}</span><div class="flex gap-2"><button type="button" (click)="previous()" class="rounded-lg border border-slate-200 px-3 py-1.5" [disabled]="page() === 1">السابق</button><span class="px-2 py-1.5">{{ page() }}</span><button type="button" (click)="next()" class="rounded-lg border border-slate-200 px-3 py-1.5" [disabled]="page() * pageSize() >= total()">التالي</button></div></div>
+  </section>
+</div>

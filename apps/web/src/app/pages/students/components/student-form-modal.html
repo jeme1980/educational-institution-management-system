@@ -1,0 +1,531 @@
+@if (show() && studentForm()) {
+  <div (click)="closeForm.emit()" (keydown.escape)="closeForm.emit()" tabindex="0" class="fixed inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto" style="position: fixed; inset: 0; z-index: 9999;" id="student-form-modal-wrapper" role="dialog" aria-modal="true">
+    <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <!-- Modal Header -->
+      <div class="bg-[#00236f] text-white p-4 md:p-5 flex items-center justify-between border-b border-[#00236f]/10 shrink-0">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <mat-icon class="text-white/80">{{ isEditing() ? 'edit_note' : 'person_add' }}</mat-icon>
+          <span>{{ isEditing() ? 'تعديل كافة حقول الطالب (Students Schema)' : 'تسجيل طالب جديد بكافة بيانات المخطط' }}</span>
+        </h3>
+        <button (click)="closeForm.emit()" class="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all cursor-pointer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Form Tabs -->
+      <div class="flex border-b border-slate-200 bg-slate-50 shrink-0">
+        <button
+          type="button"
+          (click)="tabChange.emit('basic')"
+          [class]="activeTab() === 'basic' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'"
+          class="flex-1 py-3 text-center text-xs font-bold transition-all border-r border-slate-200/50 cursor-pointer"
+        >
+          1. البيانات الأساسية
+        </button>
+        <button
+          type="button"
+          (click)="tabChange.emit('medical')"
+          [class]="activeTab() === 'medical' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'"
+          class="flex-1 py-3 text-center text-xs font-bold transition-all border-r border-slate-200/50 cursor-pointer"
+        >
+          2. الملف الطبي (اختياري)
+        </button>
+        <button
+          type="button"
+          (click)="tabChange.emit('guardian')"
+          [class]="activeTab() === 'guardian' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/50'"
+          class="flex-1 py-3 text-center text-xs font-bold transition-all cursor-pointer"
+        >
+          3. ولي الأمر (اختياري)
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form [formGroup]="studentForm()!" (ngSubmit)="onSubmit()" class="text-right flex flex-col overflow-hidden" dir="rtl" id="student-form-inner">
+        <div class="flex-1 overflow-y-auto p-6" style="max-height: calc(90vh - 180px);">
+          
+          <!-- Tab 1: Basic Info -->
+          @if (activeTab() === 'basic') {
+            <div class="space-y-5 animate-in fade-in duration-150">
+              <!-- Section 1: Identifiers & Core Metadata -->
+              <div class="space-y-4">
+                <div class="border-b border-slate-100 pb-2">
+                  <h4 class="font-bold text-[#00236f] text-xs flex items-center gap-1.5">
+                    <mat-icon class="text-base">badge</mat-icon>
+                    <span>1. المعرفات الرسمية والحسابية</span>
+                  </h4>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهوية الوطنية (national_id)</label>
+                    <input
+                      type="text"
+                      formControlName="nationalId"
+                      required
+                      maxlength="10"
+                      placeholder="9 أرقام"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">المؤسسة التعليمية * (institution_id)</label>
+                    <select
+                      formControlName="institutionId"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="">المدرسة المركزية (افتراضي)</option>
+                      @for (inst of apiService.institutions(); track inst.id) {
+                        <option [value]="inst.id">{{ inst.nameAr }} ({{ inst.schoolCode }})</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الصف / الشعبة الدراسية (class_id)</label>
+                    <select
+                      formControlName="classId"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="">-- بدون تحديد شعبة حالياً --</option>
+                      @for (c of apiService.classes(); track c.id) {
+                        <option [value]="c.id">{{ c.nameAr }} (الصف {{ c.gradeLevel }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">حالة الطالب بالحقل * (student_status_id)</label>
+                    <select
+                      formControlName="studentStatusId"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="student-status-active">طالب منتظم ومستمر (ACTIVE)</option>
+                      <option value="INACTIVE">منقطع / ملغى (INACTIVE)</option>
+                      @for (st of apiService.lookups()?.studentStatuses || []; track st.id) {
+                        <option [value]="st.id">{{ st.nameAr }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Names (Arabic & Hebrew) -->
+              <div class="space-y-4">
+                <div class="border-b border-slate-100 pb-2">
+                  <h4 class="font-bold text-[#00236f] text-xs flex items-center gap-1.5">
+                    <mat-icon class="text-base">person</mat-icon>
+                    <span>2. الأسماء بالعربية والعبرية</span>
+                  </h4>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الأول (بالعربية) * (first_name_ar)</label>
+                    <input
+                      type="text"
+                      formControlName="firstNameAr"
+                      placeholder="مثال: محمد"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم العائلة (بالعربية) * (last_name_ar)</label>
+                    <input
+                      type="text"
+                      formControlName="lastNameAr"
+                      placeholder="مثال: الخليل"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الأول (بالعبرية) (first_name_he)</label>
+                    <input
+                      type="text"
+                      formControlName="firstNameHe"
+                      placeholder="مثال: מוחמד"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم العائلة (بالعبرية) (last_name_he)</label>
+                    <input
+                      type="text"
+                      formControlName="lastNameHe"
+                      placeholder="مثال: אלחליل"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 3: Personal & Demographics -->
+              <div class="space-y-4">
+                <div class="border-b border-slate-100 pb-2">
+                  <h4 class="font-bold text-[#00236f] text-xs flex items-center gap-1.5">
+                    <mat-icon class="text-base">cake</mat-icon>
+                    <span>3. البيانات الشخصية والديموغرافية</span>
+                  </h4>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الجنس (gender_id)</label>
+                    <select
+                      formControlName="genderId"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      @for (gender of apiService.lookups()?.genders || []; track gender.id) {
+                        <option [value]="gender.id">{{ gender.nameAr }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">تاريخ الميلاد (birth_date)</label>
+                    <input
+                      type="date"
+                      formControlName="birthDate"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رابط صورة الطالب (photo_url)</label>
+                    <input
+                      type="text"
+                      formControlName="photoUrl"
+                      placeholder="https://..."
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f] text-right"
+                      dir="ltr"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البلدة / المدينة (town_id)</label>
+                    <select
+                      formControlName="townId"
+                      class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="">-- بدون بلدة --</option>
+                      @for (town of apiService.towns(); track town.id) {
+                        <option [value]="town.id">{{ town.nameAr }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 4: Contact & Address -->
+              <div class="space-y-4">
+                <div class="border-b border-slate-100 pb-2">
+                  <h4 class="font-bold text-[#00236f] text-xs flex items-center gap-1.5">
+                    <mat-icon class="text-base">contact_phone</mat-icon>
+                    <span>4. بيانات التواصل والعنوان</span>
+                  </h4>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف / الجوال (phone_number)</label>
+                    <input
+                      type="text"
+                      formControlName="phoneNumber"
+                      placeholder="050-1234567"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني (email)</label>
+                    <input
+                      type="email"
+                      formControlName="email"
+                      placeholder="student@school.edu"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">العنوان بالعربية (address_ar)</label>
+                    <input
+                      type="text"
+                      formControlName="addressAr"
+                      placeholder="البلدية / الحي / الشارع"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">العنوان بالعبرية (address_he)</label>
+                    <input
+                      type="text"
+                      formControlName="addressHe"
+                      placeholder="كتوبيت بالعبرية"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 5: Notes & Active Toggle -->
+              <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+                <div class="text-xs font-bold text-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span class="flex items-center gap-1.5">
+                    <mat-icon class="text-base text-[#00236f]">notes</mat-icon>
+                    <span>5. الملاحظات والوضع الأكاديمي (notes, is_active)</span>
+                  </span>
+
+                  <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" formControlName="isActive" class="w-4 h-4 text-[#00236f] rounded border-slate-300 focus:ring-[#00236f] cursor-pointer" />
+                    <span class="text-xs font-bold text-slate-800">حساب الطالب نشط بالمنظومة (is_active)</span>
+                  </label>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات وسجل إضافي (notes)</label>
+                  <textarea
+                    formControlName="notes"
+                    rows="2"
+                    placeholder="أي ملاحظات أكاديمية، صحية، أو سلوكية تابعة للطالب..."
+                    class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Tab 2: Medical Profile -->
+          @if (activeTab() === 'medical') {
+            <div class="space-y-5 animate-in fade-in duration-150">
+              <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <mat-icon class="text-base text-[#00236f]">medical_services</mat-icon>
+                  <span>السجل الطبي والملف الصحي للطالب (StudentMedicalProfile)</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">فصيلة الدم (blood_type)</label>
+                    <select
+                      formControlName="bloodType"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="">-- غير معروف --</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </select>
+                  </div>
+
+                  <div class="flex items-center pt-5">
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" formControlName="hasSpecialNeeds" class="w-4 h-4 text-[#00236f] rounded border-slate-300 focus:ring-[#00236f] cursor-pointer" />
+                      <span class="text-xs font-bold text-slate-800">من ذوي الاحتياجات الخاصة؟ (has_special_needs)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الحساسية والأدوية المحذورة (allergies_description)</label>
+                    <textarea
+                      formControlName="allergiesDescription"
+                      rows="2"
+                      placeholder="اكتب بالتفصيل أي حساسية طعام أو حساسية دوائية يعاني منها الطالب..."
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الحالات والأمراض المزمنة (chronic_conditions)</label>
+                    <textarea
+                      formControlName="chronicConditions"
+                      rows="2"
+                      placeholder="مثال: ربو، سكري، صرع، أو أي ظروف صحية تحتاج متابعة مستمرة..."
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">تعليمات الطوارئ الطبية والمساعدة العاجلة (emergency_instructions)</label>
+                    <textarea
+                      formControlName="emergencyInstructions"
+                      rows="2"
+                      placeholder="الخطوات الطبية الواجب اتخاذها فوراً في حال حدوث طارئ صحي..."
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    ></textarea>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ملاحظات واحتياجات خاصة إضافية (special_needs_notes)</label>
+                    <textarea
+                      formControlName="specialNeedsNotes"
+                      rows="2"
+                      placeholder="أي تفاصيل أو ترتيبات تيسيرية مطلوبة لتسهيل اليوم الدراسي للطالب..."
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Tab 3: Guardian Details -->
+          @if (activeTab() === 'guardian') {
+            <div class="space-y-5 animate-in fade-in duration-150">
+              <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+                <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-200 pb-2">
+                  <mat-icon class="text-base text-[#00236f]">family_restroom</mat-icon>
+                  <span>بيانات ولي الأمر والاتصال الأساسي (Guardian Info)</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">صلة القرابة (relation_type_id)</label>
+                    <select
+                      formControlName="relationTypeId"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    >
+                      <option value="parent">الأب / الأم (Parent)</option>
+                      <option value="brother">الأخ (Brother)</option>
+                      <option value="sister">الأخت (Sister)</option>
+                      <option value="grandfather">الجد / الجدة (Grandparent)</option>
+                      <option value="uncle">العم / الخال (Relative)</option>
+                      <option value="guardian">الوصي الشرعي (Legal Guardian)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الأول لولي الأمر</label>
+                    <input
+                      type="text"
+                      formControlName="guardianFirstNameAr"
+                      placeholder="مثال: صالح"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم عائلة ولي الأمر</label>
+                    <input
+                      type="text"
+                      formControlName="guardianLastNameAr"
+                      placeholder="مثال: الخليل"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">الاسم الأول لولي الأمر بالعبرية</label>
+                    <input
+                      type="text"
+                      formControlName="guardianFirstNameHe"
+                      placeholder="שم פרטי"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">اسم العائلة لولي الأمر بالعبرية</label>
+                    <input
+                      type="text"
+                      formControlName="guardianLastNameHe"
+                      placeholder="שم משפחה"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف الأساسي (primary_phone_number)</label>
+                    <input
+                      type="text"
+                      formControlName="guardianPrimaryPhoneNumber"
+                      placeholder="05x-xxxxxxx"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">البريد الإلكتروني لولي الأمر</label>
+                    <input
+                      type="email"
+                      formControlName="guardianEmail"
+                      placeholder="guardian@example.com"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">رقم الهاتف الثانوي (secondary_phone_number)</label>
+                    <input
+                      type="text"
+                      formControlName="guardianSecondaryPhoneNumber"
+                      placeholder="05x-xxxxxxx"
+                      class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">عنوان إقامة ولي الأمر بالعربية</label>
+                  <input
+                    type="text"
+                    formControlName="guardianAddressAr"
+                    placeholder="البلد / الحي / الشارع"
+                    class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">عنوان ولي الأمر بالعبرية (address_he)</label>
+                  <input
+                    type="text"
+                    formControlName="guardianAddressHe"
+                    placeholder="عنوان ولي الأمر بالعبرية"
+                    class="w-full px-3 py-2 bg-white rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f]"
+                  />
+                </div>
+              </div>
+            </div>
+          }
+
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 rounded-b-xl">
+          <button
+            type="button"
+            (click)="closeForm.emit()"
+            class="px-4.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+          >
+            إلغاء
+          </button>
+          <button
+            type="submit"
+            [disabled]="studentForm()!.invalid"
+            class="px-6 py-2 rounded-lg text-xs font-bold text-white bg-[#00236f] hover:bg-[#1e3a8a] shadow-xs flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <mat-icon class="text-base">save</mat-icon>
+            <span>{{ isEditing() ? 'حفظ تعديلات الطالب' : 'تخزين وتسجيل الطالب' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

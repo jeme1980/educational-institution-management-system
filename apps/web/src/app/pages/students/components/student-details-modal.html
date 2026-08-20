@@ -1,0 +1,268 @@
+@if (show() && student()) {
+  <div (click)="closeModal.emit()" (keydown.escape)="closeModal.emit()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto" id="student-details-modal-wrapper">
+    <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="bg-[#00236f] text-white p-4 md:p-5 flex items-center justify-between border-b border-[#00236f]/10 shrink-0">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <mat-icon class="text-blue-300">account_box</mat-icon>
+          <span>بطاقة الطالب التفصيلية الكاملة</span>
+        </h3>
+        <button (click)="closeModal.emit()" class="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all cursor-pointer">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Detail Tabs -->
+      <div class="flex border-b border-slate-200 bg-slate-50 shrink-0 overflow-x-auto select-none" dir="rtl">
+        <button
+          (click)="tabChange.emit('academic')"
+          [class]="activeTab() === 'academic' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800'"
+          class="flex-1 min-w-[85px] py-3 text-center text-[11px] font-semibold transition-all border-l border-slate-200/50 cursor-pointer whitespace-nowrap"
+        >
+          المعلومات الأساسية
+        </button>
+        <button
+          (click)="tabChange.emit('grades')"
+          [class]="activeTab() === 'grades' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800'"
+          class="flex-1 min-w-[85px] py-3 text-center text-[11px] font-semibold transition-all border-l border-slate-200/50 cursor-pointer whitespace-nowrap"
+        >
+          كشف العلامات
+        </button>
+        <button
+          (click)="tabChange.emit('attendance')"
+          [class]="activeTab() === 'attendance' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800'"
+          class="flex-1 min-w-[85px] py-3 text-center text-[11px] font-semibold transition-all border-l border-slate-200/50 cursor-pointer whitespace-nowrap"
+        >
+          سجل الحضور
+        </button>
+        <button
+          (click)="tabChange.emit('medical')"
+          [class]="activeTab() === 'medical' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800'"
+          class="flex-1 min-w-[85px] py-3 text-center text-[11px] font-semibold transition-all border-l border-slate-200/50 cursor-pointer whitespace-nowrap"
+        >
+          الملف الصحي
+        </button>
+        <button
+          (click)="tabChange.emit('guardian')"
+          [class]="activeTab() === 'guardian' ? 'border-b-2 border-[#00236f] text-[#00236f] font-bold bg-white' : 'text-slate-500 hover:text-slate-800'"
+          class="flex-1 min-w-[85px] py-3 text-center text-[11px] font-semibold transition-all cursor-pointer whitespace-nowrap"
+        >
+          بيانات الولي
+        </button>
+      </div>
+
+      <!-- Card Body -->
+      <div class="p-6 space-y-4 text-right text-xs flex-1 overflow-y-auto" dir="rtl">
+        <div class="flex items-center gap-4 p-4 rounded-lg border border-slate-200">
+          @if (student()?.photoUrl) {
+            <img [src]="student()?.photoUrl" alt="صورة الطالب" class="w-16 h-16 rounded-full object-cover border-2 border-[#00236f]" referrerpolicy="no-referrer" />
+          } @else {
+            <div class="w-16 h-16 rounded-full bg-blue-50 text-[#00236f] flex items-center justify-center text-2xl font-bold">
+              <mat-icon class="text-3xl">{{ getGenderIcon(student()?.genderId) }}</mat-icon>
+            </div>
+          }
+          <div>
+            <div class="text-base font-bold text-slate-900">
+              {{ student()?.firstNameAr }} {{ student()?.lastNameAr }}
+            </div>
+            @if (student()?.firstNameHe || student()?.lastNameHe) {
+              <div class="text-xs text-slate-500 font-sans" dir="ltr">
+                {{ student()?.firstNameHe || '' }} {{ student()?.lastNameHe || '' }}
+              </div>
+            }
+            <div class="mt-1 flex items-center gap-2">
+              <span [class]="getStatusClass(student()?.studentStatusId)">
+                {{ getStatusLabel(student()?.studentStatusId) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Tab: Academic & Personal -->
+        @if (activeTab() === 'academic') {
+          <app-student-info [student]="student()!"></app-student-info>
+        }
+
+        <!-- Content Tab: Grades -->
+        @if (activeTab() === 'grades') {
+          <app-student-grades-table [studentId]="student()!.id"></app-student-grades-table>
+        }
+
+        <!-- Content Tab: Attendance -->
+        @if (activeTab() === 'attendance') {
+          <app-student-attendance [studentId]="student()!.id"></app-student-attendance>
+        }
+
+        <!-- Content Tab: Medical Profile -->
+        @if (activeTab() === 'medical') {
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-slate-800">الملف الطبي</h4>
+              <button type="button" (click)="editingMedical.set(!editingMedical())" class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-[#00236f]">{{ editingMedical() ? 'إلغاء' : 'تعديل' }}</button>
+            </div>
+            @if (editingMedical()) {
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-blue-100 bg-white p-3">
+                <label class="text-xs font-semibold">فصيلة الدم<input [value]="medicalDraft().bloodType || ''" (input)="updateMedicalField('bloodType', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">الحساسية<input [value]="medicalDraft().allergiesDescription || ''" (input)="updateMedicalField('allergiesDescription', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold md:col-span-2">الأمراض المزمنة<textarea [value]="medicalDraft().chronicConditions || ''" (input)="updateMedicalField('chronicConditions', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2"></textarea></label>
+                <label class="text-xs font-semibold md:col-span-2">تعليمات الطوارئ<textarea [value]="medicalDraft().emergencyInstructions || ''" (input)="updateMedicalField('emergencyInstructions', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2"></textarea></label>
+                <label class="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" [checked]="medicalDraft().hasSpecialNeeds" (change)="updateMedicalField('hasSpecialNeeds', $any($event.target).checked)" /> احتياجات خاصة</label>
+                <label class="text-xs font-semibold">ملاحظات الاحتياجات<textarea [value]="medicalDraft().specialNeedsNotes || ''" (input)="updateMedicalField('specialNeedsNotes', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2"></textarea></label>
+                <button type="button" (click)="saveMedicalProfile()" class="w-fit rounded-lg bg-[#00236f] px-4 py-2 text-xs font-bold text-white">حفظ الملف الطبي</button>
+              </div>
+            }
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <span class="font-semibold text-slate-500 block">فصيلة الدم (blood_type):</span>
+                <span class="text-slate-900 font-bold text-sm">{{ medicalProfile()?.bloodType || 'غير محددة' }}</span>
+              </div>
+              <div>
+                <span class="font-semibold text-slate-500 block">ذوي احتياجات خاصة؟:</span>
+                <span class="text-slate-900 font-bold text-sm">{{ medicalProfile()?.hasSpecialNeeds ? 'نعم' : 'لا يوجد' }}</span>
+              </div>
+            </div>
+
+            @if (medicalProfile()?.allergiesDescription) {
+              <div class="pt-2 border-t border-slate-200/60">
+                <span class="font-semibold text-rose-600 block">الحساسية والمحاذير (allergies_description):</span>
+                <p class="text-slate-800 font-medium mt-1">{{ medicalProfile()?.allergiesDescription }}</p>
+              </div>
+            }
+
+            @if (medicalProfile()?.chronicConditions) {
+              <div class="pt-2 border-t border-slate-200/60">
+                <span class="font-semibold text-amber-700 block">الأمراض والحالات المزمنة (chronic_conditions):</span>
+                <p class="text-slate-800 font-medium mt-1">{{ medicalProfile()?.chronicConditions }}</p>
+              </div>
+            }
+
+            @if (medicalProfile()?.emergencyInstructions) {
+              <div class="pt-2 border-t border-slate-200/60">
+                <span class="font-semibold text-blue-700 block">تعليمات الطوارئ الطبية (emergency_instructions):</span>
+                <p class="text-slate-800 font-medium mt-1">{{ medicalProfile()?.emergencyInstructions }}</p>
+              </div>
+            }
+
+            @if (medicalProfile()?.specialNeedsNotes) {
+              <div class="pt-2 border-t border-slate-200/60">
+                <span class="font-semibold text-[#00236f] block">ملاحظات ذوي الاحتياجات الخاصة:</span>
+                <p class="text-slate-800 font-medium mt-1">{{ medicalProfile()?.specialNeedsNotes }}</p>
+              </div>
+            }
+
+            @if (!medicalProfile() || 
+                (!medicalProfile()?.bloodType && 
+                 !medicalProfile()?.allergiesDescription && 
+                 !medicalProfile()?.chronicConditions && 
+                 !medicalProfile()?.emergencyInstructions)) {
+              <div class="p-4 text-center text-slate-400">
+                <mat-icon class="text-2xl text-slate-300">medical_information</mat-icon>
+                <p class="text-xs font-semibold mt-1">لا يوجد ملف طبي مسجل لهذا الطالب حالياً</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Content Tab: Guardian Info -->
+        @if (activeTab() === 'guardian') {
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 animate-in fade-in duration-150">
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-slate-800">أولياء الأمور</h4>
+              <button type="button" (click)="openGuardianCreate()" class="rounded-lg bg-[#00236f] px-3 py-1.5 text-xs font-bold text-white">إضافة ولي أمر</button>
+            </div>
+            @if (profileError()) { <p class="rounded-lg bg-rose-50 p-2 text-xs font-semibold text-rose-700">{{ profileError() }}</p> }
+            @if (showGuardianForm()) {
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-lg border border-blue-100 bg-white p-3">
+                <label class="text-xs font-semibold">الاسم الأول<input [value]="guardianDraft().firstNameAr || ''" (input)="updateGuardianField('firstNameAr', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">اسم العائلة<input [value]="guardianDraft().lastNameAr || ''" (input)="updateGuardianField('lastNameAr', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">رقم الهوية<input [value]="guardianDraft().nationalId || ''" (input)="updateGuardianField('nationalId', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">الهاتف الأساسي<input [value]="guardianDraft().primaryPhoneNumber || ''" (input)="updateGuardianField('primaryPhoneNumber', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">البريد الإلكتروني<input type="email" [value]="guardianDraft().email || ''" (input)="updateGuardianField('email', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2" /></label>
+                <label class="text-xs font-semibold">صلة القرابة<select [value]="guardianDraft().relationTypeId || 'parent'" (change)="updateGuardianField('relationTypeId', $any($event.target).value)" class="mt-1 w-full rounded-lg border border-slate-200 p-2"><option value="parent">الأب / الأم</option><option value="guardian">وصي</option><option value="brother">أخ</option><option value="sister">أخت</option></select></label>
+                <label class="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" [checked]="guardianDraft().isPrimaryContact" (change)="updateGuardianField('isPrimaryContact', $any($event.target).checked)" /> ولي الأمر الرئيسي</label>
+                <label class="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" [checked]="guardianDraft().canPickup" (change)="updateGuardianField('canPickup', $any($event.target).checked)" /> مخول بالاستلام</label>
+                <div class="flex gap-2 md:col-span-2"><button type="button" (click)="saveGuardian()" class="rounded-lg bg-[#00236f] px-4 py-2 text-xs font-bold text-white">حفظ</button><button type="button" (click)="closeGuardianForm()" class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold">إلغاء</button></div>
+              </div>
+            }
+            @if (isProfileLoading()) { <div class="p-4 text-center text-xs text-slate-500">جاري تحميل البيانات...</div> }
+            @if (!isProfileLoading() && guardians().length > 0) {
+              <div class="space-y-2">
+                @for (link of guardians(); track link.id) {
+                  <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-3">
+                    <div><div class="font-bold text-slate-900">{{ link.guardian.firstNameAr }} {{ link.guardian.lastNameAr }} @if (link.isPrimaryContact) { <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700">رئيسي</span> }</div><div class="text-xs text-slate-500" dir="ltr">{{ link.guardian.primaryPhoneNumber }}</div><div class="text-xs text-slate-500">{{ link.relationType?.nameAr || link.relationTypeId }}</div></div>
+                    <div class="flex gap-1"><button type="button" (click)="openGuardianEdit(link)" class="rounded-lg p-2 text-blue-700 hover:bg-blue-50"><mat-icon class="text-base">edit</mat-icon></button><button type="button" (click)="removeGuardian(link)" class="rounded-lg p-2 text-rose-700 hover:bg-rose-50"><mat-icon class="text-base">link_off</mat-icon></button></div>
+                  </div>
+                }
+              </div>
+            }
+            @if (!isProfileLoading() && guardians().length === 0) {
+              <div class="p-4 text-center text-slate-400"><mat-icon class="text-2xl text-slate-300">contact_page</mat-icon><p class="text-xs font-semibold mt-1">لا توجد بيانات أولياء أمور مسجلة</p></div>
+            }
+            @if (false && student()?.guardian) {
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <span class="font-semibold text-slate-500 block">الاسم بالكامل:</span>
+                  <span class="text-slate-900 font-bold text-sm">{{ student()?.guardian?.firstNameAr }} {{ student()?.guardian?.lastNameAr }}</span>
+                </div>
+                <div>
+                  <span class="font-semibold text-slate-500 block">صلة القرابة:</span>
+                  <span class="text-slate-900 font-bold text-sm">
+                    {{ student()?.relationTypeId === 'parent' ? 'الأب / الأم' : 
+                       student()?.relationTypeId === 'brother' ? 'الأخ' : 
+                       student()?.relationTypeId === 'sister' ? 'الأخت' : 'وصي / قريب' }}
+                  </span>
+                </div>
+                @if (student()?.guardian?.firstNameHe || student()?.guardian?.lastNameHe) {
+                  <div class="col-span-2">
+                    <span class="font-semibold text-slate-500 block">الاسم بالعبرية:</span>
+                    <span class="text-slate-900 font-bold font-sans">{{ student()?.guardian?.firstNameHe || '' }} {{ student()?.guardian?.lastNameHe || '' }}</span>
+                  </div>
+                }
+                <div>
+                  <span class="font-semibold text-slate-500 block">هاتف التواصل:</span>
+                  <span class="text-slate-900 font-bold font-mono text-sm block" dir="ltr">{{ student()?.guardian?.primaryPhoneNumber }}</span>
+                </div>
+                <div>
+                  <span class="font-semibold text-slate-500 block">البريد الإلكتروني:</span>
+                  <span class="text-slate-900 font-bold truncate block">{{ student()?.guardian?.email || 'غير متوفر' }}</span>
+                </div>
+                @if (student()?.guardian?.secondaryPhoneNumber) {
+                  <div>
+                    <span class="font-semibold text-slate-500 block">رقم الهاتف الثانوي:</span>
+                    <span class="text-slate-900 font-bold font-mono text-sm block" dir="ltr">{{ student()?.guardian?.secondaryPhoneNumber }}</span>
+                  </div>
+                }
+                @if (student()?.guardian?.addressAr) {
+                  <div class="col-span-2">
+                    <span class="font-semibold text-slate-500 block">عنوان ولي الأمر:</span>
+                    <span class="text-slate-900 font-bold">{{ student()?.guardian?.addressAr }}</span>
+                  </div>
+                }
+                @if (student()?.guardian?.addressHe) {
+                  <div class="col-span-2">
+                    <span class="font-semibold text-slate-500 block">عنوان ولي الأمر بالعبرية:</span>
+                    <span class="text-slate-900 font-bold">{{ student()?.guardian?.addressHe }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="p-4 text-center text-slate-400">
+                <mat-icon class="text-2xl text-slate-300">contact_page</mat-icon>
+                <p class="text-xs font-semibold mt-1">لا توجد بيانات لولي أمر مسجلة لهذا الطالب</p>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="flex justify-end pt-2">
+          <button
+            (click)="closeModal.emit()"
+            class="px-4 py-2 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-900 cursor-pointer"
+          >
+            إغلاق البطاقة
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

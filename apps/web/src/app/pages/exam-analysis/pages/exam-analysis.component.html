@@ -1,0 +1,133 @@
+<div dir="rtl" class="analysis-page mx-auto min-h-[calc(100vh-4rem)] max-w-[1600px] space-y-5 p-4 md:p-6">
+  <header class="analysis-hero rounded-3xl p-5 text-white md:p-7">
+    <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+      <div>
+        <div class="mb-2 flex items-center gap-2 text-xs text-blue-100"><mat-icon class="text-lg">analytics</mat-icon> الامتحانات والتقييمات / التحليل</div>
+        <h1 class="text-2xl font-black md:text-3xl">شاشة تحليل الامتحان</h1>
+        <p class="mt-2 max-w-2xl text-xs leading-6 text-slate-200">تحليل تشخيصي للطلاب والأسئلة والمهارات والموضوعات مع توصيات قابلة للتنفيذ.</p>
+        @if (dataset(); as current) {
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span><b>الامتحان:</b> {{ current.exam.titleAr }}</span>
+            <span><b>المادة:</b> {{ examSubjectLabel() }}</span>
+            <span><b>الفترة:</b> {{ examPeriodLabel() }}</span>
+            <span><b>الشعبة:</b> {{ examGroupsLabel() }}</span>
+            <span><b>السنة:</b> {{ selectedYearLabel() }}</span>
+          </div>
+        }
+      </div>
+      <div class="flex flex-wrap gap-2 print:hidden">
+        <button (click)="exportResults()" class="action-button bg-white/10"><mat-icon>table_view</mat-icon> تصدير Excel</button>
+        <button (click)="printReport()" class="action-button bg-white text-[#00236f]"><mat-icon>picture_as_pdf</mat-icon> تقرير PDF / طباعة</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="analysis-filter-card rounded-2xl border border-slate-200 bg-white p-4 shadow-xs print:hidden">
+    <div class="mb-3 flex items-center justify-between"><h2 class="section-title"><mat-icon>filter_alt</mat-icon> اختيار الامتحان والتصفية</h2><span class="text-[10px] text-slate-400">تُحدّث المؤشرات مباشرة</span></div>
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <label class="filter-field"><span>السنة الدراسية</span><select disabled><option>السنة الحالية</option></select></label>
+      <label class="filter-field"><span>الفصل الدراسي</span><select disabled><option>جميع الفصول</option></select></label>
+      <label class="filter-field"><span>الصف</span><select disabled><option>حسب الامتحان</option></select></label>
+      <label class="filter-field"><span>الشعبة</span><select [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event)"><option value="ALL">جميع الشعب</option>@for (group of dataset()?.groups || []; track group.studyGroupId) {<option [value]="group.studyGroupId">{{ group.studyGroupName || group.nameAr || 'الشعبة' }}</option>}</select></label>
+      <label class="filter-field"><span>المادة</span><select disabled><option>{{ dataset()?.exam.subjectNameAr || 'حسب الامتحان' }}</option></select></label>
+      <label class="filter-field xl:col-span-2"><span>اسم الامتحان</span><select [ngModel]="selectedExamId()" (ngModelChange)="onExamSelectionChange($event)"><option value="">اختر الامتحان</option>@for (exam of availableExams(); track exam.id) {<option [value]="exam.id">{{ exam.titleAr }}</option>}</select></label>
+      <label class="filter-field"><span>تاريخ الامتحان</span><input disabled [value]="dataset()?.exam.examDate ? (dataset()?.exam.examDate | date:'yyyy-MM-dd') : ''" /></label>
+      <label class="filter-field"><span>المعلم</span><select disabled><option>{{ dataset()?.exam.teacherName || 'غير متوفر في بيانات الامتحان' }}</option></select></label>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">@for (item of [1,2,3,4,5,6,7,8]; track item) {<div class="h-32 animate-pulse rounded-2xl bg-slate-200"></div>}</div>
+  } @else if (error()) {
+    <div class="empty-state" role="alert" aria-live="polite"><mat-icon>cloud_off</mat-icon><strong>{{ error() }}</strong><button type="button" (click)="loadExam()">إعادة المحاولة</button></div>
+  } @else if (!dataset()) {
+    <div class="empty-state"><mat-icon>query_stats</mat-icon><strong>اختر امتحانًا لعرض التحليل</strong></div>
+  } @else if (!hasStudentRows()) {
+    <div class="analysis-empty-card" role="status"><mat-icon>grading</mat-icon><strong>لا توجد نتائج مرصودة لهذا الامتحان بعد</strong><p>أضف درجات الطلاب أو سجّل حالات الغياب أولًا حتى تظهر مؤشرات التحليل.</p></div>
+  } @else {
+    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div><h2 class="section-title"><mat-icon>tune</mat-icon> مفتاح العلامات ومستويات الأداء</h2><div class="mt-3 flex flex-wrap gap-2">@for (level of levels(); track level.id) {<span class="level-chip" [style.--level-color]="level.color"><i></i>{{ level.name }} · {{ level.min }}–{{ level.max }}</span>}</div></div>
+        <button (click)="showLevelsEditor.set(!showLevelsEditor())" class="secondary-button print:hidden"><mat-icon>edit</mat-icon> تعديل المفتاح</button>
+      </div>
+      @if (showLevelsEditor()) {
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 print:hidden">
+          <div class="space-y-2">@for (level of levels(); track level.id; let i = $index) {
+            <div class="grid items-center gap-2 rounded-xl bg-white p-2 md:grid-cols-[1fr_100px_100px_70px_auto]">
+              <input aria-label="اسم المستوى" [ngModel]="level.name" (ngModelChange)="updateLevel(i, 'name', $event)" />
+              <input aria-label="الحد الأدنى" type="number" min="0" max="100" step="0.01" [ngModel]="level.min" (ngModelChange)="updateLevel(i, 'min', $event)" />
+              <input aria-label="الحد الأعلى" type="number" min="0" max="100" step="0.01" [ngModel]="level.max" (ngModelChange)="updateLevel(i, 'max', $event)" />
+              <input aria-label="اللون" type="color" [ngModel]="level.color" (ngModelChange)="updateLevel(i, 'color', $event)" />
+              <div class="flex gap-1"><button (click)="moveLevel(i,-1)" title="أعلى"><mat-icon>arrow_upward</mat-icon></button><button (click)="moveLevel(i,1)" title="أسفل"><mat-icon>arrow_downward</mat-icon></button><button (click)="deleteLevel(i)" class="text-rose-600" title="حذف"><mat-icon>delete</mat-icon></button></div>
+            </div>
+          }</div>
+          @if (levelError()) {<p class="mt-3 rounded-lg bg-rose-50 p-2 text-xs font-bold text-rose-700">{{ levelError() }}</p>}
+          <div class="mt-3 flex flex-wrap gap-2"><button (click)="addLevel()" class="secondary-button"><mat-icon>add</mat-icon> إضافة مستوى</button><button (click)="resetLevels()" class="secondary-button">استعادة الافتراضي</button><button (click)="saveLevels()" [disabled]="!!levelError()" class="primary-button">حفظ كإعداد افتراضي</button></div>
+        </div>
+      }
+    </section>
+
+    <nav class="tabs-bar print:hidden" role="tablist" aria-label="أقسام تحليل الامتحان">@for (tab of tabs; track tab.id) {<button type="button" role="tab" [attr.aria-selected]="activeTab() === tab.id" (click)="activeTab.set(tab.id)" [class.active]="activeTab() === tab.id"><mat-icon aria-hidden="true">{{ tab.icon }}</mat-icon>{{ tab.label }}</button>}</nav>
+
+    @if (activeTab() === 'overview') {
+      @if (dataQualityWarnings().length) { <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div class="flex items-center gap-2"><mat-icon>warning</mat-icon><span>تنبيه حول جودة بيانات التحليل</span></div><ul class="mt-2 list-inside list-disc space-y-1 text-xs font-medium">@for (warning of dataQualityWarnings(); track warning) {<li>{{ warning }}</li>}</ul><button type="button" (click)="activeTab.set('questions')" class="mt-3 text-xs font-black text-amber-800 underline">مراجعة الأسئلة</button></div> }
+      <div class="overview-kpis grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+        <app-analysis-stat-card label="متوسط العلامات" [value]="format(summary().average) + '%'" icon="monitoring" />
+        <app-analysis-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" />
+        <app-analysis-stat-card label="الانحراف المعياري" [value]="format(summary().standardDeviation)" icon="scatter_plot" />
+        <app-analysis-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" color="#16a34a" />
+        <app-analysis-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" />
+        <app-analysis-stat-card label="الحضور والغياب" [value]="summary().attended + ' / ' + summary().absent" icon="groups" hint="حاضر / غائب" />
+        <app-analysis-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" />
+        <app-analysis-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" color="#16a34a" />
+        <app-analysis-stat-card label="متوسط الإجابات الصحيحة" [value]="format(summary().averageCorrect)" icon="check_circle" color="#16a34a" />
+        <app-analysis-stat-card label="متوسط الإجابات الخاطئة" [value]="format(summary().averageWrong)" icon="cancel" color="#dc2626" />
+        <app-analysis-stat-card label="متوسط غير المجاب" [value]="format(summary().averageUnanswered)" icon="help" color="#f59e0b" />
+      </div>
+      <div class="overview-visuals mt-4 grid gap-4 lg:grid-cols-[7fr_3fr]">
+        <section class="panel"><h2 class="section-title">توزيع مستويات الأداء</h2><div class="mt-5 flex flex-col items-center gap-6 sm:flex-row"><div class="donut" [style.background]="donutGradient()"><div><b>{{ summary().attended }}</b><span>طالب</span></div></div><div class="flex-1 space-y-3">@for (level of levelCounts(); track level.id) {<div><div class="mb-1 flex justify-between text-xs"><span class="font-bold">{{ level.name }}</span><span>{{ level.count }} · {{ format(levelPercent(level.count)) }}%</span></div><div class="h-2 rounded-full bg-slate-100"><div class="h-full rounded-full" [style.background]="level.color" [style.width.%]="levelPercent(level.count)"></div></div></div>}</div></div></section>
+        <section class="panel"><h2 class="section-title">مقارنة مستويات الأداء</h2><div class="bar-chart">@for (level of levelCounts(); track level.id) {<div><span>{{ level.count }}</span><i [style.height.%]="levelPercent(level.count)" [style.background]="level.color"></i><small>{{ level.name }}</small></div>}</div></section>
+      </div>
+      <div class="mt-4 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <section class="panel quick-insights"><div class="mb-4 flex items-center justify-between"><h2 class="section-title"><mat-icon>auto_awesome</mat-icon>تحليل سريع</h2><span class="text-xs text-slate-400">اضغط للانتقال إلى التفاصيل</span></div><div class="grid gap-3 sm:grid-cols-2">@for (insight of quickInsights(); track insight.label) {<button type="button" (click)="activeTab.set(insight.tab)" class="insight-card text-right"><mat-icon>{{ insight.icon }}</mat-icon><span><small>{{ insight.label }}</small><strong>{{ insight.value }}</strong><em>{{ insight.detail }}</em></span><mat-icon class="arrow">chevron_left</mat-icon></button>} @empty {<p class="text-sm text-slate-500">لا توجد بيانات كافية لاستخراج مؤشرات سريعة.</p>}</div></section>
+        <section class="panel"><div class="mb-4 flex items-center justify-between"><h2 class="section-title"><mat-icon>priority_high</mat-icon>أولويات التدخل</h2><button type="button" (click)="activeTab.set('intervention')" class="link-button">الخطة التفصيلية</button></div><ol class="priority-list">@for (item of interventionPriorities(); track item.label; let i = $index) {<li><b>{{ i + 1 }}</b><span><strong>{{ item.label }}</strong><small>{{ item.value }} · {{ item.detail }}</small></span></li>} @empty {<li class="text-sm text-slate-500">لا توجد أولوية مسجلة حاليًا.</li>}</ol></section>
+      </div>
+    }
+
+    @if (activeTab() === 'students') {
+      <section class="panel"><div class="toolbar"><h2 class="section-title">تصنيف الطلاب</h2><div class="flex flex-wrap gap-2"><input placeholder="بحث باسم أو رقم الطالب" [ngModel]="studentSearch()" (ngModelChange)="studentSearch.set($event)" /><select [ngModel]="levelFilter()" (ngModelChange)="levelFilter.set($event)"><option value="ALL">كل المستويات</option>@for (level of levels(); track level.id) {<option [value]="level.id">{{ level.name }}</option>}</select><select [ngModel]="studentSort()" (ngModelChange)="studentSort.set($event)"><option value="score-desc">الأعلى علامة</option><option value="score-asc">الأدنى علامة</option><option value="level">مستوى الأداء</option></select><button (click)="exportResults()" class="secondary-button"><mat-icon>download</mat-icon> تصدير</button></div></div><div class="table-wrap"><table><thead><tr><th>الطالب</th><th>رقم الطالب</th><th>العلامة الخام</th><th>من 100</th><th>المستوى</th><th>صحيح</th><th>خطأ</th><th>غير مجاب</th><th></th></tr></thead><tbody>@for (student of visibleStudents(); track student.studentId) {<tr><td class="font-bold">{{ student.studentName }}</td><td>{{ student.studentNumber }}</td><td>{{ student.isAbsent ? 'لم يمتحن' : student.totalScore }}</td><td>{{ student.isAbsent ? '—' : format(student.normalizedScore) }}</td><td><span class="level-badge" [style.background]="student.level.color + '18'" [style.color]="student.level.color">{{ student.isAbsent ? 'لم يمتحن' : student.level.name }}</span></td><td>{{ student.correct }}</td><td>{{ student.wrong }}</td><td>{{ student.unanswered }}</td><td><button (click)="selectedStudent.set(student)" class="link-button">التفاصيل</button></td></tr>} @empty {<tr><td colspan="9" class="empty-cell">لا توجد نتائج مطابقة</td></tr>}</tbody></table></div></section>
+    }
+
+    @if (activeTab() === 'questions') {
+      <section class="panel"><div class="toolbar"><h2 class="section-title">تحليل الأسئلة</h2><div class="flex gap-2 text-xs"><label>سهل من <input type="number" [ngModel]="easyThreshold()" (ngModelChange)="easyThreshold.set(+$event)" class="w-16" />%</label><label>متوسط من <input type="number" [ngModel]="mediumThreshold()" (ngModelChange)="mediumThreshold.set(+$event)" class="w-16" />%</label></div></div><div class="table-wrap"><table><thead><tr><th>السؤال</th><th>النوع</th><th>الموضوع</th><th>المهارة</th><th>القصوى</th><th>المتوسط</th><th>نجاح</th><th>خطأ</th><th>غير مجاب</th><th>الصعوبة</th><th>الأداء</th><th></th></tr></thead><tbody>@for (question of questions(); track question.id) {<tr><td class="font-bold">س{{ question.questionNumber }}</td><td>{{ question.typeName }}</td><td>{{ question.topicName }}</td><td>{{ question.skillName }}</td><td>{{ question.points }}</td><td>{{ format(question.average) }}</td><td>{{ format(question.successRate) }}%</td><td>{{ format(question.errorRate) }}%</td><td>{{ format(question.unansweredRate) }}%</td><td><span class="difficulty" [class.hard]="question.difficulty === 'صعب'" [class.easy]="question.difficulty === 'سهل'">{{ question.difficulty }}</span></td><td><span class="level-badge" [style.color]="question.level.color">{{ question.level.name }}</span></td><td><button (click)="selectedQuestion.set(question)" class="link-button">التفاصيل</button></td></tr>}</tbody></table></div></section>
+    }
+
+    @if (activeTab() === 'skills' || activeTab() === 'topics') {
+      <section class="panel"><h2 class="section-title">{{ activeTab() === 'skills' ? 'تحليل المهارات' : 'تحليل الموضوعات' }}</h2><div class="mt-5 space-y-4">@for (item of (activeTab() === 'skills' ? skills() : topics()); track item.id; let rank = $index) {<div class="dimension-row"><span class="rank">{{ rank + 1 }}</span><div class="min-w-0 flex-1"><div class="mb-2 flex flex-wrap justify-between gap-2"><strong>{{ item.name }}</strong><span class="text-xs">{{ item.questionCount }} أسئلة · {{ item.maxPoints }} درجة</span></div><div class="h-2.5 rounded-full bg-slate-100"><div class="h-full rounded-full" [style.background]="item.level.color" [style.width.%]="item.masteryRate"></div></div><div class="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-500 sm:grid-cols-4"><span>الإتقان: {{ format(item.masteryRate) }}%</span><span>متقنون: {{ item.masteredStudents }}</span><span>بحاجة لدعم: {{ item.supportStudents }}</span><span [style.color]="item.level.color">{{ item.level.name }}</span></div></div></div>} @empty {<div class="empty-cell">لا تتوفر بيانات مصنفة</div>}</div></section>
+      @if (activeTab() === 'topics') {<section class="panel mt-4"><h2 class="section-title">مقارنة أنواع الأسئلة</h2><div class="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">@for (item of questionTypes(); track item.id) {<div class="rounded-xl border border-slate-200 p-4"><strong>{{ item.name }}</strong><div class="mt-3 text-2xl font-black">{{ format(item.masteryRate) }}%</div><div class="mt-2 text-xs text-slate-500">{{ item.questionCount }} أسئلة · غير مجاب {{ format(item.unansweredRate) }}%</div></div>}</div></section>}
+    }
+
+    @if (activeTab() === 'comparisons') {
+      <section class="panel"><h2 class="section-title">مقارنة الشعب</h2><div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">@for (group of groupComparisons(); track group.id) {<div class="rounded-2xl border border-slate-200 p-4"><strong>{{ group.name }}</strong><div class="mt-4 flex items-end gap-3"><span class="text-3xl font-black text-[#00236f]">{{ format(group.summary.average) }}%</span><span class="text-xs text-slate-500">متوسط الأداء</span></div><div class="mt-3 h-2 rounded-full bg-slate-100"><div class="h-full rounded-full bg-blue-600" [style.width.%]="group.summary.average"></div></div><div class="mt-3 flex justify-between text-xs text-slate-500"><span>{{ group.summary.attended }} متقدم</span><span>نجاح {{ format(group.summary.passRate) }}%</span></div></div>} @empty {<div class="empty-cell">يلزم ربط الامتحان بأكثر من شعبة لإجراء المقارنة.</div>}</div><div class="mt-5 rounded-xl bg-blue-50 p-4 text-xs leading-6 text-blue-900">المقارنة حسب الجنس والامتحانات السابقة ستظهر تلقائيًا عند توفير الجنس وربط اختبارات المقارنة من Backend.</div></section>
+    }
+
+    @if (activeTab() === 'recommendations') {
+      <div class="grid gap-4 lg:grid-cols-2">@for (item of recommendations(); track item.title) {<article class="recommendation"><mat-icon>{{ item.icon }}</mat-icon><div><h3>{{ item.title }}</h3><p>{{ item.detail }}</p></div></article>} @empty {<div class="empty-state lg:col-span-2"><mat-icon>verified</mat-icon><strong>لا توجد مؤشرات ضعف حرجة في النتائج الحالية.</strong></div>}</div>
+    }
+
+    @if (activeTab() === 'intervention') {
+      <div class="grid gap-4 lg:grid-cols-2">@for (group of interventionGroups(); track group.name) {<section class="panel border-t-4" [style.border-top-color]="group.color"><div class="flex justify-between"><h2 class="font-black">{{ group.name }}</h2><span class="level-badge" [style.background]="group.color + '18'" [style.color]="group.color">{{ group.students.length }} طلاب</span></div><div class="mt-4 flex flex-wrap gap-2">@for (student of group.students; track student.studentId) {<button (click)="selectedStudent.set(student)" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold">{{ student.studentName }}</button>} @empty {<span class="text-xs text-slate-400">لا يوجد طلاب في هذه المجموعة</span>}</div><dl class="mt-5 grid grid-cols-2 gap-3 text-xs"><div><dt>النشاط المقترح</dt><dd>{{ group.activity }}</dd></div><div><dt>مدة التدخل</dt><dd>{{ group.duration }}</dd></div><div><dt>المهارات المستهدفة</dt><dd>{{ weakestSkillNames() }}</dd></div><div><dt>معيار النجاح</dt><dd>تحسن لا يقل عن 15% في التقويم اللاحق</dd></div></dl></section>}</div>
+    }
+  }
+
+  @if (selectedQuestion(); as question) {
+    <!-- Drawer backdrop closes through the visible close button for keyboard users. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div class="drawer-backdrop" (click)="selectedQuestion.set(null)"><aside class="drawer" (click)="$event.stopPropagation()"><button class="drawer-close" (click)="selectedQuestion.set(null)"><mat-icon>close</mat-icon></button><span class="eyebrow">تفاصيل السؤال</span><h2>السؤال {{ question.questionNumber }}</h2><p class="mt-2 text-sm text-slate-500">{{ question.text }}</p><div class="detail-grid"><div><span>النوع</span><b>{{ question.typeName }}</b></div><div><span>العلامة القصوى</span><b>{{ question.points }}</b></div><div><span>الموضوع</span><b>{{ question.topicName }}</b></div><div><span>المهارة</span><b>{{ question.skillName }}</b></div><div><span>نسبة النجاح</span><b>{{ format(question.successRate) }}%</b></div><div><span>عدم الإجابة</span><b>{{ format(question.unansweredRate) }}%</b></div></div><div class="mt-5 rounded-xl bg-amber-50 p-4 text-xs leading-6 text-amber-900"><strong>توصية تربوية:</strong> {{ question.difficulty === 'صعب' ? 'راجع صياغة السؤال وأعد تدريس المهارة المرتبطة باستخدام مثال محلول ونشاط قصير.' : 'ثبّت التعلم بتغذية راجعة مركزة وأسئلة مشابهة متدرجة.' }}</div><p class="mt-4 text-xs text-slate-400">الإجابة الصحيحة وتوزيع البدائل سيظهران عند تخزين محتوى السؤال وإجابات الطلاب في Backend.</p></aside></div>
+  }
+  @if (selectedStudent(); as student) {
+    <!-- Drawer backdrop closes through the visible close button for keyboard users. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div class="drawer-backdrop" (click)="selectedStudent.set(null)"><aside class="drawer" (click)="$event.stopPropagation()"><button class="drawer-close" (click)="selectedStudent.set(null)"><mat-icon>close</mat-icon></button><span class="eyebrow">التحليل الفردي</span><h2>{{ student.studentName }}</h2><div class="student-score"><b>{{ format(student.normalizedScore) }}%</b><span [style.color]="student.level.color">{{ student.level.name }}</span></div><div class="detail-grid"><div><span>متوسط الصف</span><b>{{ format(summary().average) }}%</b></div><div><span>الفارق</span><b>{{ format(student.normalizedScore - summary().average) }}%</b></div><div><span>إجابات صحيحة</span><b>{{ student.correct }}</b></div><div><span>إجابات خاطئة</span><b>{{ student.wrong }}</b></div><div><span>غير مجابة</span><b>{{ student.unanswered }}</b></div><div><span>رقم الطالب</span><b>{{ student.studentNumber }}</b></div></div><div class="mt-5 rounded-xl bg-blue-50 p-4 text-xs leading-6 text-blue-900"><strong>خطة تعلم مختصرة:</strong> {{ student.normalizedScore < 55 ? 'جلسات دعم فردية تركز على أضعف مهارتين، تدريب متدرج، وتقويم متابعة أسبوعي.' : 'تدريبات تعميق ومهمة تطبيقية للحفاظ على مستوى الإتقان ورفع الاستقلالية.' }}</div></aside></div>
+  }
+</div>

@@ -1,0 +1,366 @@
+<ui-confirm-dialog
+  [open]="!!confirmDialogService.activeDialog()"
+  [title]="confirmDialogService.activeDialog()?.title || ''"
+  [message]="confirmDialogService.activeDialog()?.message || ''"
+  [confirmText]="confirmDialogService.activeDialog()?.confirmText || 'تأكيد'"
+  [cancelText]="confirmDialogService.activeDialog()?.cancelText || 'إلغاء'"
+  [variant]="confirmDialogService.activeDialog()?.variant || 'default'"
+  (confirmed)="confirmDialogService.resolve(true)"
+  (cancelled)="confirmDialogService.resolve(false)"
+></ui-confirm-dialog>
+
+<div dir="rtl" lang="ar" class="min-h-screen bg-background-soft-gray text-on-surface font-sans antialiased flex flex-col md:flex-row min-w-full">
+  
+  <!-- Right Sidebar (Desktop) -->
+  <aside [style.display]="authService.currentContext()?.isPlatformAdmin ? 'none' : null" class="hidden md:flex flex-col w-64 bg-surface-container-lowest border-l border-surface-border sticky top-0 h-screen z-30 shrink-0">
+    <!-- Brand Header -->
+    <div class="p-5 border-b border-slate-100 flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-[#00236f] flex items-center justify-center text-white shadow-md shadow-blue-950/20">
+        <mat-icon class="text-2xl">school</mat-icon>
+      </div>
+      <div>
+        <div class="font-bold text-base text-slate-900 leading-tight">المؤسسة التعليمية</div>
+        <div class="text-[11px] text-slate-500 font-medium mt-0.5">نظام الإدارة الموحد</div>
+      </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav aria-label="التنقل الرئيسي" class="nav-sequence flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">grid_view</mat-icon>
+        <span>لوحة القيادة</span>
+      </a>
+
+      <a
+        routerLink="/students"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">groups</mat-icon>
+        <span>قائمة الطلاب</span>
+      </a>
+
+      <a
+        routerLink="/enrollments"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">badge</mat-icon>
+        <span>بيانات الالتحاق</span>
+      </a>
+
+      <a
+        routerLink="/registered-students"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">assignment_ind</mat-icon>
+        <span>الطلاب المسجلون</span>
+      </a>
+
+      <a
+        routerLink="/staff"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">supervisor_account</mat-icon>
+        <span>الكادر والتعيينات</span>
+      </a>
+
+      <a
+        routerLink="/staff-development"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">workspace_premium</mat-icon>
+        <span>إدارة الاستكمالات</span>
+      </a>
+
+      <a
+        routerLink="/classes"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">meeting_room</mat-icon>
+        <span>الشعب والصفوف</span>
+      </a>
+
+      <a
+        routerLink="/study-groups"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">diversity_3</mat-icon>
+        <span>مجموعات الدراسة</span>
+      </a>
+
+      <a
+        routerLink="/subjects"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">menu_book</mat-icon>
+        <span>المناهج والمواد</span>
+      </a>
+
+      <a
+        routerLink="/exams"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">assignment</mat-icon>
+        <span>الامتحانات</span>
+      </a>
+
+      <a
+        routerLink="/exam-analysis"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">analytics</mat-icon>
+        <span>تحليل الامتحان</span>
+      </a>
+
+      <a
+        routerLink="/academic-years"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">calendar_today</mat-icon>
+        <span>الأعوام الدراسية</span>
+      </a>
+
+      <a
+        routerLink="/settings"
+        routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs"
+        class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group"
+      >
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">settings</mat-icon>
+        <span>الإعدادات</span>
+      </a>
+      <a routerLink="/settings/audit-log" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold shadow-xs" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-600 hover:text-[#00236f] hover:bg-slate-100/80 transition-all group">
+        <mat-icon class="text-xl text-slate-400 group-hover:text-[#00236f]">history</mat-icon><span>سجل التدقيق</span>
+      </a>
+    </nav>
+
+    <!-- Bottom Sidebar Auth / Logout -->
+    <div class="p-4 border-t border-slate-100">
+      @if (authService.currentUser()) {
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/60">
+          <div class="flex items-center gap-2.5 overflow-hidden">
+            @if (authService.currentUser()?.photoURL) {
+              <img [src]="authService.currentUser()?.photoURL" alt="User avatar" class="w-8 h-8 rounded-full shrink-0" referrerpolicy="no-referrer" />
+            } @else {
+              <div class="w-8 h-8 rounded-full bg-[#00236f] text-white text-xs flex items-center justify-center font-bold shrink-0">
+                {{ authService.currentUser()?.displayName?.substring(0, 1) || 'م' }}
+              </div>
+            }
+            <div class="truncate">
+              <div class="text-xs font-bold text-slate-800 truncate">{{ authService.currentUser()?.displayName }}</div>
+              <div class="text-[10px] text-slate-400 truncate">مدير النظام</div>
+            </div>
+          </div>
+          <button (click)="authService.logout()" title="تسجيل الخروج" class="p-1 text-slate-400 hover:text-rose-600 transition-all">
+            <mat-icon class="text-lg">logout</mat-icon>
+          </button>
+        </div>
+      }
+    </div>
+  </aside>
+
+  <!-- Main Content Layout Area -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <!-- Top Header Bar -->
+    <header class="bg-surface-container-lowest border-b border-surface-border sticky top-0 z-20 px-4 sm:px-6 py-3">
+      <div class="flex items-center justify-between gap-4">
+        
+                <!-- Right side (RTL): Mobile Hamburger + Context Dropdowns -->
+        <div class="flex items-center gap-3 flex-1">
+          <button type="button" (click)="toggleMobileMenu()" aria-label="فتح القائمة الرئيسية" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 shrink-0">
+            <mat-icon>menu</mat-icon>
+          </button>
+          
+          <!-- Context Dropdowns for Institution and Academic Year -->
+          <div class="flex items-center gap-2 w-full max-w-xl">
+            <div class="relative flex-1">
+              <mat-icon class="absolute right-2.5 top-2.5 text-slate-400 text-lg pointer-events-none">domain</mat-icon>
+              <select
+                aria-label="اختيار المؤسسة"
+                [ngModel]="apiService.selectedInstitutionId()"
+                (ngModelChange)="onInstitutionChange($event)"
+                class="w-full pr-9 pl-3 py-2 rounded-lg border border-slate-200 bg-slate-50/80 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f] transition-all appearance-none cursor-pointer"
+              >
+                @for (inst of apiService.institutions(); track inst.id) {
+                  <option [value]="inst.id">{{ inst.nameAr }}</option>
+                }
+              </select>
+              <mat-icon class="absolute left-2 top-2.5 text-slate-400 text-lg pointer-events-none">arrow_drop_down</mat-icon>
+            </div>
+            
+            <div class="relative flex-1">
+              <mat-icon class="absolute right-2.5 top-2.5 text-slate-400 text-lg pointer-events-none">calendar_today</mat-icon>
+              <select
+                aria-label="اختيار السنة الدراسية"
+                [ngModel]="apiService.selectedAcademicYearId()"
+                (ngModelChange)="onAcademicYearChange($event)"
+                class="w-full pr-9 pl-3 py-2 rounded-lg border border-slate-200 bg-slate-50/80 text-xs text-slate-800 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#00236f] focus:border-[#00236f] transition-all appearance-none cursor-pointer"
+              >
+                @for (year of apiService.academicYears(); track year.id) {
+                  <option [value]="year.id">{{ year.yearLabel }}</option>
+                }
+              </select>
+              <mat-icon class="absolute left-2 top-2.5 text-slate-400 text-lg pointer-events-none">arrow_drop_down</mat-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- Left side (RTL): User profile, Notifications & Settings quick icons -->
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            (click)="themeService.toggleTheme()"
+            [attr.aria-label]="themeService.isDark() ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'"
+            [title]="themeService.isDark() ? 'الوضع الفاتح' : 'الوضع الداكن'"
+            class="p-2 rounded-xl text-slate-500 hover:text-primary hover:bg-slate-100 transition-all"
+          >
+            <mat-icon class="text-xl">{{ themeService.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+          </button>
+          <button class="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all relative" title="الإشعارات">
+            <mat-icon class="text-xl">notifications_none</mat-icon>
+            <span class="absolute top-2 left-2 w-2 h-2 rounded-full bg-rose-500"></span>
+          </button>
+          
+          <a routerLink="/settings" class="p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all" title="الإعدادات">
+            <mat-icon class="text-xl">settings</mat-icon>
+          </a>
+
+          @if (authService.currentUser()) {
+            <button
+              type="button"
+              (click)="authService.logout()"
+              title="تسجيل الخروج"
+              aria-label="تسجيل الخروج"
+              class="flex items-center gap-1.5 rounded-xl border border-rose-100 bg-rose-50 px-2.5 py-2 text-xs font-bold text-rose-700 transition-all hover:border-rose-200 hover:bg-rose-100"
+            >
+              <mat-icon class="text-lg">logout</mat-icon>
+              <span class="hidden sm:inline">تسجيل الخروج</span>
+            </button>
+          }
+
+          @if (authService.currentUser()?.photoURL) {
+            <img [src]="authService.currentUser()?.photoURL" alt="User avatar" class="w-8 h-8 rounded-full border border-slate-200" referrerpolicy="no-referrer" />
+          } @else {
+            <div class="w-8 h-8 rounded-full bg-[#00236f] text-white text-xs flex items-center justify-center font-bold">
+              {{ authService.currentUser()?.displayName?.substring(0, 1) || 'A' }}
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Canvas Outlet -->
+    <main id="main-content" tabindex="-1" class="flex-1 overflow-y-auto bg-background-soft-gray">
+      <router-outlet></router-outlet>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-surface-container-lowest border-t border-surface-border py-3 px-6 text-center text-xs text-on-surface-variant flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>نظام إدارة المؤسسات التعليمية الموحد © 2026 - جميع الحقوق محفوظة</div>
+      <div class="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
+        <span>Cloud SQL (PostgreSQL)</span>
+        <span>•</span>
+        <span>europe-west2</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Mobile Slide-Out Sidebar Drawer -->
+  @if (isMobileMenuOpen()) {
+    <div class="fixed inset-0 z-50 flex md:hidden">
+      <!-- Backdrop -->
+      <button
+        type="button"
+        (click)="closeMobileMenu()"
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity w-full h-full border-none cursor-default"
+        aria-label="إغلاق القائمة"
+      ></button>
+      
+      <!-- Drawer Content -->
+      <div class="relative w-72 bg-white h-full shadow-2xl flex flex-col z-10">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-[#00236f] flex items-center justify-center text-white">
+              <mat-icon>school</mat-icon>
+            </div>
+            <div>
+              <div class="font-bold text-sm text-slate-900">المؤسسة التعليمية</div>
+              <div class="text-[10px] text-slate-500">نظام الإدارة الموحد</div>
+            </div>
+          </div>
+          <button (click)="closeMobileMenu()" class="text-slate-400 hover:text-slate-700">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <nav class="nav-sequence flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          <a (click)="closeMobileMenu()" routerLink="/dashboard" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">grid_view</mat-icon>
+            <span>لوحة القيادة</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">groups</mat-icon>
+            <span>قائمة الطلاب</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/enrollments" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">badge</mat-icon>
+            <span>بيانات الالتحاق</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/registered-students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">assignment_ind</mat-icon>
+            <span>الطلاب المسجلون</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/staff" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">supervisor_account</mat-icon>
+            <span>الكادر والتعيينات</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/staff-development" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">workspace_premium</mat-icon>
+            <span>إدارة الاستكمالات</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/classes" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">meeting_room</mat-icon>
+            <span>الشعب والصفوف</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/study-groups" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">diversity_3</mat-icon>
+            <span>مجموعات الدراسة</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/subjects" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">menu_book</mat-icon>
+            <span>المناهج والمواد</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/exams" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">assignment</mat-icon>
+            <span>الامتحانات</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/exam-analysis" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">analytics</mat-icon>
+            <span>تحليل الامتحان</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/academic-years" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">calendar_today</mat-icon>
+            <span>الأعوام الدراسية</span>
+          </a>
+          <a (click)="closeMobileMenu()" routerLink="/settings" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon class="text-lg">settings</mat-icon>
+            <span>الإعدادات</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+  }
+</div>

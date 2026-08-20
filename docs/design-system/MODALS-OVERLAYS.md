@@ -105,3 +105,23 @@ Recommended next phase: `CONTROLLED STANDARD MODAL MIGRATION — PILOT`, limited
 - `aria-modal="true"`, `role="dialog"`, unique `aria-labelledby`, and optional `aria-describedby` are preserved or strengthened.
 - `size="sm|md|lg"` is additive and defaults to the existing `md` width; existing consumers require no changes.
 - Escape and backdrop dismissal remain controlled by the existing inputs. `ui-confirm-dialog` remains composed over `ui-modal`.
+
+## Phase 11O controlled migration pilot
+
+The pilot started from commit `9425500` on `feature/design-system`, with the RC tag `v0.1.0-rc.1` preserved. Exactly two low-risk form modals in Settings were migrated:
+
+- **Edit institution profile** — standard form, low risk: migrated to `ui-modal` with `size="md"`.
+- **Add/edit region** — standard form, low risk: migrated to `ui-modal` with `size="sm"`.
+
+The feature-owned forms, validators, submit handlers, API calls, permissions, loading/error behavior, and cancel actions remain unchanged. The migration removed only each custom backdrop/panel/header shell and delegated dismissal, focus management, ARIA semantics, responsive sizing, and scroll locking to `ui-modal`. No duplicate backdrop, Escape handler, focus logic, or scroll lock was retained. Native feature buttons remain native; no button migration was included.
+
+`ui-confirm-dialog` and all complex, specialized, file-heavy, platform-admin, auth/security, drawer/sheet, and nested-workflow surfaces remain untouched. No modal service, dependency, route, backend, Prisma, or permission change was made. The `ui-modal` production API was not expanded or broken.
+
+Verification classification:
+
+- Targeted Angular lint and template/type compilation are required for the changed Settings component.
+- No modal unit tests are present under `apps/web/src`; static migration checks and the relevant Angular build are the available verification paths.
+- Production-build font inlining failures caused by the external Google Material Icons stylesheet are environment/network failures. Existing bundle-budget findings are baseline findings and were not changed or relaxed.
+- `git diff --check` is required to pass before the migration commit.
+
+The pilot establishes that `ui-modal` can absorb low-risk feature form shells without changing feature ownership or behavior.

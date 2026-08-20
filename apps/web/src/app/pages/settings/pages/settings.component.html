@@ -220,19 +220,9 @@
 
   <!-- MODAL: EDIT INSTITUTION -->
   @if (showInstitutionModal()) {
-    <div (click)="closeInstitutionModal()" (keydown.escape)="closeInstitutionModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in duration-200">
-        <div class="bg-indigo-900 text-white p-5 flex items-center justify-between">
-          <h3 class="font-bold text-base flex items-center gap-2">
-            <mat-icon>domain</mat-icon>
-            <span>تعديل الملف التعريفي للمؤسسة التعليمية</span>
-          </h3>
-          <button (click)="closeInstitutionModal()" type="button" class="text-indigo-300 hover:text-white transition-all cursor-pointer">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" title="تعديل الملف التعريفي للمؤسسة التعليمية" size="md" (closed)="closeInstitutionModal()">
 
-        <form [formGroup]="institutionForm" (ngSubmit)="saveInstitution()" class="p-6 space-y-4 text-right" dir="rtl">
+        <form ui-modal-body [formGroup]="institutionForm" (ngSubmit)="saveInstitution()" class="p-6 space-y-4 text-right" dir="rtl">
           <div>
             <label class="block text-xs font-semibold text-slate-700 mb-1 text-right">اسم المدرسة بالعربية *</label>
             <input
@@ -305,7 +295,7 @@
             </select>
           </div>
 
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
               (click)="closeInstitutionModal()"
@@ -323,25 +313,14 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- MODAL: ADD/EDIT REGION -->
   @if (showRegionModal()) {
-    <div (click)="closeRegionModal()" (keydown.escape)="closeRegionModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in duration-200">
-        <div class="bg-indigo-900 text-white p-5 flex items-center justify-between">
-          <h3 class="font-bold text-base flex items-center gap-2">
-            <mat-icon>{{ isEditingRegion() ? 'edit' : 'add_location_alt' }}</mat-icon>
-            <span>{{ isEditingRegion() ? 'تعديل بيانات المنطقة' : 'إضافة منطقة تعليمية جديدة' }}</span>
-          </h3>
-          <button (click)="closeRegionModal()" type="button" class="text-indigo-300 hover:text-white transition-all cursor-pointer">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" [title]="isEditingRegion() ? 'تعديل بيانات المنطقة' : 'إضافة منطقة تعليمية جديدة'" size="sm" (closed)="closeRegionModal()">
 
-        <form [formGroup]="regionForm" (ngSubmit)="saveRegion()" class="p-6 space-y-4 text-right" dir="rtl">
+        <form ui-modal-body [formGroup]="regionForm" (ngSubmit)="saveRegion()" class="p-6 space-y-4 text-right" dir="rtl">
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1 text-right">الرمز *</label>
@@ -404,7 +383,7 @@
             </label>
           </div>
 
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               type="button"
               (click)="closeRegionModal()"
@@ -422,8 +401,7 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- MODAL: ADD/EDIT EDUCATION TYPE -->

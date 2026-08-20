@@ -5,11 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiModalComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css'
 })

@@ -7,10 +7,6 @@
 .field:focus { border-color: #00236f; background: white; box-shadow: 0 0 0 3px rgb(0 35 111 / 10%); }
 label { display: block; color: #334155; font-size: .78rem; font-weight: 800; }
 label em { display: block; margin-top: .3rem; color: #e11d48; font-size: .68rem; font-style: normal; }
-table th { background: #f8fafc; padding: .85rem 1.25rem; color: #64748b; font-size: .7rem; font-weight: 900; white-space: nowrap; }
-table td { border-top: 1px solid #f1f5f9; padding: 1rem 1.25rem; vertical-align: middle; }
-tbody tr { transition: background .2s; }
-tbody tr:hover { background: #f8fbff; }
 .primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; border-radius: .75rem; font-size: .78rem; font-weight: 800; transition: .2s; }
 .primary-button { background: #00236f; color: white; padding: .7rem 1.25rem; }
 .primary-button:hover { background: #1e3a8a; }

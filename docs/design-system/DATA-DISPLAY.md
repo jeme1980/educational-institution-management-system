@@ -64,10 +64,15 @@ Pagination, filtering, sorting, fetching, permissions, and confirmation remain f
 
 ## Architecture decision
 
-**NO GENERIC TABLE YET**
+**SHARED TABLE STYLE PRIMITIVES**
 
-The smallest safe abstraction is not proven yet. Standard tables share semantic HTML and broad layout concepts, but their pagination ownership, status rendering, row actions, responsive behavior, and loading/empty states still differ. A full column-configuration table would over-generalize the current codebase.
+Phase 11H proved the smallest useful abstraction with the Institutions pilot. The shared layer is CSS-only and provides two presentation primitives:
 
-The recommended direction for Phase 11H is a controlled, presentational table-shell pilot around one low-risk standard table. Keep native table semantics, project headers/rows/actions, and keep all data and business state in the feature. Re-evaluate `ui-badge` and `ui-empty-state` only after that pilot exposes repeated contracts.
+- `.core-table-wrap`: horizontal overflow, border, radius, surface, and table-shell framing.
+- `.core-table`: semantic table sizing, token-backed header treatment, cell spacing, dividers, row height, hover state, and RTL-safe `text-align: start` behavior.
 
-No `ui-table`, `ui-badge`, `ui-empty-state`, or `ui-loading` component was added in Phase 11G.
+Institutions retains its native `<table>`, `<thead>`, `<tbody>`, `<tr>`, `<th>`, and `<td>` structure. The feature still owns the data projection, fixed column markup, filters, loading and empty states, status rendering, row actions, permissions, confirmation, and any pagination or query state. The shared primitives receive no data, column configuration, fetch logic, or business status knowledge.
+
+The pilot changed one table screen only: Institutions. Staff, Enrollments, Students, Audit Log, and all other table screens remain untouched. No `ui-table`, `ui-badge`, `ui-empty-state`, or `ui-loading` component was added, and no form-control migration was reopened.
+
+The result is reusable for controlled migration of standard tables whose feature-owned markup fits the same presentation contract. Complex, matrix, specialized, modal-specific, and unusually dense tables should remain feature-owned until a separate pilot proves a narrower need.

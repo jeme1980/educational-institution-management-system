@@ -45,3 +45,9 @@ Checkbox, radio, file upload, date picker, and search-specific primitives remain
 `ui-empty-state` is a presentational standalone empty-state shell with optional icon, title, description, compact mode, and projected actions marked with `ui-empty-action`. Keep table empties as native `<tr><td colspan="...">` markup; do not place this component inside `<tbody>`.
 
 There is intentionally no shared `ui-loading` component at this stage. Loading presentation remains feature-owned because the audit found materially different page, section, table, modal, and button contracts. Button loading remains owned by `ui-button`.
+
+## `ui-modal`
+
+`ui-modal` is the standard presentational modal shell. Existing inputs and outputs remain backward-compatible: `open`, `title`, `closeOnBackdrop`, `closeOnEscape`, and `closed`. The foundation also supports optional `description` text and `size` (`sm`, `md`, or `lg`, default `md`). Content remains projected through `[ui-modal-header]`, `[ui-modal-body]`, and `[ui-modal-footer]`.
+
+The shell owns dialog semantics, unique title/description associations, initial focus, Tab/Shift+Tab containment, Escape handling, focus restoration, and reference-counted body scroll locking. `ui-confirm-dialog` remains composed over this shell and must not add duplicate focus or scroll handling. Feature consumers continue to own content, forms, validation, permissions, API calls, and business actions.

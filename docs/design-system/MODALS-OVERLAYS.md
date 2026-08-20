@@ -42,7 +42,7 @@ Current API:
 - Dismissal: backdrop click and Escape are configurable; the native close button emits `closed`.
 - Layout: centered `min(100%, 42rem)` surface, internal body scrolling, and a full-width bottom sheet at small widths.
 
-Strengths are semantic `role="dialog"`/`aria-modal`, projected content ownership, token-backed shell structure, configurable dismissal, and a responsive mobile fallback. The remaining foundation gaps are focus trapping, return-focus handling, body scroll locking, an explicit accessible description API, configurable size variants, and a stable per-instance title id. These are small foundation gaps, but they should be resolved before controlled migration.
+Strengths are semantic `role="dialog"`/`aria-modal`, projected content ownership, token-backed shell structure, configurable dismissal, and a responsive mobile fallback. At the 11M baseline the remaining foundation gaps were focus trapping, return-focus handling, body scroll locking, an explicit accessible description API, configurable size variants, and a stable per-instance title id. Phase 11N resolves those shared-shell gaps without migrating any feature page.
 
 ## `ui-confirm-dialog` audit
 
@@ -74,9 +74,9 @@ The repository baseline remains `!important = 87` and `::ng-deep = 4`. No new de
 
 ## Architecture decision
 
-**UI-MODAL NEEDS SMALL FOUNDATION HARDENING FIRST**
+**UI-MODAL FOUNDATION READY**
 
-The current `ui-modal` is suitable as the direction for a standard shell, but not yet as a migration contract. Phase 11N should harden only the shared foundation concerns listed above, with no page migration in that phase. After that verification, a later phase may pilot at most two low-risk standard modals.
+The hardened `ui-modal` is now suitable as the direction for a standard shell and a later controlled migration pilot. The foundation change is intentionally limited to focus containment/restoration, scroll locking, ARIA description support, unique IDs, size variants, and the existing dismissal contract. No page migration is included in 11N.
 
 Complex workflows, specialized result/import surfaces, drawers/sheets, permission matrices, and modal-specific business interactions remain deferred and feature-owned. No global overlay service or generic dialog manager is planned.
 
@@ -94,4 +94,14 @@ Shared architecture may own the shell, backdrop, focus/accessibility behavior, t
 - `git diff --check`: PASS for this documentation-only change.
 - Browser verification: not required for an audit-only phase.
 
-Recommended next phase: `MODAL FOUNDATION HARDENING` without page migration.
+Recommended next phase: `CONTROLLED STANDARD MODAL MIGRATION — PILOT`, limited to two low-risk standard/form modals. Complex workflows, spreadsheet import, exam results, permission matrices, auth/security, platform, and specialized drawers remain excluded.
+
+## Phase 11N hardening record
+
+- `Tab` and `Shift+Tab` are contained within the active modal; a modal with no focusable content focuses its container fallback.
+- Initial focus prefers an explicit `[autofocus]` target, then the first focusable control, then the dialog container.
+- Focus is restored to the previously active element when it remains connected.
+- Body scroll locking is reference-counted and restores the exact prior inline overflow value on close or destroy.
+- `aria-modal="true"`, `role="dialog"`, unique `aria-labelledby`, and optional `aria-describedby` are preserved or strengthened.
+- `size="sm|md|lg"` is additive and defaults to the existing `md` width; existing consumers require no changes.
+- Escape and backdrop dismissal remain controlled by the existing inputs. `ui-confirm-dialog` remains composed over `ui-modal`.

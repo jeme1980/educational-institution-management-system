@@ -6,11 +6,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { ExamsStateService } from '../services/exams-state.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiTextareaComponent } from '../../../shared/components/textarea/ui-textarea.component';
 
 @Component({
   selector: 'app-exam-create',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiTextareaComponent],
   templateUrl: './exam-create.component.html',
   styleUrl: './exam-create.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -7,11 +7,13 @@ import { StaffMember, StaffAssignment } from '../models/staff.model';
 import { StaffHeaderComponent } from '../components/staff-header.component';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { sanitizeSpreadsheetText } from '../../../core/utils/spreadsheet-security';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-staff',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent],
   templateUrl: './staff.component.html',
   styleUrl: './staff.component.css'
 })

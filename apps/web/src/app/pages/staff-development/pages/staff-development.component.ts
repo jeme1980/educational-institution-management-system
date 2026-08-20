@@ -5,10 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { StaffDevelopment } from '../../../core/models/api.models';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 
 @Component({
   selector: 'app-staff-development',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent],
   templateUrl: './staff-development.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

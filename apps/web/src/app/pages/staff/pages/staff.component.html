@@ -45,12 +45,11 @@
             <label class="block text-xs font-semibold text-secondary mb-1">البحث السريع</label>
             <div class="relative">
               <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</mat-icon>
-              <input
-                type="text"
-                [value]="searchTerm()"
+              <ui-input
+                type="search"
+                ariaLabel="البحث في الموظفين"
                 (input)="updateSearchTerm($event)"
                 placeholder="البحث بالاسم، الكود، الهوية..."
-                class="w-full bg-slate-50 border border-surface-border rounded-lg pl-3 pr-10 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
               />
             </div>
           </div>
@@ -58,16 +57,12 @@
           <div class="w-full lg:w-1/4">
             <label class="block text-xs font-semibold text-secondary mb-1">المسمى الوظيفي</label>
             <div class="relative">
-              <select
-                [value]="jobTitleFilter()"
-                (change)="updateJobTitleFilter($event)"
-                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
-              >
+              <ui-select ariaLabel="تصفية حسب المسمى الوظيفي" (change)="updateJobTitleFilter($event)">
                 <option value="ALL">الكل (المعلمين والموظفين)</option>
                 @for (title of uniqueJobTitles(); track title) {
                   <option [value]="title">{{ title }}</option>
                 }
-              </select>
+              </ui-select>
               <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
             </div>
           </div>
@@ -75,15 +70,11 @@
           <div class="w-full lg:w-1/5">
             <label class="block text-xs font-semibold text-secondary mb-1">النوع</label>
             <div class="relative">
-              <select
-                [value]="genderFilter()"
-                (change)="updateGenderFilter($event)"
-                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
-              >
+              <ui-select ariaLabel="تصفية حسب النوع" (change)="updateGenderFilter($event)">
                 <option value="ALL">الكل</option>
                 <option value="MALE">ذكر</option>
                 <option value="FEMALE">أنثى</option>
-              </select>
+              </ui-select>
               <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
             </div>
           </div>
@@ -91,15 +82,11 @@
           <div class="w-full lg:w-1/5">
             <label class="block text-xs font-semibold text-secondary mb-1">الحالة</label>
             <div class="relative">
-              <select
-                [value]="statusFilter()"
-                (change)="updateStatusFilter($event)"
-                class="w-full appearance-none bg-slate-50 border border-surface-border rounded-lg pl-10 pr-3 py-2 text-xs text-on-surface focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-colors"
-              >
+              <ui-select ariaLabel="تصفية حسب الحالة" (change)="updateStatusFilter($event)">
                 <option value="ALL">الكل</option>
                 <option value="ACTIVE">نشط</option>
                 <option value="ARCHIVED">غير نشط / مجاز</option>
-              </select>
+              </ui-select>
               <mat-icon class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</mat-icon>
             </div>
           </div>

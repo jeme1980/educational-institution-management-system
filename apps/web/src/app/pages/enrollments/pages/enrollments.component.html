@@ -106,15 +106,11 @@
         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">السنة الدراسية</label>
         <div class="relative">
           <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">calendar_today</mat-icon>
-          <select 
-            [value]="selectedYear()" 
-            (change)="onYearChange($event)"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100/80 transition-all outline-none focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
-          >
+          <ui-select ariaLabel="اختيار السنة الدراسية" (change)="onYearChange($event)">
             @for (y of apiService.academicYears(); track y.id) {
               <option [value]="y.id">{{ y.yearLabel }} {{ y.isCurrent ? '(الحالية)' : '' }}</option>
             }
-          </select>
+          </ui-select>
           <mat-icon class="absolute left-3 top-2.5 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
         </div>
       </div>
@@ -124,16 +120,12 @@
         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">المستوى الصفّي</label>
         <div class="relative">
           <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">school</mat-icon>
-          <select 
-            [value]="selectedGrade()" 
-            (change)="onGradeChange($event)"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100/80 transition-all outline-none focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
-          >
+          <ui-select ariaLabel="تصفية حسب المستوى الصفّي" (change)="onGradeChange($event)">
             <option value="">جميع الصفوف</option>
             @for (g of availableGradesInYear(); track g) {
               <option [value]="g">الصف {{ g }}</option>
             }
-          </select>
+          </ui-select>
           <mat-icon class="absolute left-3 top-2.5 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
         </div>
       </div>

@@ -3,11 +3,15 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService, SubjectItem, TopicItem, SkillItem } from '../../../core/services/api.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiFormFieldComponent } from '../../../shared/components/form-field/ui-form-field.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-subjects',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiFormFieldComponent],
   templateUrl: './subjects.component.html',
   styleUrl: './subjects.component.css'
 })

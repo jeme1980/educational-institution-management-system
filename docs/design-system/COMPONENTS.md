@@ -30,7 +30,7 @@ These primitives are the official foundation for future controlled migrations. E
 These are native-control wrappers implementing `ControlValueAccessor`. They preserve browser semantics, autocomplete, keyboard behavior, RTL flow, and native select behavior while adding token-backed invalid, disabled, readonly, focus, and size states.
 
 - `ui-input`: `text`, `email`, `password`, `number`, `tel`, `search`, and `date`.
-- `ui-select`: projected native `<option>` elements; no custom overlay.
+- `ui-select`: projected native `<option>` elements, optional `ariaLabel` for standalone filter controls; no custom overlay.
 - `ui-textarea`: native textarea with vertical resize behavior.
 
 Checkbox, radio, file upload, date picker, and search-specific primitives remain deferred until repeated usage justifies them.

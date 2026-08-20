@@ -417,29 +417,29 @@
         </div>
 
         <form [formGroup]="subjectForm" (ngSubmit)="saveSubject()" class="p-6 space-y-4 font-bold" dir="rtl">
-          <select formControlName="academicYearId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
+          <ui-select formControlName="academicYearId" [required]="true">
             <option value="">اختر السنة الدراسية</option>
             @for (year of apiService.academicYears(); track year.id) { <option [value]="year.id">{{ year.yearLabel }}</option> }
-          </select>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1.5">اسم المادة الأكاديمية (بالعربية) *</label>
-            <input
+          </ui-select>
+          <ui-form-field label="اسم المادة الأكاديمية (بالعربية)" controlId="subject-name-ar" [required]="true" [invalid]="!!(subjectForm.get('nameAr')?.touched && subjectForm.get('nameAr')?.invalid)" errorText="اسم المادة بالعربية مطلوب.">
+            <ui-input
+              id="subject-name-ar"
               type="text"
               formControlName="nameAr"
               placeholder="مثال: الرياضيات التطبيقية"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+              [required]="true"
+              [invalid]="!!(subjectForm.get('nameAr')?.touched && subjectForm.get('nameAr')?.invalid)"
             />
-            @if (subjectForm.get('nameAr')?.touched && subjectForm.get('nameAr')?.invalid) {
-              <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">اسم المادة بالعربية مطلوب.</p>
-            }
-          </div>
+          </ui-form-field>
 
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1.5">كود / رمز المادة (Subject Code) *</label>
-            <input
+            <ui-input
               type="text"
               placeholder="مثال: MATH-101"
-              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
+              formControlName="code"
+              [required]="true"
+              [invalid]="!!(subjectForm.get('code')?.touched && subjectForm.get('code')?.invalid)"
             />
             @if (subjectForm.get('code')?.touched && subjectForm.get('code')?.invalid) {
               <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">رمز المادة مطلوب.</p>
@@ -464,17 +464,18 @@
 
           <!-- Modal Footer -->
           <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
-            <button
+            <ui-button
               type="button"
-              (click)="closeSubjectModal()"
-              class="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50 active:bg-slate-100 text-xs font-bold transition-all cursor-pointer border border-transparent hover:border-slate-200"
+              variant="secondary"
+              (activated)="closeSubjectModal()"
             >
               إلغاء التراجع
-            </button>
-            <button
+            </ui-button>
+            <ui-button
               type="submit"
+              variant="primary"
               [disabled]="subjectForm.invalid || isProcessing()"
-              class="px-5 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              [loading]="isProcessing()"
             >
               @if (isProcessing()) {
                 <mat-icon class="animate-spin text-sm block">sync</mat-icon>
@@ -483,7 +484,7 @@
                 <mat-icon class="text-sm block">save</mat-icon>
                 <span>حفظ المادة</span>
               }
-            </button>
+            </ui-button>
           </div>
         </form>
       </div>

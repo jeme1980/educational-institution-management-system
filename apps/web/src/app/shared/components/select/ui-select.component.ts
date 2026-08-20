@@ -16,6 +16,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       [attr.name]="name() || null"
       [value]="value()"
       [attr.required]="required() ? '' : null"
+      [attr.aria-label]="ariaLabel() || null"
       [attr.aria-describedby]="describedBy() || null"
       [attr.aria-invalid]="invalid() ? 'true' : null"
       [disabled]="isDisabled()"
@@ -30,6 +31,7 @@ export class UiSelectComponent implements ControlValueAccessor {
   readonly required = input(false);
   readonly disabled = input(false);
   readonly invalid = input(false);
+  readonly ariaLabel = input('');
   readonly describedBy = input('');
   readonly size = input<'sm' | 'md' | 'lg'>('md');
   readonly value = signal('');

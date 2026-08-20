@@ -6,11 +6,15 @@ import { ApiService } from '../../../core/services/api.service';
 import { InstitutionItem } from '../models/institution.model';
 import { InstitutionsHeaderComponent } from '../components/institutions-header.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiTextareaComponent } from '../../../shared/components/textarea/ui-textarea.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-institutions',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, InstitutionsHeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, InstitutionsHeaderComponent, UiButtonComponent, UiInputComponent, UiSelectComponent, UiTextareaComponent],
   templateUrl: './institutions.component.html',
   styleUrl: './institutions.component.css',
 })

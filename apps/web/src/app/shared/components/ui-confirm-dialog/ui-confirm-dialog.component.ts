@@ -11,6 +11,7 @@ import { UiModalComponent } from '../ui-modal/ui-modal.component';
  * - cancelText: cancellation button label, defaults to "إلغاء".
  * - variant: danger for irreversible deletion, warning for archive/reversible actions,
  *   or default for ordinary confirmations.
+ * - loading: shows the shared button pending state and makes the confirmation non-dismissible.
  * Outputs:
  * - confirmed: emitted when the user confirms.
  * - cancelled: emitted when the user cancels, presses Escape, or clicks the backdrop.
@@ -24,7 +25,8 @@ import { UiModalComponent } from '../ui-modal/ui-modal.component';
     <ui-modal
       [open]="open()"
       [title]="title()"
-      (closed)="cancelled.emit()"
+      [dismissible]="!loading()"
+      (closed)="onModalClosed()"
     >
       <div ui-modal-body class="confirm-dialog__content">
         @if (variant() !== 'default') {
@@ -34,8 +36,8 @@ import { UiModalComponent } from '../ui-modal/ui-modal.component';
       </div>
 
       <div ui-modal-footer class="confirm-dialog__actions">
-        <ui-button variant="ghost" type="button" (activated)="cancelled.emit()">{{ cancelText() }}</ui-button>
-        <ui-button [variant]="confirmButtonVariant()" type="button" (activated)="confirmed.emit()">{{ confirmText() }}</ui-button>
+        <ui-button variant="ghost" type="button" [disabled]="loading()" (activated)="onCancel()">{{ cancelText() }}</ui-button>
+        <ui-button [variant]="confirmButtonVariant()" type="button" [loading]="loading()" (activated)="onConfirm()">{{ confirmText() }}</ui-button>
       </div>
     </ui-modal>
   `,
@@ -81,11 +83,24 @@ export class UiConfirmDialogComponent {
   readonly confirmText = input('تأكيد');
   readonly cancelText = input('إلغاء');
   readonly variant = input<'danger' | 'warning' | 'default'>('default');
+  readonly loading = input(false);
 
   readonly confirmed = output<void>();
   readonly cancelled = output<void>();
 
   confirmButtonVariant(): 'danger' | 'secondary' | 'primary' {
     return this.variant() === 'danger' ? 'danger' : this.variant() === 'warning' ? 'secondary' : 'primary';
+  }
+
+  onConfirm(): void {
+    if (!this.loading()) this.confirmed.emit();
+  }
+
+  onCancel(): void {
+    if (!this.loading()) this.cancelled.emit();
+  }
+
+  onModalClosed(): void {
+    if (!this.loading()) this.cancelled.emit();
   }
 }

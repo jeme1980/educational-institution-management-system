@@ -257,3 +257,13 @@ Baseline overlay inventory remains `29` `fixed inset-0` patterns. Five are confi
 The current component is the standard foundation for ordinary confirmations, but loading/disabled presentation is a concrete generic gap for async destructive actions. No migration was performed. The smallest next step is a foundation-only hardening phase, followed by a controlled migration of the two Staff custom standard confirmations and the browser guardian confirmation if the hardened API remains backward-compatible. Complex cascade warnings and specialized account-security confirmation remain deferred.
 
 Audit verification: source inventory complete, classification recorded, production code unchanged, and `git diff --check` required to pass. The last production build and targeted lint remain valid from Phase 11R.
+
+## Confirmation foundation hardening — Phase 11T
+
+Phase 11T hardens the shared confirmation foundation only. No feature confirmation was migrated, and the 13 existing consumers remain unchanged. `ui-confirm-dialog` now adds one generic input: `loading` (default `false`). It delegates pending presentation to the existing `ui-button` loading API, uses native disabled semantics, and guards both confirm and cancel handlers so repeated activation cannot emit a second decision while pending.
+
+While `loading=true`, the confirmation is non-dismissible: confirm and cancel actions are disabled, and the close button, backdrop, and Escape cannot emit `cancelled`. This is implemented through the generic `ui-modal` `dismissible` input (default `true`), preserving all existing modal behavior for other consumers. When loading returns to `false`, the dialog resumes its normal cancel and confirm behavior; the feature decides whether to keep it open after failure or close it after success.
+
+The async responsibility contract is explicit: the feature owns the API request, loading state value, permissions, errors, and success close decision. Shared UI owns only generic presentation, duplicate-action prevention, dismissal protection, focus containment/restoration, scroll locking, tone, labels, and native keyboard semantics. No Promise API, confirmation service, business status, or API error handling was added.
+
+`ui-confirm-dialog` is now **UI-CONFIRM-DIALOG FOUNDATION READY** for the next controlled migration. The direct candidates remain Staff member deletion, Staff assignment deletion, and Student guardian relationship removal. Academic year/period cascade deletion and Subject/topic/skill cascade deletion remain deferred complex confirmations; Account setup link reissue remains deferred specialized security confirmation. Phase 11U migration is not started here.

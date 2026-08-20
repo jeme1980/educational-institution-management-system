@@ -7,6 +7,7 @@ export type UiModalSize = 'sm' | 'md' | 'lg';
  * Inputs:
  * - open: controls whether the modal is visible.
  * - title: optional accessible title shown in the default header.
+ * - dismissible: enables the close button, backdrop, and Escape dismissal.
  * - closeOnBackdrop: closes when the backdrop is clicked.
  * - closeOnEscape: closes when Escape is pressed.
  * Content slots:
@@ -40,7 +41,7 @@ export type UiModalSize = 'sm' | 'md' | 'lg';
             @if (title()) {
               <h2 [id]="titleId">{{ title() }}</h2>
             }
-            <button class="ui-modal__close" type="button" aria-label="إغلاق" (click)="closed.emit()">×</button>
+            <button class="ui-modal__close" type="button" aria-label="إغلاق" [disabled]="!dismissible()" (click)="onCloseClick()">×</button>
           </header>
           @if (description()) {
             <p class="ui-modal__description" [id]="descriptionId">{{ description() }}</p>
@@ -137,6 +138,7 @@ export class UiModalComponent implements OnDestroy {
   readonly title = input('');
   readonly description = input('');
   readonly size = input<UiModalSize>('md');
+  readonly dismissible = input(true);
   readonly closeOnBackdrop = input(true);
   readonly closeOnEscape = input(true);
   readonly closed = output<void>();
@@ -163,7 +165,7 @@ export class UiModalComponent implements OnDestroy {
   onDialogKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.stopPropagation();
-      if (this.open() && this.closeOnEscape()) this.closed.emit();
+      if (this.open() && this.dismissible() && this.closeOnEscape()) this.closed.emit();
       return;
     }
 
@@ -189,14 +191,18 @@ export class UiModalComponent implements OnDestroy {
   }
 
   onBackdropClick(event: MouseEvent): void {
-    if (event.target === event.currentTarget && this.closeOnBackdrop()) this.closed.emit();
+    if (event.target === event.currentTarget && this.dismissible() && this.closeOnBackdrop()) this.closed.emit();
   }
 
   onBackdropKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.closeOnEscape()) {
+    if (event.key === 'Escape' && this.dismissible() && this.closeOnEscape()) {
       event.stopPropagation();
       this.closed.emit();
     }
+  }
+
+  onCloseClick(): void {
+    if (this.dismissible()) this.closed.emit();
   }
 
   ngOnDestroy(): void {

@@ -48,6 +48,12 @@ There is intentionally no shared `ui-loading` component at this stage. Loading p
 
 ## `ui-modal`
 
-`ui-modal` is the standard presentational modal shell. Existing inputs and outputs remain backward-compatible: `open`, `title`, `closeOnBackdrop`, `closeOnEscape`, and `closed`. The foundation also supports optional `description` text and `size` (`sm`, `md`, or `lg`, default `md`). Content remains projected through `[ui-modal-header]`, `[ui-modal-body]`, and `[ui-modal-footer]`.
+`ui-modal` is the standard presentational modal shell. Existing inputs and outputs remain backward-compatible: `open`, `title`, `closeOnBackdrop`, `closeOnEscape`, and `closed`. The foundation also supports optional `description` text, `size` (`sm`, `md`, or `lg`, default `md`), and generic `dismissible` control (default `true`) for coordinated pending states. Content remains projected through `[ui-modal-header]`, `[ui-modal-body]`, and `[ui-modal-footer]`.
 
 The shell owns dialog semantics, unique title/description associations, initial focus, Tab/Shift+Tab containment, Escape handling, focus restoration, and reference-counted body scroll locking. `ui-confirm-dialog` remains composed over this shell and must not add duplicate focus or scroll handling. Feature consumers continue to own content, forms, validation, permissions, API calls, and business actions.
+
+## `ui-confirm-dialog`
+
+`ui-confirm-dialog` is the standard event-based confirmation foundation composed over `ui-modal`. Inputs are `open`, `title`, `message`, `confirmText` (default `تأكيد`), `cancelText` (default `إلغاء`), `variant` (`danger | warning | default`), and `loading` (default `false`). Outputs remain `confirmed` and `cancelled`.
+
+When `loading` is true, the confirm action uses `ui-button`'s shared loading presentation and native disabled semantics. Confirm and cancel events are guarded, and the dialog becomes non-dismissible through its close button, backdrop, and Escape. The feature owns the request, loading value, error handling, and final close decision; the shared component has no business or API knowledge. The default `loading=false` behavior is unchanged.

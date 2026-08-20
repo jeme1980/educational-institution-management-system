@@ -161,3 +161,31 @@ The three selected shells were migrated to `ui-modal`: Academic Period `sm`, Edu
 `ui-modal` and `ui-confirm-dialog` remain unchanged. No generic API gap, feature workaround, duplicate focus/escape/scroll-lock mechanism, dependency, backend, Prisma, migration, or route change was introduced. The custom-shell inventory moved from 36 to 33 `fixed inset-0` patterns across 19 files; `!important` remains `87` and `::ng-deep` remains `4`.
 
 After Batch 2, four Standard/Form candidates remain. Confirmations, complex workflows, drawers/sheets, specialized overlays, platform/auth surfaces, imports, exam results, and permission matrices remain excluded. Verification: targeted lint PASS, Angular production build PASS, bundle budget PASS without threshold changes, and `git diff --check` PASS. No feature or modal foundation tests are available under `apps/web/src`; browser automation was unavailable, so foundation-backed static/source verification was used. The `fixed inset-0` inventory is `36 → 33` patterns across `19 → 18` files.
+
+## Phase 11R final Standard/Form migration
+
+The final reconciliation started from `d9eaffe`. The four remaining candidates were verified against source and all were direct Reactive Form modals, so all four were eligible and migrated:
+
+| Modal | Previous class | Final class | Migrated |
+| --- | --- | --- | --- |
+| Topic creator/editor | Form | Form | Yes |
+| Skill creator/editor | Form | Form | Yes |
+| Staff assignment creator/editor | Form | Form | Yes |
+| Staff development creator/editor | Form | Form | Yes |
+
+The shells now use `ui-modal` with sizes `sm`, `md`, `md`, and `md` respectively. Open/close conditions, forms, validation, relationships, API calls, payloads, permissions, CRUD behavior, loading, errors, and actions were preserved. No confirmation, complex workflow, drawer/sheet, specialized overlay, table, data-display, or previously migrated modal was changed.
+
+Final Standard/Form architecture status:
+
+- Final Standard/Form total: `14`.
+- Using `ui-modal`: `14`.
+- Coverage: `100%`.
+- Remaining `fixed inset-0` roots are intentionally outside this denominator: confirmations, exam/question/result workflows, spreadsheet/import errors, drawers/sheets, study-group membership, student detail/form surfaces, platform/admin surfaces, and other legacy specialized overlays. Remaining Standard/Form fixed overlays in the reconciled inventory: `0`.
+- Fixed-overlay metrics: `33 → 29` patterns, `18 → 17` files.
+- CSS debt: `!important 87 → 87`; `::ng-deep 4 → 4`; new debt `0`.
+
+`ui-modal`, `ui-confirm-dialog`, form primitives, table foundations, and data-display primitives remain unchanged. No generic API gap or feature workaround was found. Targeted lint PASS, Angular production build PASS, bundle budget PASS without threshold changes, and `git diff --check` PASS. Feature and modal foundation tests are unavailable under `apps/web/src`; browser verification was unavailable, so foundation-backed static/source verification was used.
+
+**STANDARD MODAL MIGRATION CLOSED**
+
+`ui-modal` is the final foundation for Standard/Form modals. Complex, Drawer, and Specialized overlays remain intentionally outside this architecture. Recommended next phase: `CUSTOM CONFIRMATION CURRENT-STATE AUDIT` only; do not start it automatically.

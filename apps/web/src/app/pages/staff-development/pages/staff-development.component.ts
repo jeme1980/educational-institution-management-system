@@ -7,10 +7,11 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 import { StaffDevelopment } from '../../../core/models/api.models';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   selector: 'app-staff-development',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent, UiModalComponent],
   templateUrl: './staff-development.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -177,7 +178,7 @@ export class StaffDevelopmentComponent implements OnInit {
     }
   }
 
-  private normalizeHeader(value: unknown): string { return this.cellText(value).replace(/^﻿/, '').toLowerCase().replace(/[\s_-]/g, ''); }
+  private normalizeHeader(value: unknown): string { return this.cellText(value).replace(/^\uFEFF/, '').toLowerCase().replace(/[\s_-]/g, ''); }
   private cellText(value: unknown): string { return value instanceof Date ? value.toISOString().slice(0, 10) : String(value ?? '').trim(); }
   private excelDate(value: unknown): string {
     if (value instanceof Date) return value.toISOString().slice(0, 10);

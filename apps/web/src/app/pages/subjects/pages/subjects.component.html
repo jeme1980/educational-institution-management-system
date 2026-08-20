@@ -482,19 +482,9 @@
 
   <!-- Topic Creator / Editor Modal -->
   @if (showTopicModal()) {
-    <div (click)="closeTopicModal()" (keydown.escape)="closeTopicModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
-        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
-          <h3 class="font-extrabold text-sm flex items-center gap-2">
-            <mat-icon class="block">{{ isEditingTopic() ? 'edit' : 'add_task' }}</mat-icon>
-            <span>{{ isEditingTopic() ? 'تعديل الموضوع / الوحدة الدراسية' : 'إضافة وحدة دراسية جديدة' }}</span>
-          </h3>
-          <button type="button" (click)="closeTopicModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
-            <mat-icon class="block">close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" [title]="isEditingTopic() ? 'تعديل الموضوع / الوحدة الدراسية' : 'إضافة وحدة دراسية جديدة'" size="sm" (closed)="closeTopicModal()">
 
-        <form [formGroup]="topicForm" (ngSubmit)="saveTopic()" class="p-6 space-y-4 font-bold" dir="rtl">
+        <form ui-modal-body [formGroup]="topicForm" (ngSubmit)="saveTopic()" class="p-6 space-y-4 font-bold" dir="rtl">
           <input type="hidden" formControlName="academicYearId" /><input type="hidden" formControlName="subjectId" />
           <label class="block text-xs font-bold text-slate-600">الطبقة *</label>
           <select formControlName="gradeLevelId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
@@ -557,7 +547,7 @@
           </div>
 
           <!-- Modal Footer -->
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
             <button
               type="button"
               (click)="closeTopicModal()"
@@ -580,25 +570,14 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- Skill Creator / Editor Modal -->
   @if (showSkillModal()) {
-    <div (click)="closeSkillModal()" (keydown.escape)="closeSkillModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
-        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
-          <h3 class="font-extrabold text-sm flex items-center gap-2">
-            <mat-icon class="block">{{ isEditingSkill() ? 'edit' : 'psychology' }}</mat-icon>
-            <span>{{ isEditingSkill() ? 'تعديل المهارة / المخرج التعليمي' : 'تسجيل مهارة تعليمية جديدة' }}</span>
-          </h3>
-          <button type="button" (click)="closeSkillModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
-            <mat-icon class="block">close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" [title]="isEditingSkill() ? 'تعديل المهارة / المخرج التعليمي' : 'تسجيل مهارة تعليمية جديدة'" size="sm" (closed)="closeSkillModal()">
 
-        <form [formGroup]="skillForm" (ngSubmit)="saveSkill()" class="p-6 space-y-4 font-bold" dir="rtl">
+        <form ui-modal-body [formGroup]="skillForm" (ngSubmit)="saveSkill()" class="p-6 space-y-4 font-bold" dir="rtl">
           <input type="hidden" formControlName="academicYearId" /><input type="hidden" formControlName="subjectId" />
           <label class="block text-xs font-bold text-slate-600">الطبقة *</label>
           <select formControlName="gradeLevelId" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold">
@@ -651,7 +630,7 @@
           </div>
 
           <!-- Modal Footer -->
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
             <button
               type="button"
               (click)="closeSkillModal()"
@@ -674,8 +653,7 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- Delete Confirmation Overlay Modal -->

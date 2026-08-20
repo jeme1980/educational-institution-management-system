@@ -1,0 +1,97 @@
+# Modal & Overlay Architecture Audit
+
+Phase 11M is an audit and architecture decision only. No production page, shared component, backend, route, Prisma schema, dependency, or interaction flow was changed.
+
+## Inventory summary
+
+The source inventory found 41 `fixed inset-0` roots across 19 application files. This includes modal-like surfaces, the mobile navigation drawer, and a small number of legacy/duplicate template surfaces; the count is therefore a pattern inventory rather than a claim that every fixed root is a modal. There are two active `ui-modal` consumers:
+
+| Area | Current implementation | Classification | Shared status |
+| --- | --- | --- | --- |
+| Platform provider form | `ui-modal` with projected form/footer | Form modal | Shared shell |
+| Lookup tables | `ui-modal` with projected form/footer | Form modal | Shared shell |
+| Institutions, Classes, Study groups, Staff | Feature-owned fixed templates | Standard/form/read-only modals | Not shared |
+| Academic years, Subjects, Settings | Feature-owned fixed templates | Form and confirmation modals | Not shared |
+| Exams and Exam Results | Feature-owned fixed templates/components | Complex/specialized workflow overlays | Not shared |
+| Students and Enrollments | Feature-owned templates | Form, import-error, and transfer overlays | Not shared |
+| Institution users and Roles | Feature-owned templates | Form modal and right-side sheet/drawer | Not shared |
+| Mobile application navigation | Fixed backdrop plus side panel | Drawer | Feature shell |
+
+Confirmation ownership is more consistent than modal ownership: `ConfirmDialogService` has 13 consuming TypeScript files and renders one global `ui-confirm-dialog` host in `app.html`. Some legacy feature templates still contain custom confirmation surfaces.
+
+## Classification boundary
+
+- **Standard modal:** bounded title/body/footer or read-only details with no workflow-specific interaction model.
+- **Confirmation dialog:** a focused decision with cancel/confirm actions and a severity variant.
+- **Form modal:** a feature-owned form whose data, validation, save state, and permissions remain local to the feature.
+- **Complex workflow modal:** multi-section forms, editable grids, question/result workflows, import results, or nested business interactions.
+- **Drawer/sheet:** side or edge-aligned surfaces such as mobile navigation and institution-user creation.
+- **Specialized overlay:** exam results, study-group membership management, import errors, or another domain-specific interaction.
+- **Not actually modal:** toasts, menus, sticky controls, and other fixed-position feedback or navigation surfaces.
+
+The standard/complex boundary is clear. The majority of current surfaces are feature-owned form, complex, specialized, or drawer implementations and must not be forced into a generic dialog API.
+
+## `ui-modal` audit
+
+Current API:
+
+- Selector: `ui-modal`.
+- Inputs: `open`, `title`, `closeOnBackdrop`, `closeOnEscape`.
+- Output: `closed`.
+- Projection: optional `[ui-modal-header]`, `[ui-modal-body]`, and `[ui-modal-footer]` slots.
+- Dismissal: backdrop click and Escape are configurable; the native close button emits `closed`.
+- Layout: centered `min(100%, 42rem)` surface, internal body scrolling, and a full-width bottom sheet at small widths.
+
+Strengths are semantic `role="dialog"`/`aria-modal`, projected content ownership, token-backed shell structure, configurable dismissal, and a responsive mobile fallback. The remaining foundation gaps are focus trapping, return-focus handling, body scroll locking, an explicit accessible description API, configurable size variants, and a stable per-instance title id. These are small foundation gaps, but they should be resolved before controlled migration.
+
+## `ui-confirm-dialog` audit
+
+`ui-confirm-dialog` is already composed over `ui-modal`, not an independent overlay implementation. It owns confirmation copy, severity mapping, cancel/confirm outputs, and shared button usage; `ConfirmDialogService` owns the single active request and resolves it centrally.
+
+Decision: **KEEP `ui-confirm-dialog` composed over `ui-modal`**. No separate overlay service or dialog manager is justified by the current architecture. Confirmation loading and feature-specific pre-confirmation checks remain feature-owned until the foundation API explicitly supports them.
+
+## Cross-cutting findings
+
+### Backdrop, stacking, and positioning
+
+Custom surfaces commonly use `z-50`, with higher values such as `z-[70]`, `z-[9999]`, and the shared shell's `z-index: 1000`. Backdrop opacity, blur, click-to-close behavior, and max-width vary by feature. The application drawer, toasts, menus, and modals are not governed by one stacking contract. This is duplication and a nested-overlay risk, not a reason to introduce a global manager.
+
+### Focus, keyboard, and ARIA
+
+Feature templates commonly use a focusable backdrop with `keydown.escape`; some have explicit `role="dialog"`, while others rely on visible headings without dialog semantics. The shared shell has Escape and close-button behavior but no focus trap or return-focus mechanism. Keyboard access for close actions is generally present where a native button is used. These findings are accessibility quality gaps, not security severity classifications.
+
+### Scroll and responsive behavior
+
+Internal scrolling and viewport caps are implemented per feature. Some forms use `overflow-y-auto`, some use max-height rules, and the shared shell uses an internal body scroll. There is no shared body-scroll lock. Mobile behavior ranges from an edge sheet to a centered shrinking dialog or a full-width overlay.
+
+### Theme and RTL
+
+The shared shell uses design-token variables but still references the older `--color-*` token aliases. Feature overlays mix semantic utility classes, legacy utility colors, and occasional raw values. RTL is mostly preserved through logical layout or `dir="rtl"`, but fixed left/right placement and feature-specific spacing remain inconsistent. No token gap was added in this audit.
+
+### CSS debt
+
+The repository baseline remains `!important = 87` and `::ng-deep = 4`. No new debt was introduced by this audit. No modal-specific `::ng-deep` usage was identified in the inspected modal implementations; existing `!important` findings remain feature-owned and unchanged.
+
+## Architecture decision
+
+**UI-MODAL NEEDS SMALL FOUNDATION HARDENING FIRST**
+
+The current `ui-modal` is suitable as the direction for a standard shell, but not yet as a migration contract. Phase 11N should harden only the shared foundation concerns listed above, with no page migration in that phase. After that verification, a later phase may pilot at most two low-risk standard modals.
+
+Complex workflows, specialized result/import surfaces, drawers/sheets, permission matrices, and modal-specific business interactions remain deferred and feature-owned. No global overlay service or generic dialog manager is planned.
+
+## Ownership boundary
+
+Shared architecture may own the shell, backdrop, focus/accessibility behavior, theme integration, dismissal contract, and responsive container. Features retain ownership of content, forms, validation, API calls, loading/error states, permissions, business actions, and workflow transitions.
+
+## Verification scope
+
+- Branch: `feature/design-system`.
+- Starting and final commit: `72ea53f`.
+- Working tree: clean.
+- RC tag `v0.1.0-rc.1`: preserved.
+- Production build: already PASS at the 11L-V baseline; no production code changed in 11M.
+- `git diff --check`: PASS for this documentation-only change.
+- Browser verification: not required for an audit-only phase.
+
+Recommended next phase: `MODAL FOUNDATION HARDENING` without page migration.

@@ -16,14 +16,28 @@
   --on-surface-variant: #45474c;
   --outline: #75777d;
   --outline-variant: #c5c6cd;
-  --primary: #091426;
+  --primary: #00236f;
   --on-primary: #ffffff;
   --primary-container: #1e293b;
   --secondary: #0058be;
   --on-secondary: #ffffff;
   --secondary-container: #2170e4;
   --error: #ba1a1a;
+  --on-error: #ffffff;
   --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  --on-primary-container: #90a8ff;
+  --inverse-surface: #2f3036;
+  --inverse-on-surface: #f1f0f7;
+  --inverse-primary: #b6c4ff;
+  --surface-tint: #4059aa;
+  --tertiary: #4b1c00;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #6e2c00;
+  --on-tertiary-container: #f39461;
+  --legacy-success-emerald: #10b981;
+  --legacy-warning-amber: #f59e0b;
+  --legacy-error-rose: #e11d48;
 
   --success: #15803d;
   --success-container: #dcfce7;
@@ -33,17 +47,6 @@
   --danger-container: #ffe4e6;
   --neutral: #475569;
   --neutral-container: #f1f5f9;
-
-  /* Stable aliases for templates and future shared components. */
-  --app-background: var(--surface);
-  --text-primary: var(--on-surface);
-  --text-secondary: var(--on-surface-variant);
-  --text-disabled: var(--outline);
-  --primary-contrast: var(--on-primary);
-  --input-background: var(--surface-container-lowest);
-  --table-background: var(--surface-container-lowest);
-  --table-hover: var(--surface-container-low);
-  --card-background: var(--surface-container-lowest);
 
   --font-family-base: 'IBM Plex Sans Arabic', 'Noto Sans', system-ui, sans-serif;
   --font-family-label: 'IBM Plex Sans Arabic', 'Noto Sans', system-ui, sans-serif;
@@ -66,13 +69,27 @@
   --text-label-md-line: 1.25rem;
   --text-label-sm: 0.75rem;
   --text-label-sm-line: 1rem;
+  --font-size-headline-lg: 2rem;
+  --font-size-headline-lg-line: 2.5rem;
+  --font-size-headline-md: var(--text-headline-lg);
+  --font-size-headline-md-line: var(--text-headline-lg-line);
+  --font-size-headline-sm: var(--text-headline-sm);
+  --font-size-headline-sm-line: var(--text-headline-sm-line);
+  --font-size-body-lg: var(--text-body-lg);
+  --font-size-body-lg-line: var(--text-body-lg-line);
+  --font-size-body-md: var(--text-body-md);
+  --font-size-body-md-line: var(--text-body-md-line);
+  --font-size-body-sm: var(--text-body-sm);
+  --font-size-body-sm-line: var(--text-body-sm-line);
+  --font-size-label-md: 0.8125rem;
+  --font-size-label-md-line: 1.125rem;
+  --font-size-label-sm: var(--text-label-sm);
+  --font-size-label-sm-line: var(--text-label-sm-line);
 
   --radius-default: 0.25rem;
-  --radius-md: 0.375rem;
-  --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
   --radius-full: 9999px;
-  --control-height: 2.5rem;
+  --control-height: var(--control-height-md);
   --table-row-height: 3.25rem;
 
   /* Brand and semantic colors. The darker 500 values are selected to preserve WCAG AA
@@ -152,6 +169,74 @@
 
   --transition-fast: 150ms;
   --transition-normal: 250ms;
+
+  /* Canonical semantic foundation. Runtime themes override these values below. */
+  --background: var(--surface);
+  --surface-elevated: var(--surface-container-lowest);
+  --surface-overlay: var(--surface-container-low);
+  --text-muted: var(--on-surface-variant);
+  --text-placeholder: var(--outline);
+  --border: var(--outline-variant);
+  --border-subtle: #e2e8f0;
+  --border-strong: var(--outline);
+  --divider: var(--outline-variant);
+  --primary-hover: #1e3a8a;
+  --primary-active: #1e3a8a;
+  --info: var(--secondary);
+  --info-container: var(--secondary-container);
+  --disabled-surface: var(--neutral-container);
+  --disabled-text: var(--outline);
+  --hover-surface: var(--surface-container-low);
+  --active-surface: var(--surface-container-high);
+  --selected-surface: var(--surface-container);
+  --focus-ring: var(--secondary);
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --overlay: rgb(15 23 42 / 0.62);
+
+  /* Foundation dimensions. Feature-specific geometry remains local. */
+  --border-width-thin: 1px;
+  --border-width-strong: 2px;
+  --control-height-sm: 2rem;
+  --control-height-md: 2.5rem;
+  --control-height-lg: 3rem;
+  --icon-size-sm: 1rem;
+  --icon-size-md: 1.25rem;
+  --icon-size-lg: 1.5rem;
+  --avatar-size-sm: 2rem;
+  --avatar-size-md: 2.75rem;
+  --avatar-size-lg: 4rem;
+  --z-base: 0;
+  --z-sticky: 20;
+  --z-dropdown: 30;
+  --z-overlay: 50;
+  --z-toast: 70;
+  --z-modal: 1000;
+  --transition-slow: 300ms;
+  --ease-standard: ease;
+  --ease-emphasized: ease-out;
+  --breakpoint-mobile: 640px;
+  --breakpoint-tablet: 767px;
+  --breakpoint-desktop: 1024px;
+
+  /* Compatibility aliases retained for existing consumers. */
+  --app-background: var(--background);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --text-disabled: var(--disabled-text);
+  --primary-contrast: var(--on-primary);
+  --input-background: var(--surface-elevated);
+  --table-background: var(--surface-elevated);
+  --table-hover: var(--hover-surface);
+  --card-background: var(--surface-elevated);
+  --academic-primary: var(--primary);
+  --academic-primary-active: var(--primary-active);
+  --academic-canvas: var(--background);
+  --academic-surface: var(--surface-elevated);
+  --academic-border: var(--border-subtle);
+  --academic-text: var(--on-surface);
+  --academic-muted: var(--text-muted);
+  --academic-shadow-overlay: var(--shadow-md);
 }
 
 /* Dark theme uses the same semantic names. Components never need a theme
@@ -185,38 +270,24 @@
   --danger-container: #4c0519;
   --neutral: #cbd5e1;
   --neutral-container: #334155;
+  --on-error: #450a0a;
+  --on-error-container: #fecaca;
+  --on-primary-container: #bae6fd;
+  --inverse-surface: #f1f5f9;
+  --inverse-on-surface: #0f172a;
+  --inverse-primary: #0c4a6e;
+  --surface-tint: #38bdf8;
+  --tertiary: #fdba74;
+  --on-tertiary: #431407;
+  --tertiary-container: #7c2d12;
+  --on-tertiary-container: #fed7aa;
 
-  --academic-primary: var(--primary);
-  --academic-primary-active: #7dd3fc;
-  --academic-canvas: var(--surface);
-  --academic-surface: var(--surface-container-lowest);
-  --academic-border: var(--outline-variant);
-  --academic-text: var(--on-surface);
-  --academic-muted: var(--on-surface-variant);
+  --border-subtle: #334155;
+  --primary-hover: #7dd3fc;
+  --primary-active: #7dd3fc;
+  --disabled-surface: #334155;
+  --disabled-text: #94a3b8;
+  --overlay: rgb(2 6 23 / 0.72);
   --academic-shadow-overlay: 0 10px 15px -3px rgb(2 6 23 / 0.28);
 
-  /* Tailwind theme variables used by existing templates. */
-  --color-surface: var(--surface);
-  --color-surface-container-lowest: var(--surface-container-lowest);
-  --color-surface-container-low: var(--surface-container-low);
-  --color-surface-container: var(--surface-container);
-  --color-surface-container-high: var(--surface-container-high);
-  --color-surface-container-highest: var(--surface-container-highest);
-  --color-on-surface: var(--on-surface);
-  --color-on-surface-variant: var(--on-surface-variant);
-  --color-outline: var(--outline);
-  --color-outline-variant: var(--outline-variant);
-  --color-primary: var(--primary);
-  --color-primary-container: var(--primary-container);
-  --color-on-primary: var(--on-primary);
-  --color-secondary: var(--secondary);
-  --color-secondary-container: var(--secondary-container);
-  --color-on-secondary: var(--on-secondary);
-  --color-error: var(--error);
-  --color-error-container: var(--error-container);
-  --color-success-emerald: var(--success);
-  --color-warning-amber: var(--warning);
-  --color-error-rose: var(--danger);
-  --color-surface-border: var(--outline-variant);
-  --color-background-soft-gray: var(--surface);
 }

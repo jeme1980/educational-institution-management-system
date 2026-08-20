@@ -13,81 +13,83 @@
 @import "./styles/_exam-analysis.scss";
 
 @theme {
-  --font-sans: 'IBM Plex Sans Arabic', 'Noto Sans', system-ui, sans-serif;
-  --font-headline: 'IBM Plex Sans Arabic', 'IBM Plex Sans', sans-serif;
-  --font-body: 'IBM Plex Sans Arabic', 'Noto Sans', sans-serif;
-  --font-label: 'IBM Plex Sans Arabic', 'Noto Sans', sans-serif;
+  /* Tailwind bridge: values come from _tokens.scss, the runtime source of truth. */
+  --font-sans: var(--font-family-base);
+  --font-headline: var(--font-family-base);
+  --font-body: var(--font-family-base);
+  --font-label: var(--font-family-label);
 
-  --text-headline-lg: 2rem;
-  --text-headline-lg--line-height: 2.5rem;
-  --text-headline-md: 1.5rem;
-  --text-headline-md--line-height: 2rem;
-  --text-headline-sm: 1.25rem;
-  --text-headline-sm--line-height: 1.75rem;
-  --text-body-lg: 1.125rem;
-  --text-body-lg--line-height: 1.75rem;
-  --text-body-md: 1rem;
-  --text-body-md--line-height: 1.5rem;
-  --text-body-sm: 0.875rem;
-  --text-body-sm--line-height: 1.25rem;
-  --text-label-md: 0.8125rem;
-  --text-label-md--line-height: 1.125rem;
-  --text-label-sm: 0.75rem;
-  --text-label-sm--line-height: 1rem;
+  --text-headline-lg: var(--font-size-headline-lg);
+  --text-headline-lg--line-height: var(--font-size-headline-lg-line);
+  --text-headline-md: var(--font-size-headline-md);
+  --text-headline-md--line-height: var(--font-size-headline-md-line);
+  --text-headline-sm: var(--font-size-headline-sm);
+  --text-headline-sm--line-height: var(--font-size-headline-sm-line);
+  --text-body-lg: var(--font-size-body-lg);
+  --text-body-lg--line-height: var(--font-size-body-lg-line);
+  --text-body-md: var(--font-size-body-md);
+  --text-body-md--line-height: var(--font-size-body-md-line);
+  --text-body-sm: var(--font-size-body-sm);
+  --text-body-sm--line-height: var(--font-size-body-sm-line);
+  --text-label-md: var(--font-size-label-md);
+  --text-label-md--line-height: var(--font-size-label-md-line);
+  --text-label-sm: var(--font-size-label-sm);
+  --text-label-sm--line-height: var(--font-size-label-sm-line);
 
-  --color-surface: #faf8ff;
-  --color-surface-dim: #dad9e1;
-  --color-surface-bright: #faf8ff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f4f3fa;
-  --color-surface-container: #eeedf4;
-  --color-surface-container-high: #e9e7ef;
-  --color-surface-container-highest: #e3e1e9;
-  --color-on-surface: #1a1b21;
-  --color-on-surface-variant: #444651;
-  --color-outline: #757682;
-  --color-outline-variant: #c5c5d3;
-  --color-inverse-surface: #2f3036;
-  --color-inverse-on-surface: #f1f0f7;
-  --color-surface-tint: #4059aa;
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-surface-tint: var(--surface-tint);
 
-  --color-primary: #00236f;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #1e3a8a;
-  --color-on-primary-container: #90a8ff;
-  --color-inverse-primary: #b6c4ff;
-  --color-primary-fixed: #dce1ff;
-  --color-primary-fixed-dim: #b6c4ff;
-  --color-on-primary-fixed: #00164e;
-  --color-on-primary-fixed-variant: #264191;
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-inverse-primary: var(--inverse-primary);
+  --color-primary-fixed: var(--color-primary-100);
+  --color-primary-fixed-dim: var(--color-primary-100);
+  --color-on-primary-fixed: var(--color-primary-900);
+  --color-on-primary-fixed-variant: var(--color-primary-700);
 
-  --color-secondary: #505f76;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #d0e1fb;
-  --color-on-secondary-container: #54647a;
-  --color-secondary-fixed: #d3e4fe;
-  --color-secondary-fixed-dim: #b7c8e1;
-  --color-on-secondary-fixed: #0b1c30;
-  --color-on-secondary-fixed-variant: #38485d;
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-surface-variant);
+  --color-secondary-fixed: var(--color-secondary-100);
+  --color-secondary-fixed-dim: var(--color-secondary-100);
+  --color-on-secondary-fixed: var(--on-surface);
+  --color-on-secondary-fixed-variant: var(--color-secondary-700);
 
-  --color-tertiary: #4b1c00;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #6e2c00;
-  --color-on-tertiary-container: #f39461;
-  --color-tertiary-fixed: #ffdbcb;
-  --color-tertiary-fixed-dim: #ffb691;
-  --color-on-tertiary-fixed: #341100;
-  --color-on-tertiary-fixed-variant: #773205;
-  --color-error: #ba1a1a;
-  --color-on-error: #ffffff;
-  --color-error-container: #ffdad6;
-  --color-on-error-container: #93000a;
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-tertiary-fixed: var(--color-warning-100);
+  --color-tertiary-fixed-dim: var(--color-warning-100);
+  --color-on-tertiary-fixed: var(--color-warning-900);
+  --color-on-tertiary-fixed-variant: var(--color-warning-700);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
 
-  --color-success-emerald: #10B981;
-  --color-warning-amber: #F59E0B;
-  --color-error-rose: #E11D48;
-  --color-surface-border: #E2E8F0;
-  --color-background-soft-gray: #F8FAFC;
+  /* Legacy utility aliases; retained until feature templates migrate. */
+  --color-success-emerald: var(--legacy-success-emerald);
+  --color-warning-amber: var(--legacy-warning-amber);
+  --color-error-rose: var(--legacy-error-rose);
+  --color-surface-border: var(--border-subtle);
+  --color-background-soft-gray: var(--background);
 }
 
 body {
@@ -100,16 +102,9 @@ body {
 /* Academic Core design system — shared application primitives */
 :root {
   color-scheme: light;
-  --academic-primary: #00236f;
-  --academic-primary-active: #1e3a8a;
-  --academic-canvas: #f8fafc;
-  --academic-surface: #ffffff;
-  --academic-border: #e2e8f0;
-  --academic-text: #1a1b21;
-  --academic-muted: #444651;
-  --academic-radius-control: 4px;
-  --academic-radius-container: 8px;
-  --academic-shadow-overlay: 0 4px 12px rgb(15 23 42 / 0.05);
+  /* Legacy academic aliases now resolve through the token foundation. */
+  --academic-radius-control: var(--radius-default);
+  --academic-radius-container: var(--radius-lg);
 }
 
 html,

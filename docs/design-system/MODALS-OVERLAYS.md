@@ -189,3 +189,71 @@ Final Standard/Form architecture status:
 **STANDARD MODAL MIGRATION CLOSED**
 
 `ui-modal` is the final foundation for Standard/Form modals. Complex, Drawer, and Specialized overlays remain intentionally outside this architecture. Recommended next phase: `CUSTOM CONFIRMATION CURRENT-STATE AUDIT` only; do not start it automatically.
+
+## Confirmation architecture — Phase 11S audit
+
+This is an audit-only baseline from `e3050c3`; no production, shared-component, API, route, database, or dependency changes were made.
+
+### Current inventory
+
+| Feature | Action | Implementation | Classification | Destructive | Async |
+| --- | --- | --- | --- | --- | --- |
+| Institutions | Archive institution | `UI_CONFIRM_DIALOG` | Standard destructive/reversible | Yes | Yes |
+| Classes | Delete/archive class | `UI_CONFIRM_DIALOG` | Standard destructive/reversible | Yes | Yes |
+| Study groups | Archive group / continue after exam warning | `UI_CONFIRM_DIALOG` | Standard destructive + specialized warning | Yes | Yes |
+| Study groups | Remove one/all members | `UI_CONFIRM_DIALOG` | Standard destructive | Yes | Yes |
+| Students | Remove student | `UI_CONFIRM_DIALOG` | Standard destructive | Yes | Yes |
+| Enrollments | Cancel one/multiple enrollments | `UI_CONFIRM_DIALOG` | Standard destructive | Yes | Yes |
+| Exams | Archive exam | `UI_CONFIRM_DIALOG` | Standard destructive/reversible | Yes | Yes |
+| Exams / Exam Builder | Replace unsaved questions | `UI_CONFIRM_DIALOG` | Complex/specialized warning | No | Yes |
+| Exams | Publish incomplete results | `UI_CONFIRM_DIALOG` | Specialized workflow warning | No | Yes |
+| Exam Create / Builder | Leave with unsaved changes | `UI_CONFIRM_DIALOG` | Standard non-destructive navigation | No | Yes |
+| Staff Development | Delete development record | `UI_CONFIRM_DIALOG` | Standard destructive | Yes | Yes |
+| Settings | Delete region / education type / lookup record / security role | `UI_CONFIRM_DIALOG` | Standard destructive | Yes | Yes |
+| Student details | Remove guardian relationship | `BROWSER_CONFIRM` (`window.confirm`) | Standard destructive | Yes | Yes |
+| Academic Years | Delete year/period | `CUSTOM_OVERLAY` | Complex confirmation: entity-specific archive/delete consequences | Yes | Yes |
+| Subjects | Delete subject/topic/skill | `CUSTOM_OVERLAY` | Complex confirmation: cascade warning for subject relations | Yes | Yes |
+| Staff | Remove staff member | `CUSTOM_OVERLAY` | Standard destructive | Yes | Yes |
+| Staff | Delete staff assignment | `CUSTOM_OVERLAY` | Standard destructive | Yes | Yes |
+| Institution Users | Reissue account setup link | `SPECIALIZED` custom overlay | Security/account workflow with explicit expiry/revocation message | No | Yes |
+
+No inline yes/no confirmation pattern was found. The settings language confirmation signals are currently unused/dead paths in the rendered template, not an active inline confirmation.
+
+### `ui-confirm-dialog` API audit
+
+- Selector: `ui-confirm-dialog`.
+- Inputs: `open`, `title`, `message`, `confirmText`, `cancelText`, `variant` (`danger|warning|default`).
+- Outputs: `confirmed`, `cancelled`.
+- Tone: variant maps to danger, warning, or default button styling; the feature chooses the tone.
+- Labels: configurable, default `تأكيد` / `إلغاء`.
+- Loading/disabled: not supported by the shared confirmation component; current consumers resolve the decision before their API request.
+- Dismissal: confirm emits `confirmed`; close button/backdrop/Escape emit `cancelled` through `ui-modal` defaults.
+- Semantics: inherited `role="dialog"`, `aria-modal`, labelled title, focus containment, focus restoration, and body scroll lock from `ui-modal`; no separate description input is supplied.
+- Size: inherited `ui-modal` default `md`; no confirmation-specific size input.
+- Composition: `ui-confirm-dialog → ui-modal`; no duplicate focus, Escape, or scroll-lock implementation exists.
+
+Current shared consumers: 13 feature TypeScript consumers. The service is promise-based at the feature boundary, but the shared component itself remains event-based. Feature code owns API execution and error handling; the shared layer owns only the decision shell.
+
+### Browser and custom confirmation findings
+
+The single browser confirmation is the student guardian relationship removal. It is a direct low-risk migration candidate, but currently has browser-only limitations: no theme/RTL control, limited custom accessibility and labelling, no loading state, and a blocking synchronous API.
+
+The two Staff custom overlays are direct standard-confirmation candidates. The Academic Years and Subjects overlays are deferred as complex because they include entity-specific consequences and cascade warnings. The Institution Users reissue overlay is deferred as specialized because it is an account-security workflow with explicit link revocation/expiry semantics and its own async state.
+
+All five custom overlays use a backdrop and feature-owned panel/buttons; the Academic Years, Subjects, and Staff overlays also implement feature-local Escape/backdrop handling. No custom focus trap or body scroll lock was found in these confirmation blocks. Custom overlays remain unchanged in 11S.
+
+### Accessibility, behavior, and maturity
+
+`ui-confirm-dialog` is Level B — usable with a small generic gap. It already provides the standard shell, variants, labels, keyboard-native buttons, Escape/backdrop cancellation, focus containment/restoration, ARIA dialog semantics, responsive behavior, theme tokens, and RTL-compatible layout through `ui-modal`. The evidence-based gap is async confirmation presentation: no shared loading/disabled state prevents repeated confirmation while the feature API request is running. This is not blocking the current shared shell audit, but should be addressed before a broad confirmation migration.
+
+Initial focus follows `ui-modal`'s first-focusable policy; destructive confirmation does not explicitly focus the destructive button. Enter/Space use native button activation. Action ordering is consistently cancel then confirm in the shared footer. No destructive-default-focus issue was found in the shared component. Error handling remains feature-owned after the dialog resolves; the shared dialog does not stay open for API errors.
+
+Baseline overlay inventory remains `29` `fixed inset-0` patterns. Five are confirmation-related: two complex custom confirmations in Academic Years/Subjects, two standard Staff confirmations, and one specialized account-setup reissue overlay. Existing `!important`/`::ng-deep` debt remains `87`/`4`; no confirmation-specific cleanup was performed.
+
+### Architecture decision
+
+**UI-CONFIRM-DIALOG NEEDS SMALL HARDENING FIRST**
+
+The current component is the standard foundation for ordinary confirmations, but loading/disabled presentation is a concrete generic gap for async destructive actions. No migration was performed. The smallest next step is a foundation-only hardening phase, followed by a controlled migration of the two Staff custom standard confirmations and the browser guardian confirmation if the hardened API remains backward-compatible. Complex cascade warnings and specialized account-security confirmation remain deferred.
+
+Audit verification: source inventory complete, classification recorded, production code unchanged, and `git diff --check` required to pass. The last production build and targeted lint remain valid from Phase 11R.

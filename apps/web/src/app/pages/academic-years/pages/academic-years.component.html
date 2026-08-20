@@ -417,19 +417,9 @@
 
   <!-- Period / Term Creator & Editor Modal -->
   @if (showPeriodModal()) {
-    <div (click)="closePeriodModal()" (keydown.escape)="closePeriodModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
-        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
-          <h3 class="font-extrabold text-sm flex items-center gap-2">
-            <mat-icon class="block">{{ editingPeriod() ? 'edit' : 'date_range' }}</mat-icon>
-            <span>{{ editingPeriod() ? 'تعديل بيانات الفترة الدراسية' : 'إضافة فترة / فصل دراسي جديد' }}</span>
-          </h3>
-          <button type="button" (click)="closePeriodModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
-            <mat-icon class="block">close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" [title]="editingPeriod() ? 'تعديل بيانات الفترة الدراسية' : 'إضافة فترة / فصل دراسي جديد'" size="sm" (closed)="closePeriodModal()">
 
-        <form [formGroup]="periodForm" (ngSubmit)="savePeriod()" class="p-6 space-y-4 font-bold" dir="rtl">
+        <form ui-modal-body [formGroup]="periodForm" (ngSubmit)="savePeriod()" class="p-6 space-y-4 font-bold" dir="rtl">
           <div class="bg-[#00236f]/5 p-3 rounded-xl border border-[#00236f]/10 mb-2">
             <span class="text-[10px] text-slate-400 block font-bold">العام الدراسي الملحق به</span>
             <span class="text-xs font-black text-[#00236f]">{{ selectedYear()?.yearLabel }}</span>
@@ -512,7 +502,7 @@
           </div>
 
           <!-- Modal Footer -->
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
             <button
               type="button"
               (click)="closePeriodModal()"
@@ -535,8 +525,7 @@
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- Custom Confirmation Dialog -->

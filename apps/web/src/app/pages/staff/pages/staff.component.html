@@ -561,21 +561,10 @@
 
       <!-- MODAL B: ADD / EDIT STAFF MEMBER -->
       @if (showModal()) {
-         <div (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <!-- Header -->
-            <div class="bg-[#00236f] text-white px-6 py-4 flex items-center justify-between">
-              <h3 class="font-bold text-sm flex items-center gap-2">
-                <mat-icon>{{ isEditMode() ? 'edit' : 'person_add' }}</mat-icon>
-                <span>{{ isEditMode() ? 'تعديل بيانات عضو الكادر' : 'إضافة عضو كادر جديد' }}</span>
-              </h3>
-              <button (click)="closeModal()" class="text-white/80 hover:text-white">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
+         <ui-modal [open]="true" [title]="isEditMode() ? 'تعديل بيانات عضو الكادر' : 'إضافة عضو كادر جديد'" size="md" (closed)="closeModal()">
 
             <!-- Form -->
-            <form [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="p-6 space-y-4 text-xs">
+            <form ui-modal-body [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="p-6 space-y-4 text-xs">
               <div class="grid grid-cols-1 gap-4">
                 <div>
                   <label class="block font-bold text-slate-700 mb-1">رقم الهوية الوطنية (national_id)</label>
@@ -715,7 +704,7 @@
 
               <!-- Action buttons -->
               @if (apiService.usersApi.staffError()) { <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{{ apiService.usersApi.staffError() }}</div> }
-              <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+               <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button
                   type="button"
                   (click)="closeModal()"
@@ -733,8 +722,7 @@
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+         </ui-modal>
       }
 
       <!-- MODAL C: ADD / EDIT STAFF ASSIGNMENT -->

@@ -141,3 +141,23 @@ Foundation status: `ui-modal` and `ui-confirm-dialog` are unchanged; no shared A
 Inventory reconciliation after excluding complex/drawer/specialized/confirmation surfaces: 14 Standard/Form candidates; 4 already using `ui-modal` before 11P (including the two 11O Settings modals); 3 migrated in 11P; 7 remaining for a later controlled batch. The 11P custom-shell inventory moved from 39 to 36 `fixed inset-0` patterns across 19 files to 19 files. No new `!important` or `::ng-deep` debt was introduced: `87 → 87` and `4 → 4`.
 
 Verification: targeted lint PASS, Angular production build PASS, bundle budgets PASS without threshold changes, and `git diff --check` PASS. No feature tests or modal foundation tests are available under `apps/web/src`; source/static verification was used. Browser automation was not available in the execution environment.
+
+## Phase 11Q controlled standard modal migration — Batch 2
+
+Batch 2 started from `c3360de` on `feature/design-system`. The remaining Standard/Form inventory was reconciled against source and contained seven candidates:
+
+| Modal | Feature | Classification | Risk | Selected |
+| --- | --- | --- | --- | --- |
+| Academic period creator/editor | Academic Years | Form | Low | Yes |
+| Education type creator/editor | Settings | Form | Low | Yes |
+| Staff member creator/editor | Staff | Form | Medium | Yes |
+| Topic creator/editor | Subjects | Form | Medium | No |
+| Skill creator/editor | Subjects | Form | Medium | No |
+| Staff assignment creator/editor | Staff | Form | Medium | No |
+| Staff development creator/editor | Staff Development | Form | Medium | No |
+
+The three selected shells were migrated to `ui-modal`: Academic Period `sm`, Education Type `sm`, and Staff Member `md`. Only the custom viewport/backdrop/panel/header/footer shell was removed. Feature forms, validators, open/close state, API calls, payloads, permissions, loading/error behavior, and action handlers remain unchanged. The 11O and 11P migrated modals were not modified.
+
+`ui-modal` and `ui-confirm-dialog` remain unchanged. No generic API gap, feature workaround, duplicate focus/escape/scroll-lock mechanism, dependency, backend, Prisma, migration, or route change was introduced. The custom-shell inventory moved from 36 to 33 `fixed inset-0` patterns across 19 files; `!important` remains `87` and `::ng-deep` remains `4`.
+
+After Batch 2, four Standard/Form candidates remain. Confirmations, complex workflows, drawers/sheets, specialized overlays, platform/auth surfaces, imports, exam results, and permission matrices remain excluded. Verification: targeted lint PASS, Angular production build PASS, bundle budget PASS without threshold changes, and `git diff --check` PASS. No feature or modal foundation tests are available under `apps/web/src`; browser automation was unavailable, so foundation-backed static/source verification was used. The `fixed inset-0` inventory is `36 → 33` patterns across `19 → 18` files.

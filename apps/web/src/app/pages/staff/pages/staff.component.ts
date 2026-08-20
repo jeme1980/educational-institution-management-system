@@ -9,11 +9,12 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 import { sanitizeSpreadsheetText } from '../../../core/utils/spreadsheet-security';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-staff',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent, UiModalComponent],
   templateUrl: './staff.component.html',
   styleUrl: './staff.component.css'
 })

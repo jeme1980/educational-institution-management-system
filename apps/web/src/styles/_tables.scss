@@ -5,3 +5,4 @@
 .core-table tbody tr { min-height: var(--table-row-height); }
 .core-table tbody tr:hover { background: var(--surface-container-low); }
 .core-table tbody tr:last-child td { border-bottom: 0; }
+.core-table th.text-center, .core-table td.text-center { text-align: center; }

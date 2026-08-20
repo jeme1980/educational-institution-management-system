@@ -7,11 +7,12 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiFormFieldComponent } from '../../../shared/components/form-field/ui-form-field.component';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-subjects',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiFormFieldComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiFormFieldComponent, UiModalComponent],
   templateUrl: './subjects.component.html',
   styleUrl: './subjects.component.css'
 })

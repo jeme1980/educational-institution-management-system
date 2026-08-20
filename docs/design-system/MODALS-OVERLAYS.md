@@ -125,3 +125,19 @@ Verification classification:
 - `git diff --check` is required to pass before the migration commit.
 
 The pilot establishes that `ui-modal` can absorb low-risk feature form shells without changing feature ownership or behavior.
+
+## Phase 11P controlled standard modal migration — Batch 1
+
+Batch 1 started from `212234d` on `feature/design-system`. The RC tag `v0.1.0-rc.1` remains preserved. Exactly three low/medium-risk form modals were migrated; the two Settings modals from 11O were not changed:
+
+- **Academic year creator/editor** — Academic Years, form modal, `size="sm"`.
+- **Subject creator/editor** — Subjects, form modal, `size="sm"`.
+- **Enrollment creator/editor** — Enrollments, form modal, `size="md"`.
+
+Each migration replaced only the feature-owned viewport/backdrop/panel/header shell with `ui-modal`. Reactive Forms, open/close signals, submit handlers, validators, payloads, API calls, loading states, errors, permissions, and existing footer actions remain feature-owned and unchanged. The selected forms had no feature-specific focus trap, scroll lock, or additional Escape behavior requiring preservation. Confirmation, transfer, topic/skill, period, import, exam, permission, drawer, and other excluded surfaces remain untouched.
+
+Foundation status: `ui-modal` and `ui-confirm-dialog` are unchanged; no shared API gap or feature workaround was introduced. The shared shell now owns backdrop, dialog semantics, focus behavior, responsive sizing, and body scroll locking for all five migrated feature modals across 11O and 11P.
+
+Inventory reconciliation after excluding complex/drawer/specialized/confirmation surfaces: 14 Standard/Form candidates; 4 already using `ui-modal` before 11P (including the two 11O Settings modals); 3 migrated in 11P; 7 remaining for a later controlled batch. The 11P custom-shell inventory moved from 39 to 36 `fixed inset-0` patterns across 19 files to 19 files. No new `!important` or `::ng-deep` debt was introduced: `87 → 87` and `4 → 4`.
+
+Verification: targeted lint PASS, Angular production build PASS, bundle budgets PASS without threshold changes, and `git diff --check` PASS. No feature tests or modal foundation tests are available under `apps/web/src`; source/static verification was used. Browser automation was not available in the execution environment.

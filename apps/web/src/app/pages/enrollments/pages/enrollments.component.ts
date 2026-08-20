@@ -5,11 +5,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService, ClassItem } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-enrollments',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiSelectComponent, UiModalComponent],
   templateUrl: './enrollments.component.html',
   styleUrl: './enrollments.component.css'
 })

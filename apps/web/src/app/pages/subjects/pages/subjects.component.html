@@ -404,19 +404,9 @@
 
   <!-- Subject Creator / Editor Modal -->
   @if (showSubjectModal()) {
-    <div (click)="closeSubjectModal()" (keydown.escape)="closeSubjectModal()" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-      <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-slate-200/80 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-right">
-        <div class="bg-[#00236f] text-white p-5 flex items-center justify-between">
-          <h3 class="font-extrabold text-sm flex items-center gap-2">
-            <mat-icon class="block">{{ isEditingSubject() ? 'edit' : 'add_circle' }}</mat-icon>
-            <span>{{ isEditingSubject() ? 'تعديل بيانات المادة الدراسية' : 'إضافة مادة تعليمية جديدة' }}</span>
-          </h3>
-          <button type="button" (click)="closeSubjectModal()" class="text-white/80 hover:text-white hover:bg-white/10 p-1 rounded-lg transition-all cursor-pointer">
-            <mat-icon class="block">close</mat-icon>
-          </button>
-        </div>
+    <ui-modal [open]="true" [title]="isEditingSubject() ? 'تعديل بيانات المادة الدراسية' : 'إضافة مادة تعليمية جديدة'" size="sm" (closed)="closeSubjectModal()">
 
-        <form [formGroup]="subjectForm" (ngSubmit)="saveSubject()" class="p-6 space-y-4 font-bold" dir="rtl">
+        <form ui-modal-body [formGroup]="subjectForm" (ngSubmit)="saveSubject()" class="p-6 space-y-4 font-bold" dir="rtl">
           <ui-select formControlName="academicYearId" [required]="true">
             <option value="">اختر السنة الدراسية</option>
             @for (year of apiService.academicYears(); track year.id) { <option [value]="year.id">{{ year.yearLabel }}</option> }
@@ -463,7 +453,7 @@
           </div>
 
           <!-- Modal Footer -->
-          <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
+          <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100 mt-4">
             <ui-button
               type="button"
               variant="secondary"
@@ -487,8 +477,7 @@
             </ui-button>
           </div>
         </form>
-      </div>
-    </div>
+    </ui-modal>
   }
 
   <!-- Topic Creator / Editor Modal -->

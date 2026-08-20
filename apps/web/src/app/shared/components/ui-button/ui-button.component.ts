@@ -20,6 +20,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       [attr.type]="type()"
       [disabled]="disabled() || loading()"
       [attr.aria-busy]="loading()"
+      [attr.aria-label]="ariaLabel() || null"
       (click)="activated.emit($event)"
     >
       @if (loading()) {
@@ -40,7 +41,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       justify-content: center;
       gap: var(--space-2);
       border: 1px solid transparent;
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-default);
       padding-inline: var(--space-4);
       padding-block: var(--space-2);
       font: inherit;
@@ -48,12 +49,12 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       font-weight: var(--font-semibold);
       line-height: 1.25;
       cursor: pointer;
-      transition: background-color var(--transition-fast) ease, border-color var(--transition-fast) ease, color var(--transition-fast) ease, box-shadow var(--transition-fast) ease;
+      transition: background-color var(--transition-fast) var(--ease-standard), border-color var(--transition-fast) var(--ease-standard), color var(--transition-fast) var(--ease-standard), box-shadow var(--transition-fast) var(--ease-standard);
     }
 
     .ui-button:focus-visible {
-      outline: var(--space-1) solid var(--color-primary-500);
-      outline-offset: var(--space-1);
+      outline: var(--focus-ring-width) solid var(--focus-ring);
+      outline-offset: var(--focus-ring-offset);
     }
 
     .ui-button:disabled { cursor: not-allowed; opacity: 0.62; }
@@ -62,17 +63,17 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
     .ui-button--md { min-height: var(--space-10); }
     .ui-button--lg { min-height: var(--space-12); padding-inline: var(--space-5); font-size: var(--font-md); }
 
-    .ui-button--primary { background: var(--color-primary-700); color: var(--color-neutral-50); }
-    .ui-button--primary:hover:not(:disabled) { background: var(--color-primary-900); }
+    .ui-button--primary { background: var(--primary); color: var(--on-primary); }
+    .ui-button--primary:hover:not(:disabled) { background: var(--primary-hover); }
 
-    .ui-button--secondary { border-color: var(--color-neutral-100); background: var(--color-neutral-50); color: var(--color-neutral-900); }
-    .ui-button--secondary:hover:not(:disabled) { background: var(--color-neutral-100); }
+    .ui-button--secondary { border-color: var(--border); background: var(--surface-elevated); color: var(--primary); }
+    .ui-button--secondary:hover:not(:disabled) { background: var(--hover-surface); }
 
-    .ui-button--danger { background: var(--color-danger-700); color: var(--color-neutral-50); }
+    .ui-button--danger { background: var(--danger); color: var(--on-primary); }
     .ui-button--danger:hover:not(:disabled) { background: var(--color-danger-900); }
 
-    .ui-button--ghost { background: transparent; color: var(--color-neutral-700); }
-    .ui-button--ghost:hover:not(:disabled) { background: var(--color-neutral-100); color: var(--color-neutral-900); }
+    .ui-button--ghost { background: transparent; color: var(--text-secondary); }
+    .ui-button--ghost:hover:not(:disabled) { background: var(--hover-surface); color: var(--on-surface); }
 
     .ui-button__spinner {
       width: var(--space-4);
@@ -92,5 +93,6 @@ export class UiButtonComponent {
   readonly loading = input(false);
   readonly disabled = input(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
+  readonly ariaLabel = input('');
   readonly activated = output<MouseEvent>();
 }

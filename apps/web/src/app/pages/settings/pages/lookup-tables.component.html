@@ -27,7 +27,7 @@
     <main class="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-xs">
       <div class="flex flex-col justify-between gap-4 border-b border-surface-border p-5 sm:flex-row">
         <div><h2 class="flex items-center gap-2 text-lg font-bold text-on-surface"><mat-icon class="text-primary">{{ currentDefinition().icon }}</mat-icon>{{ currentDefinition().label }}</h2><p class="mt-1 text-xs text-on-surface-variant">إضافة وتعديل السجلات الخاصة بالمؤسسة الحالية.</p></div>
-        <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="absolute end-3 top-2.5 text-lg text-on-surface-variant">search</mat-icon><input type="search" [value]="searchTerm()" (input)="onSearch($event)" placeholder="بحث..." class="min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low py-2.5 pe-10 ps-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20" /></label>
+        <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="absolute end-3 top-2.5 text-lg text-on-surface-variant">search</mat-icon><ui-input type="search" ariaLabel="البحث في جداول المؤسسة" (input)="onSearch($event)" placeholder="بحث..." /></label>
       </div>
 
       <div class="overflow-x-auto">
@@ -53,10 +53,10 @@
   <ui-modal [open]="showModal()" [title]="(editingItem() ? 'تعديل سجل - ' : 'إضافة سجل - ') + currentDefinition().label" [closeOnBackdrop]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" (closed)="closeModal()">
     <form ui-modal-body [formGroup]="form" class="space-y-4" (ngSubmit)="saveItem()">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label class="text-sm font-bold text-on-surface">الاسم بالعربية *<input formControlName="nameAr" maxlength="150" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
-        <label class="text-sm font-bold text-on-surface">الاسم بالعبرية<input formControlName="nameHe" maxlength="150" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
+        <label class="text-sm font-bold text-on-surface">الاسم بالعربية *<ui-input formControlName="nameAr" [required]="true" maxlength="150" /></label>
+        <label class="text-sm font-bold text-on-surface">الاسم بالعبرية<ui-input formControlName="nameHe" maxlength="150" /></label>
       </div>
-      <label class="block text-sm font-bold text-on-surface">ترتيب العرض<input type="number" formControlName="sortOrder" class="mt-1.5 min-h-10 w-full rounded-xl border border-surface-border bg-surface-container-low px-3 font-normal text-on-surface" /></label>
+      <label class="block text-sm font-bold text-on-surface">ترتيب العرض<ui-input type="number" formControlName="sortOrder" /></label>
       <div class="flex flex-wrap gap-5 rounded-xl border border-surface-border bg-surface-container-low p-3">
         <label class="flex items-center gap-2 text-sm font-bold text-on-surface"><input type="checkbox" formControlName="isActive" />السجل فعال</label>
         @if (currentDefinition().hasTeachingRole) { <label class="flex items-center gap-2 text-sm font-bold text-on-surface"><input type="checkbox" formControlName="isTeachingRole" />دور تدريسي</label> }

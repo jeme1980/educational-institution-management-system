@@ -5,11 +5,14 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { InstitutionUserExpanded } from '../models/settings.model';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-institution-users',
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatIconModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatIconModule, RouterLink, UiButtonComponent, UiInputComponent, UiSelectComponent],
   templateUrl: './institution-users.component.html',
   styleUrl: './institution-users.component.css'
 })

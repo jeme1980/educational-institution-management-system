@@ -184,16 +184,16 @@
                 <!-- Select Staff Member -->
                 <div class="space-y-1.5">
                   <label for="staffMemberId" class="block text-xs font-semibold text-stone-700">الموظف البرلماني المرتبط</label>
-                  <select 
+                  <ui-select
                     id="staffMemberId" 
                     formControlName="staffMemberId"
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950 bg-white"
+                    [required]="true"
                   >
                     <option value="" disabled selected>اختر الموظف غير المسجل...</option>
                     @for (staff of unregisteredStaff(); track staff.id) {
                       <option [value]="staff.id">{{ staff.firstNameAr }} {{ staff.familyNameAr }} (هوية: {{ staff.nationalId || '---' }})</option>
                     }
-                  </select>
+                  </ui-select>
                   @if (unregisteredStaff().length === 0) {
                     <p class="text-[10px] text-amber-600 font-medium mt-1">جميع الموظفين المسجلين في النظام لديهم حسابات مستخدم مفعلة بالفعل.</p>
                   }
@@ -205,12 +205,12 @@
                 <!-- Email -->
                 <div class="space-y-1.5">
                   <label for="email" class="block text-xs font-semibold text-stone-700">البريد الإلكتروني للحساب</label>
-                  <input 
+                  <ui-input
                     id="email" 
                     type="email" 
                     formControlName="email"
                     placeholder="example@school.edu"
-                    class="w-full px-3.5 py-2.5 border border-stone-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-950"
+                    [required]="true"
                   />
                   @if (userForm.get('email')?.touched && userForm.get('email')?.invalid) {
                     <p class="text-[11px] text-red-600 font-medium">يرجى إدخال بريد إلكتروني صحيح</p>
@@ -246,17 +246,20 @@
 
             <!-- Footer Buttons -->
             <div class="px-6 py-4 border-t border-stone-100 flex gap-3 bg-stone-50">
-              <button 
-                (click)="showCreateModal.set(false)"
-                class="flex-1 py-2.5 px-4 rounded-xl text-stone-700 bg-white hover:bg-stone-50 font-semibold text-xs border border-stone-200 text-center transition-colors cursor-pointer"
+              <ui-button
+                type="button"
+                variant="secondary"
+                (activated)="showCreateModal.set(false)"
               >
                 إلغاء
-              </button>
-              <button 
+              </ui-button>
+              <ui-button
+                type="button"
+                variant="primary"
                 id="save-new-user-btn"
                 [disabled]="userForm.invalid || isSubmittingForm()"
-                (click)="createUser()"
-                class="flex-1 py-2.5 px-4 rounded-xl text-white bg-slate-900 hover:bg-slate-950 disabled:opacity-50 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                (activated)="createUser()"
+                [loading]="isSubmittingForm()"
               >
                 @if (isSubmittingForm()) {
                   <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
@@ -267,7 +270,7 @@
                   <mat-icon class="text-sm">done</mat-icon>
                 }
                 <span>إنشاء الحساب</span>
-              </button>
+              </ui-button>
             </div>
           </div>
         </div>

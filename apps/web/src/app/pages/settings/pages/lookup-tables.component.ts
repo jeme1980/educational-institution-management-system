@@ -7,6 +7,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 
 type InstitutionLookupKey = 'specializations' | 'questionTypes' | 'examTypes' | 'jobRoles';
 
@@ -20,7 +21,7 @@ interface InstitutionLookupDefinition {
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-lookup-tables',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiButtonComponent, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiButtonComponent, UiModalComponent, UiInputComponent],
   templateUrl: './lookup-tables.component.html',
   styleUrl: './lookup-tables.component.css',
 })

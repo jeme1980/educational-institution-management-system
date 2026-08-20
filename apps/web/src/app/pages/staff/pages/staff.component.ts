@@ -10,11 +10,12 @@ import { sanitizeSpreadsheetText } from '../../../core/utils/spreadsheet-securit
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { UiConfirmDialogComponent } from '../../../shared/components/ui-confirm-dialog/ui-confirm-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-staff',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent, UiModalComponent, UiConfirmDialogComponent],
   templateUrl: './staff.component.html',
   styleUrl: './staff.component.css'
 })
@@ -48,12 +49,14 @@ export class StaffComponent implements OnInit {
   selectedStaffId = signal<string | null>(null);
   isSaving = signal<boolean>(false);
   memberToDelete = signal<StaffMember | null>(null);
+  isDeletingMember = signal<boolean>(false);
 
   showAssignmentModal = signal<boolean>(false);
   isAssignmentEditMode = signal<boolean>(false);
   selectedAssignmentId = signal<string | null>(null);
   isSavingAssignment = signal<boolean>(false);
   assignmentToDelete = signal<StaffAssignment | null>(null);
+  isDeletingAssignment = signal<boolean>(false);
 
   staffForm: FormGroup = this.fb.group({
     nationalId: [''],
@@ -494,9 +497,17 @@ export class StaffComponent implements OnInit {
 
   async confirmDelete() {
     const m = this.memberToDelete();
-    if (m && await this.apiService.deleteStaff(m.id)) {
+    if (!m || this.isDeletingMember()) return;
+    this.isDeletingMember.set(true);
+    const deleted = await this.apiService.deleteStaff(m.id);
+    this.isDeletingMember.set(false);
+    if (deleted) {
       this.memberToDelete.set(null);
     }
+  }
+
+  cancelDelete() {
+    if (!this.isDeletingMember()) this.memberToDelete.set(null);
   }
 
   // --- ASSIGNMENT ACTIONS ---
@@ -588,8 +599,16 @@ export class StaffComponent implements OnInit {
 
   async confirmDeleteAssignment() {
     const a = this.assignmentToDelete();
-    if (a && await this.apiService.deleteStaffAssignment(a.id)) {
+    if (!a || this.isDeletingAssignment()) return;
+    this.isDeletingAssignment.set(true);
+    const deleted = await this.apiService.deleteStaffAssignment(a.id);
+    this.isDeletingAssignment.set(false);
+    if (deleted) {
       this.assignmentToDelete.set(null);
     }
+  }
+
+  cancelDeleteAssignment() {
+    if (!this.isDeletingAssignment()) this.assignmentToDelete.set(null);
   }
 }

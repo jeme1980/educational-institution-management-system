@@ -884,65 +884,27 @@
          </ui-modal>
       }
 
-      <!-- DELETE CONFIRMATION DIALOG (STAFF MEMBER) -->
-      @if (memberToDelete()) {
-         <div (click)="memberToDelete.set(null)" (keydown.escape)="memberToDelete.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-sm p-6 text-center space-y-4 animate-in fade-in">
-            <div class="w-12 h-12 rounded-full bg-rose-50 text-[#E11D48] flex items-center justify-center mx-auto border border-rose-100">
-              <mat-icon class="text-xl">warning</mat-icon>
-            </div>
-            <div>
-              <h3 class="font-bold text-slate-900 text-base">تأكيد حذف الموظف</h3>
-              <p class="text-xs text-slate-500 mt-1">
-                هل أنت متأكد من رغبتك في إزالة الموظف <strong class="text-slate-800">{{ memberToDelete()?.firstNameAr }} {{ memberToDelete()?.familyNameAr }}</strong> من النظام نهائياً؟
-              </p>
-            </div>
-            <div class="flex items-center justify-center gap-3 pt-2 text-xs">
-              <button
-                (click)="memberToDelete.set(null)"
-                class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
-              >
-                تراجع
-              </button>
-              <button
-                (click)="confirmDelete()"
-                class="px-5 py-2 rounded-lg bg-[#E11D48] hover:bg-[#ba1a1a] text-white font-bold shadow-2xs"
-              >
-                تأكيد الحذف
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+      <ui-confirm-dialog
+        [open]="!!memberToDelete()"
+        title="تأكيد حذف الموظف"
+        [message]="'هل أنت متأكد من رغبتك في إزالة الموظف ' + (memberToDelete()?.firstNameAr || '') + ' ' + (memberToDelete()?.familyNameAr || '') + ' من النظام نهائياً؟'"
+        confirmText="تأكيد الحذف"
+        cancelText="تراجع"
+        variant="danger"
+        [loading]="isDeletingMember()"
+        (confirmed)="confirmDelete()"
+        (cancelled)="cancelDelete()"
+      />
 
-      <!-- DELETE CONFIRMATION DIALOG (ASSIGNMENT) -->
-      @if (assignmentToDelete()) {
-         <div (click)="assignmentToDelete.set(null)" (keydown.escape)="assignmentToDelete.set(null)" tabindex="0" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-           <div (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0" class="bg-white rounded-2xl border border-surface-border shadow-2xl w-full max-w-sm p-6 text-center space-y-4 animate-in fade-in">
-            <div class="w-12 h-12 rounded-full bg-rose-50 text-[#E11D48] flex items-center justify-center mx-auto border border-rose-100">
-              <mat-icon class="text-xl">warning</mat-icon>
-            </div>
-            <div>
-              <h3 class="font-bold text-slate-900 text-base">تأكيد إزالة التعيين</h3>
-              <p class="text-xs text-slate-500 mt-1">
-                هل أنت متأكد من حذف التعيين الوظيفي للموظف <strong class="text-slate-800">{{ getStaffName(assignmentToDelete()?.staffMemberId, assignmentToDelete() || undefined) }}</strong>؟
-              </p>
-            </div>
-            <div class="flex items-center justify-center gap-3 pt-2 text-xs">
-              <button
-                (click)="assignmentToDelete.set(null)"
-                class="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-bold"
-              >
-                تراجع
-              </button>
-              <button
-                (click)="confirmDeleteAssignment()"
-                class="px-5 py-2 rounded-lg bg-[#E11D48] hover:bg-[#ba1a1a] text-white font-bold shadow-2xs"
-              >
-                تأكيد الإزالة
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+      <ui-confirm-dialog
+        [open]="!!assignmentToDelete()"
+        title="تأكيد إزالة التعيين"
+        [message]="'هل أنت متأكد من حذف التعيين الوظيفي للموظف ' + getStaffName(assignmentToDelete()?.staffMemberId, assignmentToDelete() || undefined) + '؟'"
+        confirmText="تأكيد الإزالة"
+        cancelText="تراجع"
+        variant="danger"
+        [loading]="isDeletingAssignment()"
+        (confirmed)="confirmDeleteAssignment()"
+        (cancelled)="cancelDeleteAssignment()"
+      />
     </div>

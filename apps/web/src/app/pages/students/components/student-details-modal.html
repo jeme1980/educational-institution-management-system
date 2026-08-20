@@ -266,3 +266,15 @@
     </div>
   </div>
 }
+
+<ui-confirm-dialog
+  [open]="!!guardianToDelete()"
+  title="إزالة ارتباط ولي الأمر"
+  message="هل تريد إزالة ارتباط ولي الأمر بهذا الطالب؟"
+  confirmText="إزالة"
+  cancelText="إلغاء"
+  variant="danger"
+  [loading]="isRemovingGuardian()"
+  (confirmed)="confirmRemoveGuardian()"
+  (cancelled)="cancelRemoveGuardian()"
+></ui-confirm-dialog>

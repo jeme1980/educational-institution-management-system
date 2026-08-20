@@ -267,3 +267,25 @@ While `loading=true`, the confirmation is non-dismissible: confirm and cancel ac
 The async responsibility contract is explicit: the feature owns the API request, loading state value, permissions, errors, and success close decision. Shared UI owns only generic presentation, duplicate-action prevention, dismissal protection, focus containment/restoration, scroll locking, tone, labels, and native keyboard semantics. No Promise API, confirmation service, business status, or API error handling was added.
 
 `ui-confirm-dialog` is now **UI-CONFIRM-DIALOG FOUNDATION READY** for the next controlled migration. The direct candidates remain Staff member deletion, Staff assignment deletion, and Student guardian relationship removal. Academic year/period cascade deletion and Subject/topic/skill cascade deletion remain deferred complex confirmations; Account setup link reissue remains deferred specialized security confirmation. Phase 11U migration is not started here.
+
+## Standard confirmation migration — Phase 11U
+
+Phase 11U completed the controlled migration of the three remaining direct standard destructive confirmations. The shared foundation and its API were unchanged.
+
+| Feature | Action | Previous implementation | Final implementation | Classification |
+| --- | --- | --- | --- | --- |
+| Staff | Remove staff member | Feature-owned custom overlay | `ui-confirm-dialog` | Standard destructive async |
+| Staff | Delete staff assignment | Feature-owned custom overlay | `ui-confirm-dialog` | Standard destructive async |
+| Student details | Remove guardian relationship | `window.confirm()` | `ui-confirm-dialog` | Standard destructive async |
+
+Feature ownership remains intact: each feature owns the selected entity, open state, request, loading value, permission boundary, error behavior, refresh, and success close decision. Staff delete APIs, assignment identifiers/payloads, permission guards, refresh behavior, and existing silent failure behavior were preserved. Guardian removal keeps the existing API and profile-error presentation; failed requests restore interaction and keep the confirmation open.
+
+All three migrated confirmations use the shared `loading` contract. Confirm handlers have feature-level loading guards, the shared confirm action is native-disabled during pending, and cancel/close/backdrop/Escape are locked until the request settles. On success the selected entity is cleared; on cancel it is cleared without an API call. No custom confirmation backdrop or duplicate confirmation CSS remains for these three workflows.
+
+The final inventory is: 16 confirmation consumers (the original 13 service consumers plus the three migrated feature dialogs), 4 rendered `ui-confirm-dialog` tags including the application host, zero browser `window.confirm()` calls, and three custom confirmation overlays remaining. The remaining overlays are the two deferred complex cascade confirmations (Academic Years and Subjects) and the deferred specialized security workflow (Institution Users account-setup link reissue). Standard confirmation coverage is `3 / 3 = 100%`; no Standard confirmation remains outside `ui-confirm-dialog`.
+
+The `fixed inset-0` inventory is `29 → 27`; the confirmation-related subset is `5 → 3`. The removed two are the Staff standard confirmation shells. The remaining three confirmation overlays are intentionally Complex/Specialized and remain outside the Standard foundation. No changes were made to `ui-confirm-dialog`, `ui-modal`, complex confirmations, specialized confirmations, backend, Prisma, routes, or dependencies.
+
+**STANDARD CONFIRMATION MIGRATION CLOSED**
+
+`UI-CONFIRM-DIALOG IS THE FINAL FOUNDATION FOR STANDARD CONFIRMATIONS`. Complex cascade confirmations remain feature-specific/deferred, and specialized security confirmation remains feature-specific/deferred. Recommended next phase: `DRAWER / SPECIALIZED OVERLAY CURRENT-STATE AUDIT` only; do not start it automatically.

@@ -7,6 +7,7 @@ import { StudentStateService } from '../services/student-state.service';
 import { StudentGradesTable } from './student-grades-table';
 import { StudentAttendance } from './student-attendance';
 import { StudentInfo } from './student-info';
+import { UiConfirmDialogComponent } from '../../../shared/components/ui-confirm-dialog/ui-confirm-dialog.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -16,7 +17,8 @@ import { StudentInfo } from './student-info';
     MatIconModule,
     StudentGradesTable,
     StudentAttendance,
-    StudentInfo
+    StudentInfo,
+    UiConfirmDialogComponent,
   ],
   templateUrl: './student-details-modal.html',
 })
@@ -39,6 +41,8 @@ export class StudentDetailsModal {
   guardianDraft = signal<any>({ relationTypeId: 'parent', isPrimaryContact: true, isFinancialResponsible: false, hasCustody: false, canPickup: false });
   medicalDraft = signal<MedicalProfile>({});
   editingMedical = signal(false);
+  guardianToDelete = signal<StudentGuardian | null>(null);
+  isRemovingGuardian = signal(false);
 
   constructor() {
     effect(() => {
@@ -74,9 +78,27 @@ export class StudentDetailsModal {
     request.subscribe({ next: () => { this.showGuardianForm.set(false); this.loadSensitiveProfiles(studentId); }, error: (error) => this.profileError.set(error.message) });
   }
   removeGuardian(link: StudentGuardian) {
+    this.guardianToDelete.set(link);
+  }
+  confirmRemoveGuardian() {
     const studentId = this.student()?.id;
-    if (!studentId || !window.confirm('هل تريد إزالة ارتباط ولي الأمر بهذا الطالب؟')) return;
-    this.studentStateService.deleteStudentGuardian(studentId, link.id).subscribe({ next: () => this.loadSensitiveProfiles(studentId), error: (error) => this.profileError.set(error.message) });
+    const link = this.guardianToDelete();
+    if (!studentId || !link || this.isRemovingGuardian()) return;
+    this.isRemovingGuardian.set(true);
+    this.studentStateService.deleteStudentGuardian(studentId, link.id).subscribe({
+      next: () => {
+        this.isRemovingGuardian.set(false);
+        this.guardianToDelete.set(null);
+        this.loadSensitiveProfiles(studentId);
+      },
+      error: (error) => {
+        this.isRemovingGuardian.set(false);
+        this.profileError.set(error.message);
+      },
+    });
+  }
+  cancelRemoveGuardian() {
+    if (!this.isRemovingGuardian()) this.guardianToDelete.set(null);
   }
   updateMedicalField(field: string, value: any) { this.medicalDraft.update((draft) => ({ ...draft, [field]: value })); }
   saveMedicalProfile() {

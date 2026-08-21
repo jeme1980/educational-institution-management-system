@@ -41,12 +41,16 @@ export async function tenantIsolationMiddleware(
           ? { institutionId: requestedInstitutionId }
           : {}),
       },
-      select: { id: true, institutionId: true },
+      select: { id: true, institutionId: true, institution: { select: { archivedAt: true } } },
     });
 
     if (!membership) {
       console.warn(`[Tenant Isolation Blocked] User ${user.email} has no active institution membership.`);
       return res.status(403).json({ error: 'Unauthorized institution access' });
+    }
+
+    if (membership.institution.archivedAt) {
+      return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' });
     }
 
     if (requestedInstitutionId && requestedInstitutionId !== membership.institutionId) {

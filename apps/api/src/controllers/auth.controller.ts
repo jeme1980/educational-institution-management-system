@@ -156,11 +156,14 @@ export async function getAuthMe(req: ContextRequest, res: Response): Promise<any
 
   const userRecord: any = await prisma.user.findFirst({
     where: { normalizedEmail: email.trim().toLowerCase(), isActive: true },
-    include: { institutionUser: true },
+    include: { institutionUser: { include: { institution: { select: { archivedAt: true } } } } },
   });
 
   if (!userRecord?.isPlatformAdmin && (!userRecord?.institutionUser?.isActive || userRecord.institutionUser.archivedAt)) {
     return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' });
+  }
+  if (!userRecord?.isPlatformAdmin && userRecord.institutionUser.institution.archivedAt) {
+    return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' });
   }
 
   const membership = userRecord.institutionUser;
@@ -195,10 +198,13 @@ export async function createAuthLogin(req: ContextRequest, res: Response): Promi
 
   const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({
     where: { userId: user.id, isActive: true, archivedAt: null },
-    select: { institutionId: true },
+    select: { institutionId: true, institution: { select: { archivedAt: true } } },
   });
   if (!membership && !user.isPlatformAdmin) {
     return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' });
+  }
+  if (membership?.institution.archivedAt) {
+    return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' });
   }
   if (user.mustChangePassword) {
     return res.status(403).json({ error: 'Account setup is required before sign in.', code: 'ACCOUNT_SETUP_REQUIRED' });
@@ -279,8 +285,9 @@ export async function refreshAuthSession(req: ContextRequest, res: Response): Pr
     clearRefreshCookie(res);
     return res.status(401).json({ error: 'The refresh cookie is invalid or expired.' });
   }
-  const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({ where: { userId: user.id, isActive: true, archivedAt: null }, select: { institutionId: true } });
+  const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({ where: { userId: user.id, isActive: true, archivedAt: null }, select: { institutionId: true, institution: { select: { archivedAt: true } } } });
   if (!membership && !user.isPlatformAdmin) { clearRefreshCookie(res); return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' }); }
+  if (membership?.institution.archivedAt) { clearRefreshCookie(res); return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' }); }
   const nextRefreshToken = createRefreshToken();
   const rotated = await prisma.userSession.updateMany({
     where: { id: session.id, refreshTokenHash: oldHash, revokedAt: null, expiresAt: { gt: now } },

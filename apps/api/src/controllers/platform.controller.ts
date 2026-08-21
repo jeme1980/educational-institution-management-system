@@ -11,6 +11,7 @@ const current = { status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as 
 const errorResponse = (res: Response, error: any) => {
   if (error?.code === 'P2002') { res.status(409).json({ error: 'A record with the same unique code or slug already exists.' }); return; }
   if (error?.code === 'P2003') { res.status(400).json({ error: 'One or more selected lookup values are invalid.' }); return; }
+  if (error?.code === 'P2025') { res.status(404).json({ error: 'Institution not found.' }); return; }
   const statusCode = Number(error?.statusCode);
   if (Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 500) {
     res.status(statusCode).json({ error: error?.message || 'Platform operation failed.', ...(error?.code ? { code: error.code } : {}) });
@@ -147,8 +148,20 @@ const validProviderInput = (data: ReturnType<typeof providerInput>, partial = fa
   && (data.name === undefined || (data.name.length > 0 && data.name.length <= 150))
   && (data.sortOrder === undefined || Number.isInteger(data.sortOrder));
 
-export async function listInstitutions(_req: ContextRequest, res: Response): Promise<void> {
-  const rows = await platformPrisma.institution.findMany({ where: { archivedAt: null }, orderBy: { nameAr: 'asc' }, include: { status: true, subscriptions: { where: current, orderBy: { startsAt: 'desc' }, take: 1, include: { plan: true } } } });
+const institutionRelations = {
+  type: true,
+  region: true,
+  town: true,
+  status: true,
+  defaultLanguage: true,
+  subscriptions: { where: current, orderBy: { startsAt: 'desc' as const }, take: 1, include: { plan: true } },
+} as const;
+
+export async function listInstitutions(req: ContextRequest, res: Response): Promise<void> {
+  const scope = String(req.query.scope || 'active');
+  const where = scope === 'archived' ? { archivedAt: { not: null } } : scope === 'all' ? {} : { archivedAt: null };
+  if (!['active', 'archived', 'all'].includes(scope)) { res.status(400).json({ error: 'Invalid institution scope.' }); return; }
+  const rows = await platformPrisma.institution.findMany({ where, orderBy: { nameAr: 'asc' }, include: institutionRelations });
   const result = await Promise.all(rows.map(async ({ subscriptions, ...institution }) => ({ ...institution, subscription: subscriptions[0] || null, plan: subscriptions[0]?.plan || null, initialAdmin: await getInitialAdminStatus(institution.id) })));
   res.json(result);
 }
@@ -156,7 +169,7 @@ export async function listInstitutions(_req: ContextRequest, res: Response): Pro
 export async function getInstitution(req: ContextRequest, res: Response): Promise<void> {
   const id = String(req.params.id || '');
   if (!uuid(id)) { res.status(400).json({ error: 'Invalid institution id.' }); return; }
-  const institution = await platformPrisma.institution.findUnique({ where: { id }, include: { status: true, subscriptions: { orderBy: { startsAt: 'desc' }, include: { plan: true } } } });
+  const institution = await platformPrisma.institution.findUnique({ where: { id }, include: { ...institutionRelations, subscriptions: { orderBy: { startsAt: 'desc' }, include: { plan: true } } } });
   if (!institution) { res.status(404).json({ error: 'Institution not found.' }); return; }
   const { subscriptions, ...metadata } = institution;
   res.json({ ...metadata, currentSubscription: subscriptions.find((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'].includes(item.status)) || null, subscriptionHistory: subscriptions, initialAdmin: await getInitialAdminStatus(id) });
@@ -197,10 +210,57 @@ export async function updateInstitution(req: ContextRequest, res: Response): Pro
   const id = String(req.params.id || '');
   if (!uuid(id)) { res.status(400).json({ error: 'Invalid institution id.' }); return; }
   const body = req.body || {};
+  const text = (value: unknown) => String(value ?? '').trim();
+  const schoolCode = text(body.schoolCode).toUpperCase();
+  const slug = text(body.slug).toLowerCase();
+  const email = text(body.email).toLowerCase();
+  if (!text(body.nameAr) || !schoolCode || !slug || !uuid(body.typeId) || !uuid(body.regionId) || !uuid(body.statusId) || !uuid(body.defaultLanguageId)) { res.status(400).json({ error: 'Institution metadata is incomplete or invalid.' }); return; }
+  if (!/^[A-Z0-9_-]{2,20}$/.test(schoolCode) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { res.status(400).json({ error: 'Institution code, slug, or email format is invalid.' }); return; }
   try {
-    const updated = await platformPrisma.institution.update({ where: { id }, data: { nameAr: body.nameAr, nameHe: body.nameHe || null, schoolCode: body.schoolCode, slug: body.slug, typeId: body.typeId, regionId: body.regionId, townId: uuid(body.townId) ? body.townId : null, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, logoUrl: body.logoUrl || null, brandingSettings: body.brandingSettings || null } });
-    await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_UPDATED', entityType: 'Institution', entityId: id, targetInstitutionId: id, metadata: { changedFields: Object.keys(body) } });
+    const region = await platformPrisma.region.findUnique({ where: { id: body.regionId }, select: { id: true } });
+    if (!region) { res.status(400).json({ error: 'Selected region is invalid.' }); return; }
+    if (body.townId) {
+      const town = await platformPrisma.town.findUnique({ where: { id: String(body.townId) }, select: { id: true } });
+      if (!town) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
+    }
+    const updated = await platformPrisma.$transaction(async (tx) => {
+      const result = await tx.institution.update({ where: { id }, data: { nameAr: text(body.nameAr), nameHe: text(body.nameHe) || null, schoolCode, slug, typeId: body.typeId, regionId: body.regionId, townId: uuid(body.townId) ? body.townId : null, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, phoneNumber: text(body.phoneNumber) || null, email: email || null, logoUrl: text(body.logoUrl) || null, updatedBy: req.user?.uid || null }, include: institutionRelations });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_UPDATED', entityType: 'Institution', entityId: id, targetInstitutionId: id, metadata: { changedFields: Object.keys(body).filter((key) => key !== 'brandingSettings') } }, tx);
+      return result;
+    });
     res.json(updated);
+  } catch (error) { errorResponse(res, error); }
+}
+
+export async function archiveInstitution(req: ContextRequest, res: Response): Promise<void> {
+  const id = String(req.params.id || '');
+  if (!uuid(id)) { res.status(400).json({ error: 'Invalid institution id.' }); return; }
+  try {
+    const result = await platformPrisma.$transaction(async (tx) => {
+      const existing = await tx.institution.findUnique({ where: { id }, select: { id: true, archivedAt: true } });
+      if (!existing) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
+      if (existing.archivedAt) return existing;
+      const archived = await tx.institution.update({ where: { id }, data: { archivedAt: new Date(), updatedBy: req.user?.uid || null } });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_ARCHIVED', entityType: 'Institution', entityId: id, targetInstitutionId: id, metadata: { lifecycle: 'archive' } }, tx);
+      return archived;
+    });
+    res.json(result);
+  } catch (error) { errorResponse(res, error); }
+}
+
+export async function restoreInstitution(req: ContextRequest, res: Response): Promise<void> {
+  const id = String(req.params.id || '');
+  if (!uuid(id)) { res.status(400).json({ error: 'Invalid institution id.' }); return; }
+  try {
+    const result = await platformPrisma.$transaction(async (tx) => {
+      const existing = await tx.institution.findUnique({ where: { id }, select: { id: true, archivedAt: true } });
+      if (!existing) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
+      if (!existing.archivedAt) return existing;
+      const restored = await tx.institution.update({ where: { id }, data: { archivedAt: null, updatedBy: req.user?.uid || null } });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_RESTORED', entityType: 'Institution', entityId: id, targetInstitutionId: id, metadata: { lifecycle: 'restore' } }, tx);
+      return restored;
+    });
+    res.json(result);
   } catch (error) { errorResponse(res, error); }
 }
 

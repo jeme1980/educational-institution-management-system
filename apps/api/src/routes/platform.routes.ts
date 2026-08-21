@@ -10,6 +10,8 @@ router.get('/platform/institutions', ...platform, asyncHandler(controller.listIn
 router.get('/platform/institutions/:id', ...platform, asyncHandler(controller.getInstitution));
 router.post('/platform/institutions', ...platform, asyncHandler(controller.createInstitution));
 router.patch('/platform/institutions/:id', ...platform, asyncHandler(controller.updateInstitution));
+router.patch('/platform/institutions/:id/archive', ...platform, asyncHandler(controller.archiveInstitution));
+router.patch('/platform/institutions/:id/restore', ...platform, asyncHandler(controller.restoreInstitution));
 router.post('/platform/institutions/:id/initial-admin', ...platform, asyncHandler(controller.provisionInitialAdmin));
 router.post('/platform/institutions/:id/initial-admin/reissue', ...platform, asyncHandler(controller.reissueInitialAdmin));
 router.get('/platform/plans', ...platform, asyncHandler(controller.listPlans));

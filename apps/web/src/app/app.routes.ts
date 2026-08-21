@@ -9,7 +9,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/platform/platform-shell.component').then(m => m.PlatformShellComponent),
     children: [
       { path: '', title: 'لوحة المنصة', loadComponent: () => import('./pages/platform/platform.component').then(m => m.PlatformComponent) },
-      { path: 'institutions', title: 'المؤسسات', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformInstitutionsComponent) },
+      { path: 'institutions', title: 'المؤسسات', loadComponent: () => import('./pages/platform/platform-institutions.component').then(m => m.PlatformInstitutionsComponent) },
       { path: 'plans', title: 'الخطط والاشتراكات', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformPlansComponent) },
       { path: 'reference-data', title: 'الجداول المرجعية', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformReferenceDataComponent) },
       { path: 'audit', title: 'سجل تدقيق المنصة', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformAuditComponent) },

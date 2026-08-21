@@ -325,3 +325,41 @@ Audit and implement only the global document title and landmark foundation, with
 `STANDARD FEATURE HIGH/MEDIUM ACCESSIBILITY DEBT CLOSED`
 
 `PHASE 11AA CONTROLLED MEDIUM-PRIORITY ACCESSIBILITY REMEDIATION VERIFIED`
+
+## Phase 11AB — global landmark / page title accessibility foundation record
+
+Phase 11AB establishes the application-wide document and landmark foundation only. Feature-screen migrations, shared primitive changes, specialized overlays, mobile drawer behavior, loading/feedback behavior, and all backend or business logic remain out of scope.
+
+### Evidence gate and ownership decision
+
+- Starting commit: `b23a3a1` on `feature/design-system`; the worktree was clean before implementation.
+- The root document title was the generic `Google AI Studio Angular App`.
+- No Router `TitleStrategy`, route title metadata, or page-local `document.title` writes existed.
+- The app shell already owns the application canvas and contains one global `<main id="main-content" tabindex="-1">`, one shell header, one footer, one desktop sidebar, and desktop/mobile navigation landmarks.
+- Ownership decision: **APP SHELL OWNS MAIN LANDMARK**. Feature templates retain their existing nested/legacy landmarks for later, explicitly separate remediation phases.
+
+### Implemented foundation
+
+- Replaced the generic root title with `نظام إدارة المؤسسات التعليمية`.
+- Added the centralized `AppTitleStrategy`, provided through the Angular router. It uses route `title` metadata and applies the product suffix; routes without a title fall back to the product title.
+- Added titles to all 23 navigable application routes, including authentication, account setup, platform administration, dashboard, feature routes, and settings routes. The empty redirect remains untitled by design.
+- Added an accessible label to the existing mobile navigation landmark without changing its behavior or interaction model.
+- No feature screen, shared component, API, Prisma, route path, permission, dependency, or business behavior was changed.
+
+### Phase 11AB verification
+
+- Production architecture files changed: 4 (`index.html`, `app.config.ts`, `app.html`, and the dedicated title strategy service) plus route metadata in `app.routes.ts`; feature screens changed: 0.
+- Global shell landmarks: 1 main, 1 header, 1 footer, 1 sidebar, and 2 named navigation landmarks.
+- Navigable route title coverage: 23/23; centralized fallback: PASS.
+- Page-local title writes: 0.
+- Shared components changed: 0; new raw colors: 0; new dependencies, backend, Prisma, migrations, permissions, or route paths: 0.
+- Lint: baseline preserved at `175 problems` (`37 errors`, `138 warnings`); no new findings in the changed files. The command remains non-zero because of the pre-existing baseline.
+- Angular production build and template compilation: PASS.
+- `git diff --check`: PASS.
+- Browser verification: unavailable in this execution environment.
+
+## Phase 11AB final decision
+
+`GLOBAL LANDMARK / PAGE TITLE ACCESSIBILITY FOUNDATION STABLE`
+
+`PHASE 11AB GLOBAL LANDMARK PAGE TITLE FOUNDATION VERIFIED`

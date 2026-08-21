@@ -21,7 +21,7 @@ export async function seedDevelopmentDatabase(): Promise<void> {
 
   await bootstrapSystemData(prisma);
   const passwordHash = await hashPassword(adminPassword);
-  await prisma.town.upsert({ where: { id: systemIds.town }, update: {}, create: { id: systemIds.town, nameAr: 'المدينة التعليمية', nameHe: 'העיר החינוכית' } });
+  await prisma.town.upsert({ where: { id: systemIds.town }, update: { regionId: systemIds.region }, create: { id: systemIds.town, nameAr: 'المدينة التعليمية', nameHe: 'העיר החינוכית', regionId: systemIds.region } });
   await prisma.institution.upsert({
     where: { id: ids.institution }, update: { email: adminEmail, archivedAt: null },
     create: { id: ids.institution, schoolCode: 'DEMO', slug: 'demo-school', nameAr: 'المؤسسة التعليمية التجريبية', nameHe: 'המוסד החינוכי לדוגמה', email: adminEmail, typeId: systemIds.educationType, regionId: systemIds.region, townId: systemIds.town, statusId: systemIds.status, defaultLanguageId: systemIds.language },

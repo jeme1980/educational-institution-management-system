@@ -51,7 +51,7 @@ export const PLATFORM_REFERENCE_TABLES = {
 } as const;
 
 type PlatformReferenceKey = keyof typeof PLATFORM_REFERENCE_TABLES;
-const PLATFORM_MUTABLE_REFERENCE_TABLES = new Set<PlatformReferenceKey>(['providers']);
+const PLATFORM_MUTABLE_REFERENCE_TABLES = new Set<PlatformReferenceKey>(['providers', 'towns']);
 
 const platformReferenceKey = (value: unknown): value is PlatformReferenceKey =>
   typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLATFORM_REFERENCE_TABLES, value);
@@ -99,7 +99,7 @@ export async function listPlatformReferenceData(req: ContextRequest, res: Respon
       : key === 'towns' || key === 'studentFeatures'
       ? [{ nameAr: 'asc' as const }]
       : [{ sortOrder: 'asc' as const }, { nameAr: 'asc' as const }];
-    const items = await delegate.findMany({ orderBy });
+    const items = await delegate.findMany({ orderBy, ...(key === 'towns' ? { include: { region: true } } : {}) });
     return [key, items] as const;
   }));
   res.json(Object.fromEntries(rows));
@@ -110,8 +110,9 @@ export async function createPlatformReferenceData(req: ContextRequest, res: Resp
   if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
   if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
   const data = platformReferenceData(key, req.body || {});
-  if (key !== 'towns' && key !== 'studentFeatures' && !data.nameAr && key !== 'providers') { res.status(400).json({ error: 'Arabic name is required.' }); return; }
+  if (key !== 'studentFeatures' && !data.nameAr && key !== 'providers') { res.status(400).json({ error: 'Arabic name is required.' }); return; }
   if (key === 'providers' && (!data.providerCode || !data.name)) { res.status(400).json({ error: 'Provider code and name are required.' }); return; }
+  if (key === 'towns' && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) { res.status(400).json({ error: 'An active region is required for a town.' }); return; }
   try {
     const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
     const created = await platformPrisma.$transaction(async (tx) => {
@@ -133,6 +134,10 @@ export async function updatePlatformReferenceData(req: ContextRequest, res: Resp
     const current = await delegate.findUnique({ where: { id } });
     if (!current) { res.status(404).json({ error: 'Reference item not found.' }); return; }
     const data = platformReferenceData(key, req.body || {}, true);
+    if (key === 'towns' && data.regionId !== undefined && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) { res.status(400).json({ error: 'An active region is required for a town.' }); return; }
+    if (key === 'towns' && data.regionId !== undefined && data.regionId !== current.regionId) {
+      res.status(409).json({ error: 'A town region cannot be changed after creation; create a separate town for the other region.' }); return;
+    }
     const updated = await platformPrisma.$transaction(async (tx) => {
       const row = await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].update({ where: { id }, data });
       await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: row.isActive === false ? 'GLOBAL_LOOKUP_DEACTIVATED' : 'GLOBAL_LOOKUP_UPDATED', entityType: key, entityId: id, metadata: { key, changedFields: Object.keys(data) } }, tx);
@@ -197,6 +202,12 @@ export async function createInstitution(req: ContextRequest, res: Response): Pro
   const email = body.email ? String(body.email).trim().toLowerCase() : null;
   if (!/^[A-Z0-9_-]{2,20}$/.test(schoolCode) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { res.status(400).json({ error: 'Institution code, slug, or email format is invalid.' }); return; }
   try {
+    const region = await platformPrisma.region.findUnique({ where: { id: body.regionId }, select: { id: true } });
+    if (!region) { res.status(400).json({ error: 'Selected region is invalid.' }); return; }
+    if (body.townId) {
+      const town = await platformPrisma.town.findUnique({ where: { id: String(body.townId) }, select: { id: true, regionId: true } });
+      if (!town || town.regionId !== body.regionId) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
+    }
     const result = await platformPrisma.$transaction(async (tx) => {
       const institution = await tx.institution.create({ data: { schoolCode, slug, nameAr: String(body.nameAr).trim(), nameHe: body.nameHe ? String(body.nameHe).trim() : null, phoneNumber: body.phoneNumber ? String(body.phoneNumber).trim() : null, email, typeId: body.typeId, regionId: body.regionId, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, townId: uuid(body.townId) ? body.townId : null, logoUrl: body.logoUrl || null, brandingSettings: body.brandingSettings || null, createdBy: req.user?.uid || null } });
       await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_CREATED', entityType: 'Institution', entityId: institution.id, targetInstitutionId: institution.id, metadata: { schoolCode } }, tx);
@@ -220,8 +231,8 @@ export async function updateInstitution(req: ContextRequest, res: Response): Pro
     const region = await platformPrisma.region.findUnique({ where: { id: body.regionId }, select: { id: true } });
     if (!region) { res.status(400).json({ error: 'Selected region is invalid.' }); return; }
     if (body.townId) {
-      const town = await platformPrisma.town.findUnique({ where: { id: String(body.townId) }, select: { id: true } });
-      if (!town) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
+      const town = await platformPrisma.town.findUnique({ where: { id: String(body.townId) }, select: { id: true, regionId: true } });
+      if (!town || town.regionId !== body.regionId) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
     }
     const updated = await platformPrisma.$transaction(async (tx) => {
       const result = await tx.institution.update({ where: { id }, data: { nameAr: text(body.nameAr), nameHe: text(body.nameHe) || null, schoolCode, slug, typeId: body.typeId, regionId: body.regionId, townId: uuid(body.townId) ? body.townId : null, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, phoneNumber: text(body.phoneNumber) || null, email: email || null, logoUrl: text(body.logoUrl) || null, updatedBy: req.user?.uid || null }, include: institutionRelations });

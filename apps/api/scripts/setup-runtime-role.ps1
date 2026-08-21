@@ -60,13 +60,14 @@ $platformGrants = @(
   @{ Privileges = 'INSERT'; Tables = @('audit_logs') },
   @{ Privileges = 'SELECT, INSERT'; Tables = @('institution_users','staff_members','roles','role_permissions','institution_user_roles') },
   @{ Privileges = 'SELECT'; Tables = @('permissions','institution_statuses') },
-  # Global references remain read-only at runtime. Provider is the only
-  # existing global reference with an explicit Platform mutation contract.
+  # Global references remain read-only at runtime except for the explicit
+  # Platform mutation contracts for Towns and Providers.
   @{ Privileges = 'SELECT'; Tables = @(
-      'regions','towns','languages','education_types','education_stages','grade_levels',
+      'regions','languages','education_types','education_stages','grade_levels',
       'class_types','composition_types','genders','student_statuses','enrollment_statuses',
       'relation_types','student_features'
-    ) },
+  ) },
+  @{ Privileges = 'SELECT, INSERT, UPDATE'; Tables = @('towns') },
   @{ Privileges = 'SELECT, INSERT, UPDATE'; Tables = @('providers') }
 )
 

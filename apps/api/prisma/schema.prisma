@@ -33,19 +33,19 @@ enum SubscriptionStatus {
 /// Global SaaS plan metadata. Plans are managed by the platform domain and
 /// intentionally do not carry an institutionId.
 model Plan {
-  id                  String                   @id @default(uuid()) @db.Uuid
-  code                String                   @unique @db.VarChar(50)
-  nameAr              String                   @db.VarChar(100)
-  nameHe              String?                  @db.VarChar(100)
-  descriptionAr       String?                  @db.VarChar(500)
-  descriptionHe       String?                  @db.VarChar(500)
-  maxStudents         Int?
-  maxStaff            Int?
-  maxUsers            Int?
-  isActive            Boolean                  @default(true)
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  subscriptions       InstitutionSubscription[]
+  id            String                    @id @default(uuid()) @db.Uuid
+  code          String                    @unique @db.VarChar(50)
+  nameAr        String                    @db.VarChar(100)
+  nameHe        String?                   @db.VarChar(100)
+  descriptionAr String?                   @db.VarChar(500)
+  descriptionHe String?                   @db.VarChar(500)
+  maxStudents   Int?
+  maxStaff      Int?
+  maxUsers      Int?
+  isActive      Boolean                   @default(true)
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  subscriptions InstitutionSubscription[]
 
   @@index([isActive, code])
   @@map("plans")
@@ -59,10 +59,10 @@ model InstitutionSubscription {
   startsAt      DateTime
   endsAt        DateTime?
   trialEndsAt   DateTime?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  institution   Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  plan          Plan                @relation(fields: [planId], references: [id], onDelete: Restrict)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  institution   Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  plan          Plan               @relation(fields: [planId], references: [id], onDelete: Restrict)
 
   @@index([institutionId, status, startsAt])
   @@index([planId, status])
@@ -78,6 +78,7 @@ model Region {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   institutions Institution[]
+  towns        Town[]
 
   @@unique([nameAr])
   @@index([isActive, sortOrder])
@@ -88,12 +89,15 @@ model Town {
   id           String        @id @default(uuid()) @db.Uuid
   nameAr       String
   nameHe       String?
+  regionId     String        @db.Uuid
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  region       Region        @relation(fields: [regionId], references: [id], onDelete: Restrict)
   institutions Institution[]
   students     Student[]
 
-  @@unique([nameAr])
+  @@unique([regionId, nameAr])
+  @@index([regionId])
   @@map("towns")
 }
 
@@ -211,30 +215,30 @@ model CompositionType {
 }
 
 model Institution {
-  id                      String                   @id @default(uuid()) @db.Uuid
-  schoolCode              String                   @unique @db.VarChar(20)
-  slug                    String                   @unique @db.VarChar(80)
+  id                      String                    @id @default(uuid()) @db.Uuid
+  schoolCode              String                    @unique @db.VarChar(20)
+  slug                    String                    @unique @db.VarChar(80)
   nameAr                  String
   nameHe                  String?
-  phoneNumber             String?                  @db.VarChar(50)
-  email                   String?                  @db.VarChar(250)
-  typeId                  String                   @db.Uuid
-  regionId                String                   @db.Uuid
-  townId                  String?                  @db.Uuid
-  statusId                String                   @db.Uuid
-  defaultLanguageId       String                   @db.Uuid
+  phoneNumber             String?                   @db.VarChar(50)
+  email                   String?                   @db.VarChar(250)
+  typeId                  String                    @db.Uuid
+  regionId                String                    @db.Uuid
+  townId                  String?                   @db.Uuid
+  statusId                String                    @db.Uuid
+  defaultLanguageId       String                    @db.Uuid
   logoUrl                 String?
   brandingSettings        Json?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
   archivedAt              DateTime?
-  createdBy               String?                  @db.Uuid
-  updatedBy               String?                  @db.Uuid
-  type                    EducationType            @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  region                  Region                   @relation(fields: [regionId], references: [id], onDelete: Restrict)
-  town                    Town?                    @relation(fields: [townId], references: [id], onDelete: SetNull)
-  status                  InstitutionStatus        @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  defaultLanguage         Language                 @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
+  createdBy               String?                   @db.Uuid
+  updatedBy               String?                   @db.Uuid
+  type                    EducationType             @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  region                  Region                    @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  town                    Town?                     @relation(fields: [townId], references: [id], onDelete: SetNull)
+  status                  InstitutionStatus         @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  defaultLanguage         Language                  @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
   academicYears           AcademicYear[]
   academicPeriods         AcademicPeriod[]
   students                Student[]
@@ -278,14 +282,14 @@ model Institution {
 }
 
 model AuditLog {
-  id           String      @id @default(uuid()) @db.Uuid
-  institutionId String     @db.Uuid
-  actorUserId  String?     @db.Uuid
-  action       String      @db.VarChar(40)
-  entityType   String      @db.VarChar(80)
-  entityId     String?     @db.Uuid
-  metadata     Json?
-  createdAt    DateTime    @default(now())
+  id            String   @id @default(uuid()) @db.Uuid
+  institutionId String   @db.Uuid
+  actorUserId   String?  @db.Uuid
+  action        String   @db.VarChar(40)
+  entityType    String   @db.VarChar(80)
+  entityId      String?  @db.Uuid
+  metadata      Json?
+  createdAt     DateTime @default(now())
 
   institution Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
 
@@ -635,20 +639,20 @@ model StaffAssignmentSubject {
 }
 
 model User {
-  id                  String           @id @default(uuid()) @db.Uuid
-  email               String           @db.VarChar(250)
-  normalizedEmail     String           @unique @db.VarChar(250)
-  passwordHash        String           @db.VarChar(500)
-  securityStamp       String?          @db.VarChar(100)
-  isActive            Boolean          @default(true)
-  isPlatformAdmin     Boolean          @default(false)
-  mustChangePassword  Boolean          @default(false)
-  failedLoginAttempts Int              @default(0)
+  id                  String                  @id @default(uuid()) @db.Uuid
+  email               String                  @db.VarChar(250)
+  normalizedEmail     String                  @unique @db.VarChar(250)
+  passwordHash        String                  @db.VarChar(500)
+  securityStamp       String?                 @db.VarChar(100)
+  isActive            Boolean                 @default(true)
+  isPlatformAdmin     Boolean                 @default(false)
+  mustChangePassword  Boolean                 @default(false)
+  failedLoginAttempts Int                     @default(0)
   lockedUntil         DateTime?
   lastLoginAt         DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  versionNumber       Int              @default(1)
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  versionNumber       Int                     @default(1)
   institutionUser     InstitutionUser?
   sessions            UserSession[]
   setupTokens         UserAccountSetupToken[]
@@ -692,15 +696,15 @@ model UserAccountSetupToken {
 }
 
 model PlatformAuditLog {
-  id                   String    @id @default(uuid()) @db.Uuid
-  actorUserId          String?   @db.Uuid
-  action               String    @db.VarChar(60)
-  entityType           String    @db.VarChar(80)
-  entityId             String?   @db.Uuid
-  targetInstitutionId  String?   @db.Uuid
-  targetPlanId         String?   @db.Uuid
-  metadata             Json?
-  createdAt            DateTime  @default(now())
+  id                  String   @id @default(uuid()) @db.Uuid
+  actorUserId         String?  @db.Uuid
+  action              String   @db.VarChar(60)
+  entityType          String   @db.VarChar(80)
+  entityId            String?  @db.Uuid
+  targetInstitutionId String?  @db.Uuid
+  targetPlanId        String?  @db.Uuid
+  metadata            Json?
+  createdAt           DateTime @default(now())
 
   @@index([createdAt])
   @@index([targetInstitutionId, createdAt])
@@ -877,7 +881,7 @@ model StudentEnrollment {
   enrollmentStatus   EnrollmentStatus    @relation(fields: [enrollmentStatusId], references: [id], onDelete: Restrict)
   studentFeature     StudentFeature?     @relation(fields: [studentFeatureId], references: [id], onDelete: Restrict)
   studyGroupStudents StudyGroupStudent[]
-  attendanceRecords Attendance[]
+  attendanceRecords  Attendance[]
 
   @@unique([institutionId, academicYearId, studentId])
   @@unique([institutionId, id])

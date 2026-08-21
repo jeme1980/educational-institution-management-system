@@ -87,6 +87,10 @@ export class InstitutionsComponent implements OnInit {
   get regions(): any[] { return this.apiService.regions(); }
   get languages(): any[] { return this.apiService.languages(); }
   get towns(): any[] { return this.apiService.towns(); }
+  get filteredTowns(): any[] {
+    const regionId = this.form.controls.regionId.value;
+    return regionId ? this.towns.filter(item => item.regionId === regionId) : [];
+  }
   statusName(item: InstitutionItem): string { return item.status?.nameAr || 'غير محددة'; }
   typeName(item: InstitutionItem): string { return item.type?.nameAr || 'غير محدد'; }
   regionName(item: InstitutionItem): string { return item.region?.nameAr || 'غير محددة'; }
@@ -101,6 +105,11 @@ export class InstitutionsComponent implements OnInit {
     this.editingInstitution.set(item);
     this.form.reset({ schoolCode: item.schoolCode, slug: item.slug, nameAr: item.nameAr, nameHe: item.nameHe || '', phoneNumber: item.phoneNumber || '', email: item.email || '', typeId: item.typeId, regionId: item.regionId, townId: item.townId || '', statusId: item.statusId, defaultLanguageId: item.defaultLanguageId, logoUrl: item.logoUrl || '', brandingJson: item.brandingSettings ? JSON.stringify(item.brandingSettings, null, 2) : '' });
     this.showModal.set(true);
+  }
+
+  onRegionChange(): void {
+    const townId = this.form.controls.townId.value;
+    if (townId && !this.filteredTowns.some(item => item.id === townId)) this.form.controls.townId.setValue('');
   }
 
   viewDetails(item: InstitutionItem): void { this.selectedInstitution.set(item); }

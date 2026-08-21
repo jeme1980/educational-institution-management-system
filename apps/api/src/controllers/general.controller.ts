@@ -18,8 +18,9 @@ export async function getReadiness(_req: ContextRequest, res: Response): Promise
 }
 
 export async function getLookups(_req: ContextRequest, res: Response): Promise<any> {
-  const [regions, institutionStatuses, languages, educationTypes, educationStages, gradeLevels, classTypes, compositionTypes, genders, studentStatuses, enrollmentStatuses, relationTypes, studentFeatures] = await Promise.all([
+  const [regions, towns, institutionStatuses, languages, educationTypes, educationStages, gradeLevels, classTypes, compositionTypes, genders, studentStatuses, enrollmentStatuses, relationTypes, studentFeatures] = await Promise.all([
     prisma.region.findMany(),
+    prisma.town.findMany({ include: { region: true }, orderBy: { nameAr: 'asc' } }),
     prisma.institutionStatus.findMany(),
     prisma.language.findMany(),
     prisma.educationType.findMany(),
@@ -33,7 +34,7 @@ export async function getLookups(_req: ContextRequest, res: Response): Promise<a
     prisma.relationType.findMany(),
     prisma.studentFeature.findMany({ orderBy: { nameAr: 'asc' } }),
   ]);
-  return res.json({ regions, institutionStatuses, languages, educationTypes, educationStages, gradeLevels, classTypes, compositionTypes, genders, studentStatuses, enrollmentStatuses, relationTypes, studentFeatures });
+  return res.json({ regions, towns, institutionStatuses, languages, educationTypes, educationStages, gradeLevels, classTypes, compositionTypes, genders, studentStatuses, enrollmentStatuses, relationTypes, studentFeatures });
 }
 
 export async function getDashboardStats(req: ContextRequest, res: Response): Promise<any> {

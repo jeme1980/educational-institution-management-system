@@ -225,3 +225,54 @@ Select the next 2–4 standard screens from `A11Y-HIGH`/`A11Y-MEDIUM` findings. 
 `FEATURE ACCESSIBILITY REMEDIATION PATTERN PROVEN`
 
 `PHASE 11Y CONTROLLED FEATURE ACCESSIBILITY REMEDIATION BATCH 1 VERIFIED`
+
+## Phase 11Z — controlled feature remediation record
+
+Phase 11Z selected two additional standard CRUD screens from the remaining feature debt:
+
+| Screen | Finding | Severity | Category | Selected |
+| --- | --- | --- | --- | --- |
+| Academic Years | Icon-only toast and year/period actions relied on tooltip text rather than explicit accessible names. | A11Y-HIGH | Accessible names / native controls | YES |
+| Subjects | Icon-only toast and subject/topic/skill actions relied on tooltip text rather than explicit accessible names. | A11Y-HIGH | Accessible names / native controls | YES |
+
+### Fixed findings
+
+- Added explicit contextual `aria-label` values to the selected icon-only actions, including year, period, subject, topic, and skill names.
+- Added an explicit accessible name to the toast dismissal button on both screens.
+- Preserved native `button type="button"` semantics, existing click handlers, stop-propagation behavior, permissions, confirmations, and CRUD flows.
+- No shared component or new component was introduced.
+
+### Regression guard
+
+The selected screens did not introduce new lint findings. During the final verification pass, the previous Batch 1 dialog Escape handlers were also normalized onto their focusable dialog surfaces (`tabindex="-1"`) so the committed baseline contains no `interactive-supports-focus` diagnostics in Classes or Institutions. This was a semantics-only regression guard; no business behavior changed.
+
+### Phase 11Z verification
+
+- Starting commit: `780caaa`
+- Selected screens: 2 (`Academic Years`, `Subjects`)
+- Classes/Institutions: no new feature work; regression guard only.
+- Shared components changed: 0.
+- Specialized workflows, Exam Results/import, membership, Platform/Admin, Auth/Security: 0.
+- Lint baseline: `179 → 175 problems` (`37 errors`, `138 warnings`); the four previous dialog focus diagnostics were removed and no new findings appeared in the selected screens.
+- Positive `tabindex` added: 0.
+- New raw colors, dependencies, routes, backend, Prisma, migrations, or permissions: 0.
+- Angular production build, bundle budget, and template compilation: PASS.
+- `git diff --check`: PASS.
+- Feature test infrastructure: NOT AVAILABLE.
+- Browser verification: unavailable in this execution environment.
+
+### Remaining debt and next phase
+
+Remaining high-priority work is now concentrated in excluded specialized/complex surfaces: Exams and question/results workflows, Study Group membership, Platform/Admin overlays, mobile navigation, and other feature-specific interaction debt. Shared High remains 0.
+
+Recommended next phase (not started):
+
+**Phase 11AA — CONTROLLED MEDIUM-PRIORITY ACCESSIBILITY REMEDIATION**
+
+Reassess the remaining standard feature findings and select 2–4 screens only after confirming that no standard A11Y-HIGH finding remains. Specialized workflows remain deferred to their dedicated phases.
+
+## Phase 11Z final decision
+
+`STANDARD FEATURE HIGH-PRIORITY ACCESSIBILITY CLOSED`
+
+`PHASE 11Z CONTROLLED FEATURE ACCESSIBILITY REMEDIATION BATCH 2 VERIFIED`

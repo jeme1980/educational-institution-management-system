@@ -11,7 +11,7 @@
         <mat-icon class="text-blue-400">info</mat-icon>
       }
       <span class="text-xs font-bold leading-relaxed">{{ toast()?.message }}</span>
-      <button type="button" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
+      <button type="button" aria-label="إغلاق التنبيه" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
         <mat-icon class="text-sm block">close</mat-icon>
       </button>
     </div>
@@ -138,6 +138,7 @@
                   <button
                     type="button"
                     (click)="$event.stopPropagation(); openYearModal(year)"
+                    aria-label="تعديل العام {{ year.yearLabel }}"
                     title="تعديل العام"
                     [class]="isSelected ? 'text-white/70 hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-[#00236f] hover:bg-slate-100'"
                     class="p-1 rounded-lg transition-all cursor-pointer"
@@ -149,6 +150,7 @@
                     <button
                       type="button"
                       (click)="$event.stopPropagation(); makeCurrent(year)"
+                      aria-label="تعيين {{ year.yearLabel }} كعام دراسي حالي"
                       title="تعيين كعام دراسي حالي"
                       [class]="isSelected ? 'text-amber-300 hover:text-amber-100 hover:bg-white/10' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'"
                       class="p-1 rounded-lg transition-all cursor-pointer"
@@ -160,6 +162,7 @@
                   <button
                     type="button"
                     (click)="$event.stopPropagation(); confirmDelete('year', year.id, year.yearLabel)"
+                    aria-label="حذف العام {{ year.yearLabel }}"
                     title="حذف العام"
                     [class]="isSelected ? 'text-rose-300 hover:text-rose-100 hover:bg-rose-500/20' : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'"
                     class="p-1 rounded-lg transition-all cursor-pointer"
@@ -265,6 +268,7 @@
                     <button
                       type="button"
                       (click)="openPeriodModal(period)"
+                      aria-label="تعديل الفترة {{ period.nameAr }}"
                       title="تعديل الفترة"
                       class="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 hover:text-[#00236f] transition-all cursor-pointer"
                     >
@@ -274,6 +278,7 @@
                     <button
                       type="button"
                       (click)="confirmDelete('period', period.id, period.nameAr)"
+                      aria-label="حذف الفترة {{ period.nameAr }}"
                       title="حذف الفترة"
                       class="p-1.5 bg-white hover:bg-rose-50 border border-slate-200 rounded-lg text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
                     >

@@ -11,7 +11,7 @@
         <mat-icon class="text-blue-400">info</mat-icon>
       }
       <span class="text-xs font-bold leading-relaxed">{{ toast()?.message }}</span>
-      <button type="button" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
+      <button type="button" aria-label="إغلاق التنبيه" (click)="toast.set(null)" class="text-white/60 hover:text-white mr-auto pr-2 cursor-pointer">
         <mat-icon class="text-sm block">close</mat-icon>
       </button>
     </div>
@@ -184,6 +184,7 @@
                 <button
                   type="button"
                   (click)="$event.stopPropagation(); openEditSubjectModal(subject)"
+                  aria-label="تعديل المادة {{ subject.nameAr }}"
                   title="تعديل المادة"
                   class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-[#00236f] transition-all cursor-pointer"
                 >
@@ -192,6 +193,7 @@
                 <button
                   type="button"
                   (click)="$event.stopPropagation(); confirmDelete('subject', subject.id, subject.nameAr)"
+                  aria-label="حذف المادة {{ subject.nameAr }}"
                   title="حذف المادة"
                   class="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
                 >
@@ -297,6 +299,7 @@
                     <button
                       type="button"
                       (click)="openEditTopicModal(topic)"
+                      aria-label="تعديل الموضوع {{ topic.nameAr }}"
                       class="p-1 text-slate-400 hover:text-[#00236f] hover:bg-white rounded-md transition-all cursor-pointer"
                       title="تعديل الموضوع"
                     >
@@ -305,6 +308,7 @@
                     <button
                       type="button"
                       (click)="confirmDelete('topic', topic.id, topic.nameAr)"
+                      aria-label="حذف الموضوع {{ topic.nameAr }}"
                       class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
                       title="حذف الموضوع"
                     >
@@ -359,6 +363,7 @@
                     <button
                       type="button"
                       (click)="openEditSkillModal(skill)"
+                      aria-label="تعديل المهارة {{ skill.nameAr }}"
                       class="p-1 text-slate-400 hover:text-[#00236f] hover:bg-white rounded-md transition-all cursor-pointer"
                       title="تعديل المهارة"
                     >
@@ -367,6 +372,7 @@
                     <button
                       type="button"
                       (click)="confirmDelete('skill', skill.id, skill.nameAr)"
+                      aria-label="حذف المهارة {{ skill.nameAr }}"
                       class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-all cursor-pointer"
                       title="حذف المهارة"
                     >

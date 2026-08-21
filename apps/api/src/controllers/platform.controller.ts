@@ -28,6 +28,119 @@ const providerInput = (body: Record<string, unknown>, partial = false) => {
   return data;
 };
 
+/** The platform owns only these global reference tables. Keep this allowlist
+ * explicit: callers must never be able to turn a request parameter into a
+ * Prisma delegate. */
+export const PLATFORM_REFERENCE_TABLES = {
+  regions: 'region',
+  towns: 'town',
+  languages: 'language',
+  educationTypes: 'educationType',
+  educationStages: 'educationStage',
+  gradeLevels: 'gradeLevel',
+  classTypes: 'classType',
+  compositionTypes: 'compositionType',
+  genders: 'gender',
+  studentStatuses: 'studentStatus',
+  enrollmentStatuses: 'enrollmentStatus',
+  relationTypes: 'relationType',
+  studentFeatures: 'studentFeature',
+  providers: 'provider',
+  institutionStatuses: 'institutionStatus',
+} as const;
+
+type PlatformReferenceKey = keyof typeof PLATFORM_REFERENCE_TABLES;
+const PLATFORM_MUTABLE_REFERENCE_TABLES = new Set<PlatformReferenceKey>(['providers']);
+
+const platformReferenceKey = (value: unknown): value is PlatformReferenceKey =>
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLATFORM_REFERENCE_TABLES, value);
+
+const platformReferenceData = (key: PlatformReferenceKey, body: Record<string, unknown>, partial = false): Record<string, unknown> => {
+  const data: Record<string, unknown> = {};
+  const text = (value: unknown) => {
+    const result = String(value ?? '').trim();
+    return result || null;
+  };
+  if (key === 'providers') {
+    if (!partial || body.providerCode !== undefined) data.providerCode = text(body.providerCode);
+    if (!partial || body.name !== undefined) data.name = text(body.name);
+    if (!partial || body.isActive !== undefined) data.isActive = body.isActive !== false;
+    if (!partial || body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder ?? 0);
+    return data;
+  }
+  if (!partial || body.nameAr !== undefined) data.nameAr = text(body.nameAr);
+  if (!partial || body.nameHe !== undefined) data.nameHe = text(body.nameHe);
+  if (key !== 'towns' && key !== 'studentFeatures') {
+    if (!partial || body.isActive !== undefined) data.isActive = body.isActive !== false;
+    if (!partial || body.sortOrder !== undefined) data.sortOrder = Number(body.sortOrder ?? 0);
+  }
+  if (key === 'towns' && body.regionId !== undefined) data.regionId = text(body.regionId);
+  if (key === 'languages') {
+    if (!partial || body.nativeName !== undefined) data.nativeName = text(body.nativeName);
+    if (!partial || body.direction !== undefined) data.direction = text(body.direction) || 'rtl';
+  }
+  if (key === 'gradeLevels' && body.codeNumber !== undefined) data.codeNumber = Number(body.codeNumber);
+  if (key === 'genders' && body.genderCode !== undefined) data.genderCode = text(body.genderCode)?.toLowerCase();
+  if (key === 'studentStatuses' || key === 'enrollmentStatuses') {
+    if (!partial || body.isFinalStatus !== undefined) data.isFinalStatus = body.isFinalStatus === true;
+  }
+  return data;
+};
+
+export async function listPlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
+  const requested = req.query.table ? [String(req.query.table)] : Object.keys(PLATFORM_REFERENCE_TABLES);
+  const keys = requested.filter(platformReferenceKey) as PlatformReferenceKey[];
+  if (!keys.length) { res.status(400).json({ error: 'Invalid platform reference table.' }); return; }
+  const rows = await Promise.all(keys.map(async (key) => {
+    const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
+    const orderBy = key === 'providers'
+      ? [{ sortOrder: 'asc' as const }, { name: 'asc' as const }]
+      : key === 'towns' || key === 'studentFeatures'
+      ? [{ nameAr: 'asc' as const }]
+      : [{ sortOrder: 'asc' as const }, { nameAr: 'asc' as const }];
+    const items = await delegate.findMany({ orderBy });
+    return [key, items] as const;
+  }));
+  res.json(Object.fromEntries(rows));
+}
+
+export async function createPlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
+  const key = String(req.params.table || '');
+  if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
+  if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
+  const data = platformReferenceData(key, req.body || {});
+  if (key !== 'towns' && key !== 'studentFeatures' && !data.nameAr && key !== 'providers') { res.status(400).json({ error: 'Arabic name is required.' }); return; }
+  if (key === 'providers' && (!data.providerCode || !data.name)) { res.status(400).json({ error: 'Provider code and name are required.' }); return; }
+  try {
+    const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
+    const created = await platformPrisma.$transaction(async (tx) => {
+      const row = await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].create({ data });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'GLOBAL_LOOKUP_CREATED', entityType: key, entityId: row.id, metadata: { key, nameAr: row.nameAr || row.name, providerCode: row.providerCode || null } }, tx);
+      return row;
+    });
+    res.status(201).json(created);
+  } catch (error) { errorResponse(res, error); }
+}
+
+export async function updatePlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
+  const key = String(req.params.table || '');
+  const id = String(req.params.id || '');
+  if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
+  if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
+  const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
+  try {
+    const current = await delegate.findUnique({ where: { id } });
+    if (!current) { res.status(404).json({ error: 'Reference item not found.' }); return; }
+    const data = platformReferenceData(key, req.body || {}, true);
+    const updated = await platformPrisma.$transaction(async (tx) => {
+      const row = await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].update({ where: { id }, data });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: row.isActive === false ? 'GLOBAL_LOOKUP_DEACTIVATED' : 'GLOBAL_LOOKUP_UPDATED', entityType: key, entityId: id, metadata: { key, changedFields: Object.keys(data) } }, tx);
+      return row;
+    });
+    res.json(updated);
+  } catch (error) { errorResponse(res, error); }
+}
+
 const validProviderInput = (data: ReturnType<typeof providerInput>, partial = false): boolean =>
   (partial || Boolean(data.providerCode && data.name))
   && (data.providerCode === undefined || (data.providerCode.length > 0 && data.providerCode.length <= 20))

@@ -9,6 +9,9 @@
   (cancelled)="confirmDialogService.resolve(false)"
 ></ui-confirm-dialog>
 
+@if (authService.currentContext()?.isPlatformAdmin) {
+  <router-outlet />
+} @else {
 <div dir="rtl" lang="ar" class="min-h-screen bg-background-soft-gray text-on-surface font-sans antialiased flex flex-col md:flex-row min-w-full">
   
   <!-- Right Sidebar (Desktop) -->
@@ -364,3 +367,4 @@
     </div>
   }
 </div>
+}

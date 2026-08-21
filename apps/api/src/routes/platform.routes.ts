@@ -23,4 +23,7 @@ router.post('/platform/institutions/:id/subscription', ...platform, asyncHandler
 router.patch('/platform/institutions/:id/subscription/status', ...platform, asyncHandler(controller.transitionSubscription));
 router.post('/platform/institutions/:id/subscription/renew', ...platform, asyncHandler(controller.renewSubscription));
 router.get('/platform/audit-logs', ...platform, asyncHandler(controller.getPlatformAudit));
+router.get('/platform/reference-data', ...platform, asyncHandler(controller.listPlatformReferenceData));
+router.post('/platform/reference-data/:table', ...platform, asyncHandler(controller.createPlatformReferenceData));
+router.patch('/platform/reference-data/:table/:id', ...platform, asyncHandler(controller.updatePlatformReferenceData));
 export default router;

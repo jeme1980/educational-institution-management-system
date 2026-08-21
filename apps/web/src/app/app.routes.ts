@@ -4,6 +4,17 @@ import { permissionGuard } from './core/guards/permission.guard';
 import { platformGuard } from './core/guards/platform.guard';
 
 export const routes: Routes = [
+  {
+    path: 'platform', title: 'إدارة المنصة', canActivate: [authGuard, platformGuard],
+    loadComponent: () => import('./pages/platform/platform-shell.component').then(m => m.PlatformShellComponent),
+    children: [
+      { path: '', title: 'لوحة المنصة', loadComponent: () => import('./pages/platform/platform.component').then(m => m.PlatformComponent) },
+      { path: 'institutions', title: 'المؤسسات', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformInstitutionsComponent) },
+      { path: 'plans', title: 'الخطط والاشتراكات', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformPlansComponent) },
+      { path: 'reference-data', title: 'الجداول المرجعية', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformReferenceDataComponent) },
+      { path: 'audit', title: 'سجل تدقيق المنصة', loadComponent: () => import('./pages/platform/platform-feature-pages.component').then(m => m.PlatformAuditComponent) },
+    ],
+  },
   { path: 'account/setup', title: 'إعداد الحساب', loadComponent: () => import('./pages/auth/account-setup.component').then(m => m.AccountSetupComponent) },
   { path: 'platform', title: 'إدارة المنصة', canActivate: [authGuard, platformGuard], loadComponent: () => import('./pages/platform/platform.component').then(m => m.PlatformComponent) },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },

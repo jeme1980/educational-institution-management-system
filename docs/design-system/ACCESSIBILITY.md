@@ -363,3 +363,44 @@ Phase 11AB establishes the application-wide document and landmark foundation onl
 `GLOBAL LANDMARK / PAGE TITLE ACCESSIBILITY FOUNDATION STABLE`
 
 `PHASE 11AB GLOBAL LANDMARK PAGE TITLE FOUNDATION VERIFIED`
+
+## Phase 11AC — mobile navigation accessibility hardening record
+
+Phase 11AC addressed the confirmed accessibility debt in the existing app-shell mobile navigation only. No `ui-drawer`, `DrawerService`, specialized overlay, feature screen, shared primitive, route behavior, API, Prisma, dependency, or business logic work was introduced.
+
+### Evidence gate
+
+- Starting commit: `ecbcc4c` on `feature/design-system`; the worktree was clean before implementation.
+- The mobile trigger was a native button but lacked `aria-expanded` and `aria-controls` state wiring.
+- The open drawer had no initial focus handoff, keyboard containment, Escape handling, focus restoration, body scroll lock, or resize cleanup.
+- The existing mobile nav landmark was named; desktop navigation semantics and all navigation destinations were preserved.
+- Mobile navigation accessibility debt confirmed: **YES**.
+
+### Implemented hardening
+
+- Added `aria-expanded`, stable `aria-controls`, and explicit `type="button"` to the mobile trigger.
+- Added initial focus to the drawer close control after opening.
+- Added Tab and Shift+Tab containment within the open navigation panel.
+- Added Escape dismissal, semantic backdrop dismissal, and an explicitly named close button.
+- Restored focus to the trigger for close/backdrop/Escape flows; route links close the drawer without forcing focus back to a stale trigger.
+- Added body scroll locking with effect cleanup, route-navigation cleanup, and desktop-resize cleanup.
+- Marked mobile decorative Material icons `aria-hidden="true"` and preserved native link keyboard behavior.
+- Navigation links, destinations, permissions, active state, grouping, desktop sidebar, and route configuration remain unchanged.
+
+### Phase 11AC verification
+
+- App shell/mobile navigation files changed: 2 (`app.ts`, `app.html`); feature screens changed: 0.
+- Shared components changed: 0; dependencies, routes, backend, Prisma, migrations, and permissions changed: 0.
+- Trigger semantics, accessible naming, expanded state, controls relationship, focus handoff, Tab/Shift+Tab containment, Escape, backdrop, close, route cleanup, scroll cleanup, and resize cleanup: PASS by static/source verification.
+- Stale listeners or body-lock state: 0 in the implementation; destroy cleanup is owned by `takeUntilDestroyed` and effect cleanup.
+- Lint baseline preserved at `175 problems` (`37 errors`, `138 warnings`); no new findings in changed files.
+- Angular production build, bundle budget, and template compilation: PASS.
+- `git diff --check`: PASS.
+- Tests: NOT AVAILABLE.
+- Browser/device focus-loop verification: NOT AVAILABLE in this execution environment.
+
+## Phase 11AC final decision
+
+`MOBILE NAVIGATION ACCESSIBILITY CLOSED`
+
+`PHASE 11AC MOBILE NAVIGATION ACCESSIBILITY HARDENING VERIFIED`

@@ -180,8 +180,8 @@
         
                 <!-- Right side (RTL): Mobile Hamburger + Context Dropdowns -->
         <div class="flex items-center gap-3 flex-1">
-          <button type="button" (click)="toggleMobileMenu()" aria-label="فتح القائمة الرئيسية" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 shrink-0">
-            <mat-icon>menu</mat-icon>
+          <button #mobileMenuTrigger id="mobile-menu-trigger" type="button" (click)="toggleMobileMenu()" aria-label="فتح القائمة الرئيسية" [attr.aria-expanded]="isMobileMenuOpen()" aria-controls="mobile-navigation-drawer" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 shrink-0">
+            <mat-icon aria-hidden="true">menu</mat-icon>
           </button>
           
           <!-- Context Dropdowns for Institution and Academic Year -->
@@ -290,73 +290,73 @@
       ></button>
       
       <!-- Drawer Content -->
-      <div class="relative w-72 bg-white h-full shadow-2xl flex flex-col z-10">
+      <div #mobileMenuPanel id="mobile-navigation-drawer" tabindex="-1" (keydown)="onMobileMenuKeydown($event)" class="relative w-72 bg-white h-full shadow-2xl flex flex-col z-10">
         <div class="p-5 border-b border-slate-100 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-[#00236f] flex items-center justify-center text-white">
-              <mat-icon>school</mat-icon>
+              <mat-icon aria-hidden="true">school</mat-icon>
             </div>
             <div>
               <div class="font-bold text-sm text-slate-900">المؤسسة التعليمية</div>
               <div class="text-[10px] text-slate-500">نظام الإدارة الموحد</div>
             </div>
           </div>
-          <button (click)="closeMobileMenu()" class="text-slate-400 hover:text-slate-700">
-            <mat-icon>close</mat-icon>
+          <button #mobileMenuClose type="button" (click)="closeMobileMenu()" aria-label="إغلاق القائمة الرئيسية" class="text-slate-400 hover:text-slate-700">
+            <mat-icon aria-hidden="true">close</mat-icon>
           </button>
         </div>
 
         <nav aria-label="التنقل الرئيسي على الهاتف" class="nav-sequence flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          <a (click)="closeMobileMenu()" routerLink="/dashboard" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">grid_view</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/dashboard" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">grid_view</mat-icon>
             <span>لوحة القيادة</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">groups</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">groups</mat-icon>
             <span>قائمة الطلاب</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/enrollments" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">badge</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/enrollments" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">badge</mat-icon>
             <span>بيانات الالتحاق</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/registered-students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">assignment_ind</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/registered-students" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">assignment_ind</mat-icon>
             <span>الطلاب المسجلون</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/staff" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">supervisor_account</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/staff" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">supervisor_account</mat-icon>
             <span>الكادر والتعيينات</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/staff-development" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">workspace_premium</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/staff-development" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">workspace_premium</mat-icon>
             <span>إدارة الاستكمالات</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/classes" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">meeting_room</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/classes" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">meeting_room</mat-icon>
             <span>الشعب والصفوف</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/study-groups" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">diversity_3</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/study-groups" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">diversity_3</mat-icon>
             <span>مجموعات الدراسة</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/subjects" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">menu_book</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/subjects" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">menu_book</mat-icon>
             <span>المناهج والمواد</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/exams" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">assignment</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/exams" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">assignment</mat-icon>
             <span>الامتحانات</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/exam-analysis" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">analytics</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/exam-analysis" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">analytics</mat-icon>
             <span>تحليل الامتحان</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/academic-years" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">calendar_today</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/academic-years" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">calendar_today</mat-icon>
             <span>الأعوام الدراسية</span>
           </a>
-          <a (click)="closeMobileMenu()" routerLink="/settings" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
-            <mat-icon class="text-lg">settings</mat-icon>
+          <a (click)="closeMobileMenu(false)" routerLink="/settings" routerLinkActive="bg-[#d0e1fb]/60 text-[#00236f] font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-700">
+            <mat-icon aria-hidden="true" class="text-lg">settings</mat-icon>
             <span>الإعدادات</span>
           </a>
         </nav>

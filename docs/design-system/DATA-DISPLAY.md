@@ -1,5 +1,9 @@
 # Data Display Current-State Architecture
 
+## Phase 11AD final current-state
+
+Standard table coverage is **8 / 8** and the standard-table migration is **CLOSED**. The approved boundary remains native semantic table markup plus `.core-table-wrap` and `.core-table`. `ui-badge`, `ui-empty-state`, and pagination are stable; no shared `ui-loading` component is planned in Phase 11. Complex, matrix, modal-specific, and specialized data views remain feature-owned.
+
 Phase 11G records the current table and data-display patterns without migrating feature pages or introducing a generic table component.
 
 ## Inventory

@@ -1,5 +1,11 @@
 # Specialized overlay architecture audit — Phase 11V
 
+## Phase 11AD final current-state
+
+The specialized-overlay decision remains **DRAWER COUNT TOO LOW / SPECIALIZED OVERLAYS FEATURE-OWNED**. The app-shell mobile navigation is now separately hardened and closed by Phase 11AC; that does not create or justify a reusable `ui-drawer`. Complex exam/results/import, membership, sensitive student, platform/admin, cascade-confirmation, and account-security surfaces remain explicitly deferred to their owning features.
+
+Phase 11 closure does not reopen this audit, introduce a drawer primitive, or require a specialized-overlay migration.
+
 ## Audit boundary
 
 Phase 11V is an audit and classification only. No production page, shared component, modal foundation, confirmation foundation, backend, route, dependency, or overlay CSS was changed. The audit starts at `fdeae15` with a clean worktree.

@@ -1,5 +1,9 @@
 # Design Token Foundation
 
+## Phase 11AD final current-state
+
+The token foundation is **STABLE** and remains the source of truth for new shared UI. Phase 11 closure does not authorize broad raw-color or CSS cleanup. Existing legacy `!important`, `::ng-deep`, and feature-local color usage remain documented deferred debt.
+
 ## Source of truth
 
 `apps/web/src/styles/_tokens.scss` is the canonical source for runtime CSS custom properties. Light values live in `:root`; dark values are overridden by `[data-theme='dark']`. `ThemeService` remains the owner of the `data-theme` attribute and `academic-core-theme` persistence.

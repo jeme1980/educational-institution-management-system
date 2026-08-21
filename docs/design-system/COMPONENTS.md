@@ -1,5 +1,9 @@
 # Shared UI primitives
 
+## Phase 11AD final current-state
+
+The shared component foundation is **STABLE**. Standard buttons, form controls, tables/data-display primitives, modals, and confirmations are the approved shared boundaries. No new shared drawer, loading, toast, or feature-specific primitive is justified by the Phase 11 evidence. Existing public APIs remain unchanged.
+
 These primitives are the official foundation for future controlled migrations. Existing feature templates remain unchanged until a later migration phase.
 
 ## `ui-button`

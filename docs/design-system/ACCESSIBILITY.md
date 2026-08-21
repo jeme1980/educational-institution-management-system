@@ -404,3 +404,47 @@ Phase 11AC addressed the confirmed accessibility debt in the existing app-shell 
 `MOBILE NAVIGATION ACCESSIBILITY CLOSED`
 
 `PHASE 11AC MOBILE NAVIGATION ACCESSIBILITY HARDENING VERIFIED`
+
+## Phase 11AD — final accessibility and design-system consolidation
+
+Phase 11AD is a documentation, regression, and closure audit only. Historical phase records are preserved; this section defines the current-state decision after Phase 11AC.
+
+### Final capability matrix
+
+| Area | Foundation / coverage | Status |
+| --- | --- | --- |
+| Design tokens | Canonical semantic token foundation | STABLE |
+| Shared buttons/forms | Shared primitives proven | STABLE |
+| Standard school forms | Controlled migration complete | CLOSED |
+| Standard tables | 8 / 8 | CLOSED |
+| Data display | Badge, empty-state, pagination stable; loading deferred | STABLE |
+| Standard modals | `ui-modal` 14 / 14 | COMPLETE |
+| Standard confirmations | `ui-confirm-dialog` 100%; `window.confirm()` 0 | COMPLETE |
+| Specialized overlays | Drawer count insufficient | FEATURE-OWNED / DEFERRED |
+| Shared accessibility High | 0 | STABLE |
+| Standard feature High/Medium | Audited standard set closed | CLOSED |
+| Landmarks | App shell owns main; named primary navigation | STABLE |
+| Page titles | Router-owned, 23 / 23 explicit titles plus fallback | STABLE |
+| Mobile navigation | Focus, keyboard, dismissal, restore, scroll cleanup | CLOSED |
+
+### Final verification and scope
+
+- Starting commit: `883e2dc`; branch: `feature/design-system`; working tree was clean before the audit.
+- Documentation inventory is complete: `README.md`, `TOKENS.md`, `COMPONENTS.md`, `DATA-DISPLAY.md`, `MODALS-OVERLAYS.md`, `SPECIALIZED-OVERLAYS.md`, and this file.
+- No blocking regression or unresolved High-severity shared foundation gap was found.
+- Production source changes: 0. Feature migrations: 0. Shared component changes: 0.
+- Backend, Prisma, migrations, API routes, auth/security architecture, permissions, route behavior, and dependencies: 0 changes.
+- Known lint baseline: `175 problems` (`37 errors`, `138 warnings`); this legacy debt is non-blocking and is not reopened by Phase 11AD.
+- Existing deferred debt remains explicitly classified: legacy CSS/lint debt, low-priority accessibility polish, complex/specialized workflows, loading/feedback future work, and unavailable browser/device verification.
+- Angular production build, bundle budget, template compilation, relevant typecheck, and `git diff --check`: PASS from the current Phase 11 verification baseline.
+- Browser/device verification: NOT AVAILABLE in the current execution environment.
+
+## Phase 11AD final decision
+
+`PHASE 11AD FINAL ACCESSIBILITY DESIGN-SYSTEM CONSOLIDATION VERIFIED`
+
+`PHASE 11 DESIGN SYSTEM ARCHITECTURE COMPLETE`
+
+`PHASE 11 READY TO CLOSE`
+
+`READY FOR DESIGN SYSTEM BRANCH INTEGRATION / RELEASE READINESS`

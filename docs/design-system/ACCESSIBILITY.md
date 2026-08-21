@@ -276,3 +276,52 @@ Reassess the remaining standard feature findings and select 2–4 screens only a
 `STANDARD FEATURE HIGH-PRIORITY ACCESSIBILITY CLOSED`
 
 `PHASE 11Z CONTROLLED FEATURE ACCESSIBILITY REMEDIATION BATCH 2 VERIFIED`
+
+## Phase 11AA — controlled medium-priority remediation record
+
+The high-priority gate was satisfied before this phase: shared and standard-feature High findings were treated as closed; specialized High findings remain explicitly deferred to their dedicated phases.
+
+Selected standard screens:
+
+| Screen | Finding | Category | Severity | Impact |
+| --- | --- | --- | --- | --- |
+| Staff | Row actions used tooltip-only naming and omitted explicit button type; the profile close control was icon-only without a name. | Accessible names / native semantics | A11Y-MEDIUM | High reuse across staff CRUD tables and safer keyboard/form behavior. |
+| Lookup Tables | Row-action icons were not explicitly decorative and action names were generic rather than contextual. | ARIA / status and action semantics | A11Y-MEDIUM | Low-risk correction reused across institution lookup tables. |
+
+### Fixed findings
+
+- Added contextual accessible names to Staff view, edit, assignment, and delete actions.
+- Added `type="button"` and explicit naming to the Staff profile close control; marked its icon decorative.
+- Added contextual accessible names to Lookup Tables edit/delete actions and marked their icons decorative.
+- Preserved all existing handlers, CRUD behavior, permissions, table architecture, and navigation.
+- Shared components changed: 0.
+
+### Phase 11AA verification
+
+- Starting commit: `d35c888`
+- Selected screens changed: 2 (`Staff`, `Lookup Tables`).
+- Previously remediated screens: no changes.
+- Specialized workflows, Exam Results/import, permission matrices, membership, mobile navigation, Platform/Admin, Auth/Security: 0.
+- Lint baseline: `175 → 175 problems` (`37 errors`, `138 warnings`); no new findings and selected files contain no new errors.
+- Positive `tabindex` added: 0.
+- New raw colors, dependencies, routes, backend, Prisma, migrations, or permission changes: 0.
+- Angular production build, bundle budget, and template compilation: PASS.
+- `git diff --check`: PASS.
+- Feature test infrastructure: NOT AVAILABLE.
+- Browser verification: unavailable in this execution environment.
+
+### Remaining debt and next phase
+
+Standard Feature High/Medium accessibility debt is closed for the audited standard-screen set. Remaining work is specialized or architecture-level: global page titles/landmarks, mobile navigation, loading/feedback policy, low-priority polish, and excluded complex workflows. Shared High/Medium remain 0.
+
+Recommended next phase (not started):
+
+**Phase 11AB — GLOBAL LANDMARK / PAGE TITLE ACCESSIBILITY FOUNDATION**
+
+Audit and implement only the global document title and landmark foundation, with no feature migration or specialized overlay work. Do not start it in this phase.
+
+## Phase 11AA final decision
+
+`STANDARD FEATURE HIGH/MEDIUM ACCESSIBILITY DEBT CLOSED`
+
+`PHASE 11AA CONTROLLED MEDIUM-PRIORITY ACCESSIBILITY REMEDIATION VERIFIED`

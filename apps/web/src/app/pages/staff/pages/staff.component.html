@@ -159,32 +159,40 @@
                     <td class="py-3 px-4">
                       <div class="flex justify-center gap-1">
                         <button
+                          type="button"
                           (click)="openProfileModal(member)"
+                          aria-label="عرض ملف {{ member.firstNameAr }} {{ member.familyNameAr }}"
                           class="p-1.5 text-slate-500 hover:text-[#00236f] hover:bg-slate-100 rounded-lg transition-colors"
                           title="عرض الملف والتعيينات"
                         >
-                          <mat-icon class="text-[18px]">visibility</mat-icon>
+                          <mat-icon aria-hidden="true" class="text-[18px]">visibility</mat-icon>
                         </button>
                         <button
+                          type="button"
                           (click)="openEditModal(member)"
+                          aria-label="تعديل {{ member.firstNameAr }} {{ member.familyNameAr }}"
                           class="p-1.5 text-slate-500 hover:text-[#00236f] hover:bg-slate-100 rounded-lg transition-colors"
                           title="تعديل الموظف"
                         >
-                          <mat-icon class="text-[18px]">edit</mat-icon>
+                          <mat-icon aria-hidden="true" class="text-[18px]">edit</mat-icon>
                         </button>
                         <button
+                          type="button"
                           (click)="addAssignmentShortcut(member)"
+                          aria-label="إضافة تعيين لـ {{ member.firstNameAr }} {{ member.familyNameAr }}"
                           class="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 rounded-lg transition-colors"
                           title="إسناد تعيين جديد"
                         >
-                          <mat-icon class="text-[18px]">assignment_add</mat-icon>
+                          <mat-icon aria-hidden="true" class="text-[18px]">assignment_add</mat-icon>
                         </button>
                         <button
+                          type="button"
                           (click)="openDeleteConfirm(member)"
+                          aria-label="حذف {{ member.firstNameAr }} {{ member.familyNameAr }}"
                           class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                           title="حذف"
                         >
-                          <mat-icon class="text-[18px]">delete</mat-icon>
+                          <mat-icon aria-hidden="true" class="text-[18px]">delete</mat-icon>
                         </button>
                       </div>
                     </td>
@@ -440,8 +448,8 @@
                   <h3 class="font-bold text-sm">الملف الشخصي والتعيينات</h3>
                 </div>
               </div>
-              <button (click)="showProfileModal.set(false)" class="text-white/80 hover:text-white">
-                <mat-icon>close</mat-icon>
+              <button type="button" aria-label="إغلاق ملف الموظف" (click)="showProfileModal.set(false)" class="text-white/80 hover:text-white">
+                <mat-icon aria-hidden="true">close</mat-icon>
               </button>
             </div>
 

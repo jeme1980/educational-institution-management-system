@@ -97,7 +97,9 @@ export class PlatformReferenceDataComponent {
     if (key === 'studentFeatures') delete payload.isActive;
     const item = this.editing();
     const response = await this.api.apiFetch(item ? `/api/platform/reference-data/${key}/${item.id}` : `/api/platform/reference-data/${key}`, { method: item ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+    const updatedRecord = response.ok ? await response.json() : null;
     this.saving.set(false);
+    if (item && updatedRecord) this.items.update((rows) => rows.map((row) => row.id === updatedRecord.id ? updatedRecord : row));
     if (!response.ok) { this.notify('error', await this.readError(response)); return; }
     this.notify('success', item ? 'تم تعديل السجل بنجاح.' : 'تمت إضافة السجل بنجاح.'); this.closeModal(); await this.load(); if (key === 'regions') await this.loadRegions();
   }

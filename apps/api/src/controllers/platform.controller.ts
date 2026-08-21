@@ -139,6 +139,13 @@ const validatePlatformReferenceData = async (key: PlatformReferenceKey, data: Re
 };
 
 export async function listPlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  if (req.headers) {
+    delete req.headers['if-none-match'];
+    delete req.headers['if-modified-since'];
+  }
   const requested = req.query.table ? [String(req.query.table)] : Object.keys(PLATFORM_REFERENCE_TABLES);
   const keys = requested.filter(platformReferenceKey) as PlatformReferenceKey[];
   if (!keys.length) { res.status(400).json({ error: 'Invalid platform reference table.' }); return; }

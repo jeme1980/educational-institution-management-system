@@ -7,9 +7,10 @@ import { hashPassword } from './password';
 
 const invoke = async (handler: any, req: any) => {
   let statusCode = 200; let body: any;
-  const res: any = { status: (code: number) => { statusCode = code; return res; }, json: (value: any) => { body = value; return res; } };
+  const headers: Record<string, string> = {};
+  const res: any = { status: (code: number) => { statusCode = code; return res; }, set: (values: Record<string, string>) => { Object.assign(headers, values); return res; }, setHeader: (name: string, value: string) => { headers[name] = value; return res; }, json: (value: any) => { body = value; return res; } };
   await handler(req, res);
-  return { statusCode, body };
+  return { statusCode, body, headers };
 };
 
 const runMiddleware = async (req: any) => {
@@ -28,7 +29,10 @@ test('Platform reference data supports safe CRUD, protection, dependencies, and 
   const createdIds: { key: string; id: string }[] = [];
   let duplicateRegionId = '';
   try {
-    assert.equal((await invoke(listPlatformReferenceData, { ...request, query: {} })).statusCode, 200);
+    const initialList = await invoke(listPlatformReferenceData, { ...request, query: {} });
+    assert.equal(initialList.statusCode, 200);
+    assert.equal(initialList.headers['Cache-Control'], 'no-store');
+    assert.equal(initialList.headers.Pragma, 'no-cache');
     assert.equal((await invoke(createPlatformReferenceData, { ...request, params: { table: 'institutionStatuses' }, body: { nameAr: `ممنوع ${suffix}` } })).statusCode, 403);
     assert.equal((await invoke(createPlatformReferenceData, { ...request, params: { table: 'gradeLevels' }, body: { nameAr: `صف ناقص ${suffix}` } })).statusCode, 400);
 

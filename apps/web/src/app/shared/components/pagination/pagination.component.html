@@ -17,7 +17,7 @@
       <mat-icon>chevron_right</mat-icon>
     </button>
     @for (pageNumber of pages(); track pageNumber) {
-      <button type="button" class="page-button page-number" [class.active]="pageNumber === page()" [disabled]="disabled()" (click)="goToPage(pageNumber)">{{ pageNumber }}</button>
+      <button type="button" class="page-button page-number" [class.active]="pageNumber === page()" [attr.aria-current]="pageNumber === page() ? 'page' : null" [disabled]="disabled()" (click)="goToPage(pageNumber)">{{ pageNumber }}</button>
     }
     <button type="button" class="page-button" [disabled]="disabled() || page() === totalPages()" (click)="goToPage(page() + 1)" aria-label="الصفحة التالية">
       <mat-icon>chevron_left</mat-icon>

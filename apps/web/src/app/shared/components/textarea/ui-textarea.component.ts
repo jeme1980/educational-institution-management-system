@@ -18,6 +18,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       [attr.maxlength]="maxLength() ?? null"
       [attr.required]="required() ? '' : null"
       [attr.readonly]="readOnly() ? '' : null"
+      [attr.aria-label]="ariaLabel() || null"
       [attr.aria-describedby]="describedBy() || null"
       [attr.aria-invalid]="invalid() ? 'true' : null"
       [disabled]="isDisabled()"
@@ -36,6 +37,7 @@ export class UiTextareaComponent implements ControlValueAccessor {
   readonly readOnly = input(false);
   readonly disabled = input(false);
   readonly invalid = input(false);
+  readonly ariaLabel = input('');
   readonly describedBy = input('');
   readonly value = signal('');
   private readonly formDisabled = signal(false);

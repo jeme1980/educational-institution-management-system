@@ -2,7 +2,7 @@
 
 ## Phase 11W scope and decision
 
-This document is the Phase 11W audit for the design-system accessibility debt. It is an audit, classification, prioritization, and architecture decision only. No production code, API contract, database schema, route, permission, dependency, or feature behavior was changed.
+This document contains the Phase 11W audit and the Phase 11X shared-foundation resolution record. Phase 11X is limited to two generic, non-breaking primitive improvements. No API contract, database schema, route, permission, dependency, or feature behavior was changed.
 
 Audit baseline:
 
@@ -53,8 +53,8 @@ These are consolidated findings, not 14 individual DOM defects. The highest-risk
 | `ui-form-field` | PASS with integration gap | Label association and alert errors are available. The primitive cannot infer the child control’s `aria-describedby`/invalid binding; consumers must use the contract. |
 | `ui-input` | PASS | Native input with id/name, disabled/required state, accessible label and description inputs, and invalid state. |
 | `ui-select` | PASS | Native select with the same explicit accessibility contract. |
-| `ui-textarea` | SMALL GAP | Native semantics are correct, but the primitive lacks the optional standalone `aria-label` input available on the other text controls. |
-| `pagination` | SMALL GAP | Native controls and labels are present; the active page should expose `aria-current="page"`. |
+| `ui-textarea` | RESOLVED IN 11X | Added the optional `ariaLabel` input while preserving visible-label usage and all existing value/control behavior. |
+| `pagination` | RESOLVED IN 11X | The active page now exposes `aria-current="page"`; native buttons, labels, disabled state, keyboard behavior, and RTL remain unchanged. |
 | `ui-badge` | PASS with contextual review | Text is not color-only and the icon is decorative. `role="status"` should remain contextual rather than automatic for static labels. |
 | `ui-empty-state` | PASS with contextual review | Heading, description, hidden decorative icon, status announcement, and projected action are available. |
 | `ui-modal` | PASS | Dialog role, modal semantics, labelled/described references, initial focus, focus trap, focus restore, Escape/backdrop handling, and body-scroll locking are implemented. |
@@ -63,7 +63,7 @@ These are consolidated findings, not 14 individual DOM defects. The highest-risk
 
 ### Foundation decision
 
-The shared accessibility foundation is **substantially mature but needs a small hardening phase**. It is not a reason to reopen completed button, form, table, or modal migrations. The smallest shared work is limited to the `pagination` current-page announcement and an optional standalone label input for `ui-textarea`, followed by contract-level regression tests. Feature-level defects must not be solved by weakening or duplicating these primitives.
+The shared accessibility foundation is **stable after the bounded 11X hardening**. It is not a reason to reopen completed button, form, table, or modal migrations. The two findings selected from 11W are resolved without consumer changes. Feature-level defects must not be solved by weakening or duplicating these primitives.
 
 ## Keyboard and focus audit
 
@@ -105,9 +105,9 @@ The mobile drawer uses a native backdrop button and native close button, but its
 
 ### Shared design-system findings
 
-1. Add active-page semantics to pagination.
-2. Consider an optional standalone accessible-label input for `ui-textarea`.
-3. Preserve existing modal, confirmation, button, form-field, and table contracts; add only contract-level regression coverage in the next foundation phase.
+1. RESOLVED IN 11X: add active-page semantics to pagination.
+2. RESOLVED IN 11X: add an optional standalone accessible-label input for `ui-textarea`.
+3. Preserve existing modal, confirmation, button, form-field, and table contracts; feature-specific findings remain outside the foundation boundary.
 
 ### Feature-specific findings
 
@@ -121,7 +121,7 @@ The boundary is intentionally strict: shared primitives provide semantics and co
 
 | Priority | Scope | Deliverable | Excluded |
 | --- | --- | --- | --- |
-| 1 | Shared foundation | Pagination `aria-current`, optional textarea label contract, focused regression checks. | Feature migration, redesign |
+| 1 | Shared foundation | RESOLVED IN 11X: pagination `aria-current` and optional textarea label contract. | Feature migration, redesign |
 | 2 | Legacy specialized overlays | Keyboard dismissal, focus containment/restore, dialog naming, and removal of container-tabindex workarounds in one controlled batch. | New generic drawer/sheet primitive |
 | 3 | Feature forms and controls | Label/error association, icon names, native button/link semantics, and representative contrast checks. | API/business changes |
 | 4 | Complex data display | Header scope/relationships and keyboard review for exam/results/permissions matrices. | Replacing standard table shell |
@@ -129,23 +129,50 @@ The boundary is intentionally strict: shared primitives provide semantics and co
 
 ## Architecture decision and next phase
 
-Decision: **MIXED — small shared foundation hardening, then controlled feature accessibility batches.** The shared foundation is close to complete and should receive only the two bounded contract improvements above. The larger debt is feature-owned and concentrated in legacy custom overlays, so a new universal overlay abstraction is not warranted.
+Decision: **MIXED — shared foundation stable, then controlled feature accessibility batches.** The two bounded contract improvements are complete. The larger remaining debt is feature-owned and concentrated in legacy custom overlays, so a new universal overlay abstraction is not warranted.
 
 Recommended single next phase (not started):
 
-**Phase 11X — ACCESSIBILITY SHARED FOUNDATION HARDENING**
+**Phase 11Y — CONTROLLED FEATURE ACCESSIBILITY REMEDIATION — BATCH 1**
 
-Scope only the pagination active-page announcement, the optional `ui-textarea` accessible-label contract, and focused shared-component regression checks. After 11X is verified, schedule feature batches for legacy overlays and complex data displays. No Phase 11X work is performed by this document.
+Select 2–4 screens from the existing A11Y-HIGH/P1 feature findings, beginning with keyboard and focus behavior in legacy specialized overlays. Do not begin 11Y in this phase.
 
 ## Verification record
 
-- `git status --short --branch`: clean at the start of Phase 11W.
-- `git rev-parse HEAD`: `69f20f019d08fceb1aaf7215444b028ead565dcc`.
-- `npm.cmd run lint --workspace @school-management-system/web`: baseline `187 problems (49 errors, 138 warnings)`; no lint fixes were applied.
-- Angular production build: last known pass from Phase 11U; not rerun for this docs-only phase.
-- Production source changes: 0.
+- `git status --short --branch`: clean at the start of Phase 11X.
+- `git rev-parse HEAD`: `53b7fe731326c20c68fab79164163390200b3403`.
+- `npm.cmd run lint --workspace @school-management-system/web`: baseline `187 problems (49 errors, 138 warnings)`; unrelated baseline findings remain unchanged.
+- Targeted modified-file ESLint: PASS; no new findings.
+- Angular production build: PASS.
+- Bundle budget: PASS.
+- Template compilation: PASS with the production build.
+- Targeted test infrastructure: NOT AVAILABLE; static primitive checks and build verification were used.
+- Production source changes: 2 shared primitives only.
 - Backend/database/routing/permission changes: 0.
 - Browser verification: unavailable.
+
+## Phase 11X resolution matrix
+
+| Finding | Primitive | Severity | Fixed |
+| --- | --- | --- | --- |
+| Active page was visually indicated but lacked current-page semantics. | `pagination` | A11Y-MEDIUM | YES — `[attr.aria-current]="pageNumber === page() ? 'page' : null'` |
+| Standalone textarea consumers had no optional accessible-name input. | `ui-textarea` | A11Y-MEDIUM | YES — optional `ariaLabel` input and native `aria-label` binding |
+| Feature overlay keyboard/focus debt. | Feature-owned overlays | A11Y-HIGH | NO — intentionally deferred to 11Y |
+
+### Phase 11X compatibility
+
+- Breaking API changes: 0.
+- New required inputs: 0.
+- Consumer migrations: 0.
+- New positive `tabindex` values: 0.
+- New raw colors, directional hacks, dependencies, or accessibility libraries: 0.
+- Backend, Prisma, migrations, routes, and permissions: 0.
+- `!important`: unchanged at 87.
+- `::ng-deep`: unchanged at 4.
+
+## Phase 11X final decision
+
+`SHARED DESIGN SYSTEM ACCESSIBILITY FOUNDATION STABLE`
 
 ## Final phase verdict
 

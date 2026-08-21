@@ -59,16 +59,13 @@ $platformGrants = @(
   @{ Privileges = 'SELECT, INSERT'; Tables = @('platform_audit_logs') },
   @{ Privileges = 'INSERT'; Tables = @('audit_logs') },
   @{ Privileges = 'SELECT, INSERT'; Tables = @('institution_users','staff_members','roles','role_permissions','institution_user_roles') },
-  @{ Privileges = 'SELECT'; Tables = @('permissions','institution_statuses') },
-  # Global references remain read-only at runtime except for the explicit
-  # Platform mutation contracts for Towns and Providers.
-  @{ Privileges = 'SELECT'; Tables = @(
-      'regions','languages','education_types','education_stages','grade_levels',
+  @{ Privileges = 'SELECT'; Tables = @('permissions','institution_statuses','students','classes','topics','skills','student_enrollments','student_guardians','staff_developments') },
+  # Platform may mutate only the explicit global reference-data allowlist.
+  @{ Privileges = 'SELECT, INSERT, UPDATE, DELETE'; Tables = @(
+      'regions','towns','languages','education_types','education_stages','grade_levels',
       'class_types','composition_types','genders','student_statuses','enrollment_statuses',
-      'relation_types','student_features'
-  ) },
-  @{ Privileges = 'SELECT, INSERT, UPDATE'; Tables = @('towns') },
-  @{ Privileges = 'SELECT, INSERT, UPDATE'; Tables = @('providers') }
+      'relation_types','student_features','providers'
+  ) }
 )
 
 $roleSql = @"

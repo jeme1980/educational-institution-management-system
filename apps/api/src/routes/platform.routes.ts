@@ -28,4 +28,5 @@ router.get('/platform/audit-logs', ...platform, asyncHandler(controller.getPlatf
 router.get('/platform/reference-data', ...platform, asyncHandler(controller.listPlatformReferenceData));
 router.post('/platform/reference-data/:table', ...platform, asyncHandler(controller.createPlatformReferenceData));
 router.patch('/platform/reference-data/:table/:id', ...platform, asyncHandler(controller.updatePlatformReferenceData));
+router.delete('/platform/reference-data/:table/:id', ...platform, asyncHandler(controller.deletePlatformReferenceData));
 export default router;

@@ -10,8 +10,8 @@ const uuid = (value: unknown): value is string => typeof value === 'string' && /
 const current = { status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as SubscriptionStatus[] } };
 const errorResponse = (res: Response, error: any) => {
   if (error?.code === 'P2002') { res.status(409).json({ error: 'A record with the same unique code or slug already exists.' }); return; }
-  if (error?.code === 'P2003') { res.status(400).json({ error: 'One or more selected lookup values are invalid.' }); return; }
-  if (error?.code === 'P2025') { res.status(404).json({ error: 'Institution not found.' }); return; }
+  if (error?.code === 'P2003') { res.status(409).json({ code: 'REFERENCE_IN_USE', error: 'The reference record is still in use.' }); return; }
+  if (error?.code === 'P2025') { res.status(404).json({ error: 'Reference or platform record not found.' }); return; }
   const statusCode = Number(error?.statusCode);
   if (Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 500) {
     res.status(statusCode).json({ error: error?.message || 'Platform operation failed.', ...(error?.code ? { code: error.code } : {}) });
@@ -51,7 +51,45 @@ export const PLATFORM_REFERENCE_TABLES = {
 } as const;
 
 type PlatformReferenceKey = keyof typeof PLATFORM_REFERENCE_TABLES;
-const PLATFORM_MUTABLE_REFERENCE_TABLES = new Set<PlatformReferenceKey>(['providers', 'towns']);
+const PLATFORM_MUTABLE_REFERENCE_TABLES = new Set<PlatformReferenceKey>([
+  'regions', 'towns', 'languages', 'educationTypes', 'educationStages', 'gradeLevels',
+  'classTypes', 'compositionTypes', 'genders', 'studentStatuses', 'enrollmentStatuses',
+  'relationTypes', 'studentFeatures', 'providers',
+]);
+
+const REFERENCE_DISPLAY_FIELDS: Partial<Record<PlatformReferenceKey, readonly string[]>> = {
+  regions: ['nameAr', 'nameHe', 'sortOrder', 'isActive'],
+  towns: ['nameAr', 'nameHe', 'regionId'],
+  languages: ['nameAr', 'nameHe', 'nativeName', 'direction', 'sortOrder'],
+  educationTypes: ['nameAr', 'nameHe', 'sortOrder'],
+  educationStages: ['nameAr', 'nameHe', 'sortOrder'],
+  gradeLevels: ['nameAr', 'nameHe', 'sortOrder', 'isActive'],
+  classTypes: ['nameAr', 'nameHe', 'sortOrder'],
+  compositionTypes: ['nameAr', 'nameHe', 'sortOrder'],
+  genders: ['nameAr', 'nameHe', 'sortOrder', 'isActive'],
+  studentStatuses: ['nameAr', 'nameHe', 'isFinalStatus', 'sortOrder', 'isActive'],
+  enrollmentStatuses: ['nameAr', 'nameHe', 'isFinalStatus', 'sortOrder', 'isActive'],
+  relationTypes: ['nameAr', 'nameHe', 'sortOrder', 'isActive'],
+  studentFeatures: ['nameAr', 'nameHe'],
+  providers: ['name', 'sortOrder', 'isActive'],
+};
+
+const REFERENCE_DEPENDENCIES: Partial<Record<PlatformReferenceKey, readonly { type: string; model: string; field: string }[]>> = {
+  regions: [{ type: 'institutions', model: 'institution', field: 'regionId' }, { type: 'towns', model: 'town', field: 'regionId' }],
+  towns: [{ type: 'institutions', model: 'institution', field: 'townId' }, { type: 'students', model: 'student', field: 'townId' }],
+  languages: [{ type: 'institutions', model: 'institution', field: 'defaultLanguageId' }],
+  educationTypes: [{ type: 'institutions', model: 'institution', field: 'typeId' }],
+  educationStages: [{ type: 'classes', model: 'class', field: 'stageId' }],
+  gradeLevels: [{ type: 'classes', model: 'class', field: 'gradeLevelId' }, { type: 'topics', model: 'topic', field: 'gradeLevelId' }, { type: 'skills', model: 'skill', field: 'gradeLevelId' }],
+  classTypes: [{ type: 'classes', model: 'class', field: 'typeId' }],
+  compositionTypes: [{ type: 'classes', model: 'class', field: 'compositionId' }],
+  genders: [{ type: 'students', model: 'student', field: 'genderId' }, { type: 'staffMembers', model: 'staffMember', field: 'genderId' }],
+  studentStatuses: [{ type: 'students', model: 'student', field: 'studentStatusId' }],
+  enrollmentStatuses: [{ type: 'studentEnrollments', model: 'studentEnrollment', field: 'enrollmentStatusId' }],
+  relationTypes: [{ type: 'studentGuardians', model: 'studentGuardian', field: 'relationTypeId' }],
+  studentFeatures: [{ type: 'enrollments', model: 'studentEnrollment', field: 'studentFeatureId' }],
+  providers: [{ type: 'staffDevelopments', model: 'staffDevelopment', field: 'providerId' }],
+};
 
 const platformReferenceKey = (value: unknown): value is PlatformReferenceKey =>
   typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLATFORM_REFERENCE_TABLES, value);
@@ -88,6 +126,18 @@ const platformReferenceData = (key: PlatformReferenceKey, body: Record<string, u
   return data;
 };
 
+const validatePlatformReferenceData = async (key: PlatformReferenceKey, data: Record<string, unknown>, partial: boolean): Promise<string | null> => {
+  if ((!partial || data.nameAr !== undefined) && key !== 'providers' && !data.nameAr) return 'Arabic name is required.';
+  if (key === 'providers' && ((!partial && (!data.providerCode || !data.name)) || data.providerCode === null || data.name === null)) return 'Provider code and name are required.';
+  if (data.sortOrder !== undefined && (!Number.isInteger(data.sortOrder) || Number(data.sortOrder) < 0)) return 'Sort order must be a non-negative integer.';
+  if (key === 'languages' && data.direction !== undefined && !['rtl', 'ltr'].includes(String(data.direction))) return 'Language direction must be rtl or ltr.';
+  if (key === 'languages' && ((!partial && !data.nativeName) || data.nativeName === null)) return 'Native language name is required.';
+  if (key === 'gradeLevels' && ((!partial && !Number.isInteger(data.codeNumber)) || (data.codeNumber !== undefined && !Number.isInteger(data.codeNumber)))) return 'Grade code must be an integer.';
+  if (key === 'genders' && ((!partial && !/^[a-z]$/i.test(String(data.genderCode || ''))) || (data.genderCode !== undefined && !/^[a-z]$/i.test(String(data.genderCode || ''))))) return 'Gender code must be one letter.';
+  if (key === 'towns' && (!partial || data.regionId !== undefined) && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) return 'An active region is required for a town.';
+  return null;
+};
+
 export async function listPlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
   const requested = req.query.table ? [String(req.query.table)] : Object.keys(PLATFORM_REFERENCE_TABLES);
   const keys = requested.filter(platformReferenceKey) as PlatformReferenceKey[];
@@ -110,14 +160,13 @@ export async function createPlatformReferenceData(req: ContextRequest, res: Resp
   if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
   if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
   const data = platformReferenceData(key, req.body || {});
-  if (key !== 'studentFeatures' && !data.nameAr && key !== 'providers') { res.status(400).json({ error: 'Arabic name is required.' }); return; }
-  if (key === 'providers' && (!data.providerCode || !data.name)) { res.status(400).json({ error: 'Provider code and name are required.' }); return; }
-  if (key === 'towns' && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) { res.status(400).json({ error: 'An active region is required for a town.' }); return; }
+  const validationError = await validatePlatformReferenceData(key, data, false);
+  if (validationError) { res.status(400).json({ error: validationError }); return; }
   try {
     const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
     const created = await platformPrisma.$transaction(async (tx) => {
       const row = await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].create({ data });
-      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'GLOBAL_LOOKUP_CREATED', entityType: key, entityId: row.id, metadata: { key, nameAr: row.nameAr || row.name, providerCode: row.providerCode || null } }, tx);
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'REFERENCE_DATA_CREATED', entityType: key, entityId: row.id, metadata: { key, nameAr: row.nameAr || row.name, providerCode: row.providerCode || null } }, tx);
       return row;
     });
     res.status(201).json(created);
@@ -134,16 +183,50 @@ export async function updatePlatformReferenceData(req: ContextRequest, res: Resp
     const current = await delegate.findUnique({ where: { id } });
     if (!current) { res.status(404).json({ error: 'Reference item not found.' }); return; }
     const data = platformReferenceData(key, req.body || {}, true);
-    if (key === 'towns' && data.regionId !== undefined && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) { res.status(400).json({ error: 'An active region is required for a town.' }); return; }
+    const validationError = await validatePlatformReferenceData(key, data, true);
+    if (validationError) { res.status(400).json({ error: validationError }); return; }
+    const editableFields = REFERENCE_DISPLAY_FIELDS[key] || [];
+    if (current.isSystem === true && Object.keys(data).some((field) => !editableFields.includes(field))) { res.status(409).json({ error: 'System lookup items allow display-field changes only.' }); return; }
     if (key === 'towns' && data.regionId !== undefined && data.regionId !== current.regionId) {
       res.status(409).json({ error: 'A town region cannot be changed after creation; create a separate town for the other region.' }); return;
     }
     const updated = await platformPrisma.$transaction(async (tx) => {
       const row = await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].update({ where: { id }, data });
-      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: row.isActive === false ? 'GLOBAL_LOOKUP_DEACTIVATED' : 'GLOBAL_LOOKUP_UPDATED', entityType: key, entityId: id, metadata: { key, changedFields: Object.keys(data) } }, tx);
+      const action = data.isActive !== undefined && data.isActive !== current.isActive
+        ? (data.isActive ? 'REFERENCE_DATA_ACTIVATED' : 'REFERENCE_DATA_DEACTIVATED')
+        : 'REFERENCE_DATA_UPDATED';
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action, entityType: key, entityId: id, metadata: { key, changedFields: Object.keys(data) } }, tx);
       return row;
     });
     res.json(updated);
+  } catch (error) { errorResponse(res, error); }
+}
+
+export async function deletePlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
+  const key = String(req.params.table || '');
+  const id = String(req.params.id || '');
+  if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
+  if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
+  const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
+  try {
+    const existing = await delegate.findUnique({ where: { id } });
+    if (!existing) { res.status(404).json({ error: 'Reference item not found.' }); return; }
+    if (existing.isSystem === true) { res.status(409).json({ code: 'SYSTEM_PROTECTED', error: 'System lookup items cannot be deleted.' }); return; }
+    const dependencies = REFERENCE_DEPENDENCIES[key] || [];
+    const counts = await Promise.all(dependencies.map(async (dependency) => ({
+      type: dependency.type,
+      count: await (platformPrisma as any)[dependency.model].count({ where: { [dependency.field]: id } }),
+    })));
+    const used = counts.filter((dependency) => dependency.count > 0);
+    if (used.length) {
+      res.status(409).json({ code: 'REFERENCE_IN_USE', message: 'This reference record is currently in use.', dependencies: used });
+      return;
+    }
+    await platformPrisma.$transaction(async (tx) => {
+      await (tx as any)[PLATFORM_REFERENCE_TABLES[key]].delete({ where: { id } });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'REFERENCE_DATA_DELETED', entityType: key, entityId: id, metadata: { type: key, snapshot: existing } }, tx);
+    });
+    res.json({ success: true, id });
   } catch (error) { errorResponse(res, error); }
 }
 

@@ -177,3 +177,51 @@ Select 2–4 screens from the existing A11Y-HIGH/P1 feature findings, beginning 
 ## Final phase verdict
 
 `PHASE 11W ACCESSIBILITY DESIGN-SYSTEM DEBT AUDIT VERIFIED`
+
+## Phase 11Y — controlled feature remediation record
+
+Phase 11Y selected two standard CRUD screens from the audit-driven feature debt queue:
+
+| Screen | Finding | Severity | Selected |
+| --- | --- | --- | --- |
+| Classes | Modal and details surfaces used clickable non-interactive containers; close icon lacked an explicit accessible name. | A11Y-HIGH | YES |
+| Institutions | Details and edit surfaces used clickable non-interactive containers; the details close control lacked native type/name semantics. | A11Y-HIGH | YES |
+
+### Fixed findings
+
+- Replaced the selected modal backdrop/container click architecture with native backdrop buttons and preserved Escape dismissal on the feature wrapper.
+- Added `role="dialog"`, `aria-modal="true"`, and stable `aria-labelledby` references to the selected dialogs.
+- Added explicit Arabic accessible names to selected close buttons and `aria-hidden="true"` to their decorative Material Icons.
+- Added missing `type="button"` to the selected Institutions details close control.
+- No feature API, form validation, navigation, permission, CRUD, or business behavior changed.
+
+### Phase 11Y verification
+
+- Starting commit: `c8527d6`
+- Selected screens changed: 2
+- Shared components changed: 0
+- Specialized overlays/complex workflows/platform/auth: 0
+- Accessibility diagnostics: `187 → 179` total lint problems; the 8 selected non-native interaction diagnostics were removed. Remaining lint errors/warnings are baseline findings outside this batch.
+- Modified feature files have no remaining click-events-have-key-events or interactive-supports-focus errors.
+- Positive `tabindex` added: 0.
+- New raw colors, dependencies, routes, backend, Prisma, migrations, or permission changes: 0.
+- Angular production build, bundle budget, and template compilation: PASS.
+- `git diff --check`: PASS.
+- Feature test infrastructure: NOT AVAILABLE.
+- Browser verification: unavailable in this execution environment.
+
+### Remaining debt and next phase
+
+The remaining accessibility debt is intentionally deferred: specialized overlays, Exam Results/import workflows, study-group membership, permission matrices, student specialized surfaces, mobile navigation, and the remaining standard feature findings. Shared High findings remain 0.
+
+Recommended next phase (not started):
+
+**Phase 11Z — CONTROLLED FEATURE ACCESSIBILITY REMEDIATION — BATCH 2**
+
+Select the next 2–4 standard screens from `A11Y-HIGH`/`A11Y-MEDIUM` findings. Keep the shared foundation frozen and continue excluding specialized workflows until a dedicated phase is approved.
+
+## Phase 11Y final decision
+
+`FEATURE ACCESSIBILITY REMEDIATION PATTERN PROVEN`
+
+`PHASE 11Y CONTROLLED FEATURE ACCESSIBILITY REMEDIATION BATCH 1 VERIFIED`

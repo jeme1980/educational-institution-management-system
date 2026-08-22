@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, inject, signal, OnInit, effect, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, HostListener, inject, signal, OnInit, effect, ViewChild } from '@angular/core';
 import { NavigationStart, RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,6 +10,37 @@ import { ConfirmDialogService } from './shared/services/confirm-dialog.service';
 import { ThemeService } from './core/services/theme.service';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+
+export interface SchoolNavItem {
+  path: string;
+  label: string;
+  icon: string;
+  permission?: string;
+}
+
+export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
+  { path: '/dashboard', label: 'لوحة القيادة', icon: 'grid_view' },
+  { path: '/students', label: 'قائمة الطلاب', icon: 'groups', permission: 'students:read' },
+  { path: '/enrollments', label: 'بيانات الالتحاق', icon: 'badge', permission: 'students:update' },
+  { path: '/registered-students', label: 'الطلاب المسجلون', icon: 'assignment_ind', permission: 'students:read' },
+  { path: '/staff', label: 'الكادر والتعيينات', icon: 'supervisor_account', permission: 'teachers:read' },
+  { path: '/staff-development', label: 'إدارة الاستكمالات', icon: 'workspace_premium', permission: 'teachers:read' },
+  { path: '/classes', label: 'الشعب والصفوف', icon: 'meeting_room', permission: 'settings:read' },
+  { path: '/study-groups', label: 'مجموعات الدراسة', icon: 'diversity_3', permission: 'settings:read' },
+  { path: '/subjects', label: 'المناهج والمواد', icon: 'menu_book', permission: 'settings:read' },
+  { path: '/exams', label: 'الامتحانات', icon: 'assignment', permission: 'exams:read' },
+  { path: '/exam-analysis', label: 'تحليل الامتحان', icon: 'analytics', permission: 'exams:read' },
+  { path: '/academic-years', label: 'الأعوام الدراسية', icon: 'calendar_today', permission: 'settings:read' },
+  { path: '/settings', label: 'الإعدادات', icon: 'settings', permission: 'settings:read' },
+];
+
+export function filterSchoolNavItems(items: SchoolNavItem[], permissions: readonly string[]): SchoolNavItem[] {
+  return items.filter((item) => !item.permission || permissions.includes(item.permission));
+}
+
+export function resolveSelectedId<T extends { id: string }>(items: readonly T[], currentId: string | null | undefined, fallback?: (item: T) => boolean): string | null {
+  return items.find((item) => item.id === currentId)?.id || items.find((item) => fallback?.(item))?.id || items[0]?.id || null;
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +58,8 @@ export class App implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
   isMobileMenuOpen = signal<boolean>(false);
+  readonly schoolNavItems = SCHOOL_NAV_ITEMS;
+  readonly visibleSchoolNavItems = computed(() => filterSchoolNavItems(this.schoolNavItems, this.authService.currentContext()?.permissions || []));
 
   @ViewChild('mobileMenuTrigger') private mobileMenuTrigger?: ElementRef<HTMLButtonElement>;
   @ViewChild('mobileMenuPanel') private mobileMenuPanel?: ElementRef<HTMLElement>;
@@ -53,17 +86,18 @@ export class App implements OnInit {
   }
 
   async ngOnInit() {
+    if (this.authService.isLoading()) await this.authService.waitForAuthInit();
+    if (!this.authService.currentContext()) return;
     if (this.authService.currentContext()?.isPlatformAdmin) { await this.router.navigateByUrl('/platform'); return; }
     await this.apiService.loadInstitutions();
     const institutions = this.apiService.institutions();
-    const selectedInstitution = institutions.some((item: any) => item.id === this.apiService.selectedInstitutionId())
-      ? this.apiService.selectedInstitutionId()
-      : institutions[0]?.id || null;
+    const selectedInstitution = resolveSelectedId(institutions, this.apiService.selectedInstitutionId());
     this.apiService.setSelectedInstitutionId(selectedInstitution);
     await this.reloadAcademicYears();
   }
 
   async onInstitutionChange(institutionId: string) {
+    if (!this.apiService.institutions().some((institution) => institution.id === institutionId)) return;
     this.apiService.setSelectedInstitutionId(institutionId);
     this.apiService.setSelectedAcademicYearId(null);
     await this.reloadAcademicYears();
@@ -71,6 +105,7 @@ export class App implements OnInit {
   }
 
   async onAcademicYearChange(academicYearId: string) {
+    if (!this.apiService.academicYears().some((year) => year.id === academicYearId)) return;
     this.apiService.setSelectedAcademicYearId(academicYearId);
     await this.apiService.loadCurrentContextData();
   }
@@ -78,9 +113,7 @@ export class App implements OnInit {
   private async reloadAcademicYears() {
     await this.apiService.loadAcademicYears();
     const years = this.apiService.academicYears();
-    const selectedYear = years.some((item: any) => item.id === this.apiService.selectedAcademicYearId())
-      ? this.apiService.selectedAcademicYearId()
-      : (years.find((item: any) => item.isCurrent)?.id || years[0]?.id || null);
+    const selectedYear = resolveSelectedId(years, this.apiService.selectedAcademicYearId(), (item) => item.isCurrent);
     this.apiService.setSelectedAcademicYearId(selectedYear);
   }
 

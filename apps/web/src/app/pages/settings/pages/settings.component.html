@@ -4,11 +4,21 @@
       <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">إعدادات المؤسسة والنظام</h1>
       <p class="font-body-md text-body-md text-on-surface-variant mt-1">عرض وتكوين الإعدادات الهيكلية للمدرسة وقواعد البيانات المتصلة.</p>
     </div>
-    <a routerLink="/settings/lookup-tables" title="إدارة الجداول المساعدة للمؤسسة" class="px-4 py-2.5 rounded-xl bg-[#00236f] hover:bg-[#1e3a8a] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer">
-      <mat-icon class="text-sm">table_rows</mat-icon>
-      <span>الجداول المساعدة للمؤسسة</span>
-    </a>
   </div>
+
+  <nav aria-label="تنقل إعدادات المؤسسة" class="flex flex-wrap gap-2 rounded-xl border border-surface-border bg-surface-container-low p-2">
+    @for (item of visibleSettingsNavItems(); track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="bg-primary text-on-primary font-bold"
+        [routerLinkActiveOptions]="{ exact: item.path === '/settings' }"
+        class="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        <mat-icon class="text-base text-current">{{ item.icon }}</mat-icon>
+        <span>{{ item.label }}</span>
+      </a>
+    }
+  </nav>
 
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
     <!-- Institution Metadata -->

@@ -16,7 +16,6 @@ export const routes: Routes = [
     ],
   },
   { path: 'account/setup', title: 'إعداد الحساب', loadComponent: () => import('./pages/auth/account-setup.component').then(m => m.AccountSetupComponent) },
-  { path: 'platform', title: 'إدارة المنصة', canActivate: [authGuard, platformGuard], loadComponent: () => import('./pages/platform/platform.component').then(m => m.PlatformComponent) },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   {
     path: 'dashboard',
@@ -62,19 +61,22 @@ export const routes: Routes = [
   {
     path: 'classes',
     title: 'الشعب والصفوف',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'settings:read' },
     loadComponent: () => import('./pages/classes/pages/classes.component').then(m => m.ClassesComponent),
   },
   {
     path: 'study-groups',
     title: 'مجموعات التعلم',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'settings:read' },
     loadComponent: () => import('./pages/study-groups/pages/study-groups').then(m => m.StudyGroupsComponent),
   },
   {
     path: 'subjects',
     title: 'المواد الدراسية',
-    canActivate: [authGuard],
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'settings:read' },
     loadComponent: () => import('./pages/subjects/pages/subjects').then(m => m.SubjectsComponent),
   },
   {

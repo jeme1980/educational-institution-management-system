@@ -1,23 +1,34 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, RouterLinkActive, UiModalComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css'
 })
 export class SettingsComponent implements OnInit {
   apiService = inject(ApiService);
+  authService = inject(AuthService);
   confirmDialog = inject(ConfirmDialogService);
   fb = inject(FormBuilder);
+  readonly settingsNavItems = [
+    { path: '/settings', label: 'إعدادات المؤسسة', icon: 'domain', permission: 'settings:read' },
+    { path: '/settings/users', label: 'المستخدمون', icon: 'manage_accounts', permission: 'settings:create' },
+    { path: '/settings/roles', label: 'الأدوار والصلاحيات', icon: 'admin_panel_settings', permission: 'settings:create' },
+    { path: '/settings/subscription', label: 'الاشتراك', icon: 'card_membership', permission: 'subscription:read' },
+    { path: '/settings/lookup-tables', label: 'الجداول المساعدة', icon: 'table_rows', permission: 'settings:create' },
+    { path: '/settings/audit-log', label: 'سجل التدقيق', icon: 'history', permission: 'audit:read' },
+  ];
+  readonly visibleSettingsNavItems = computed(() => this.settingsNavItems.filter((item) => this.authService.hasPermission(item.permission)));
 
   isEditing = signal<boolean>(false);
   showLangModal = signal<boolean>(false);

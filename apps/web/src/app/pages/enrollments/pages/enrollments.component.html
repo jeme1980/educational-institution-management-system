@@ -25,7 +25,7 @@
       <p class="text-xs md:text-sm text-slate-500 mt-1">توزيع وتخصيص الطلاب على الصفوف والشعب الدراسية وتتبع الطاقة الاستيعابية بذكاء وكفاءة.</p>
     </div>
     <div class="flex items-center gap-3 w-full sm:w-auto">
-      <button 
+      <button [hidden]="!canCreateEnrollments()"
         type="button"
         (click)="exportEnrolledList()" 
         class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-all font-bold text-xs shadow-xs active:scale-95 cursor-pointer"
@@ -409,7 +409,7 @@
 
                 <td class="p-3 text-center">
                   <div class="flex items-center justify-center gap-1">
-                    <button 
+                    <button [hidden]="!canUpdateEnrollments()"
                       type="button"
                       (click)="openEditModal(item)"
                       title="تعديل تفاصيل القيد"
@@ -417,7 +417,7 @@
                     >
                       <mat-icon class="text-base block">edit</mat-icon>
                     </button>
-                    <button 
+                    <button [hidden]="!canDeleteEnrollments()"
                       type="button"
                       (click)="deleteEnrollment(item.enrollment.id)"
                       title="إلغاء قيد الطالب"

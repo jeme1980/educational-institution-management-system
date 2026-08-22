@@ -6,6 +6,7 @@ import { ApiService, ClassItem } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,11 +19,16 @@ export class EnrollmentsComponent implements OnInit {
   apiService = inject(ApiService);
   confirmDialog = inject(ConfirmDialogService);
   fb = inject(FormBuilder);
+  authService = inject(AuthService);
 
   Math = Math;
 
   // Split-layout view signals
-  selectedYear = signal<string>('2024-2025');
+  selectedYear = signal<string>('');
+  loadError = signal('');
+  canCreateEnrollments = computed(() => this.authService.hasPermission('students:create'));
+  canUpdateEnrollments = computed(() => this.authService.hasPermission('students:update'));
+  canDeleteEnrollments = computed(() => this.authService.hasPermission('students:delete'));
   selectedGrade = signal<string>('');
   selectedClassroomId = signal<string>('');
 
@@ -79,7 +85,8 @@ export class EnrollmentsComponent implements OnInit {
     await this.apiService.loadAcademicYears();
 
     const years = this.apiService.academicYears() || [];
-    const currentYear = years.find(y => y.isCurrent) || years[0];
+    const selectedYearId = this.apiService.selectedAcademicYearId();
+    const currentYear = years.find(y => y.id === selectedYearId) || years.find(y => y.isCurrent) || years[0];
     if (currentYear) {
       this.selectedYear.set(currentYear.id);
       this.apiService.setSelectedAcademicYearId(currentYear.id);
@@ -110,7 +117,7 @@ export class EnrollmentsComponent implements OnInit {
     const yearId = this.selectedYear();
     const classes = this.apiService.classes() || [];
     const yearClassIds = new Set(classes.filter(c => c.academicYearId === yearId).map(c => c.id));
-    return list.filter(item => item.enrollment.isActive && yearClassIds.has(item.enrollment.classId)).length;
+    return list.filter(item => !item.enrollment.isDeleted && item.enrollment.isActive && yearClassIds.has(item.enrollment.classId)).length;
   });
 
   totalUnassignedStudents = computed(() => {
@@ -125,7 +132,7 @@ export class EnrollmentsComponent implements OnInit {
 
     const enrollments = this.apiService.enrollments() || [];
     const yearClassIds = new Set(yearClasses.map(c => c.id));
-    const yearEnrollmentsCount = enrollments.filter(item => yearClassIds.has(item.enrollment.classId)).length;
+    const yearEnrollmentsCount = enrollments.filter(item => !item.enrollment.isDeleted && item.enrollment.isActive && yearClassIds.has(item.enrollment.classId)).length;
 
     const totalCapacity = yearClasses.length * 30;
     return Math.min(100, Math.round((yearEnrollmentsCount / totalCapacity) * 100));
@@ -139,7 +146,7 @@ export class EnrollmentsComponent implements OnInit {
     
     let count = 0;
     for (const c of yearClasses) {
-      const classEnrolled = enrollments.filter(item => item.enrollment.classId === c.id).length;
+      const classEnrolled = enrollments.filter(item => !item.enrollment.isDeleted && item.enrollment.isActive && item.enrollment.classId === c.id).length;
       if (classEnrolled >= 30) {
         count++;
       }
@@ -216,7 +223,7 @@ export class EnrollmentsComponent implements OnInit {
     const enrollments = this.apiService.enrollments() || [];
     const classId = this.selectedClassroomId();
     if (!classId) return [];
-    return enrollments.filter(item => item.enrollment.classId === classId);
+    return enrollments.filter(item => item.enrollment.academicYearId === this.selectedYear() && !item.enrollment.isDeleted && item.enrollment.classId === classId);
   });
 
   currentClassroomCount = computed(() => this.enrolledInSelectedClass().length);
@@ -248,7 +255,7 @@ export class EnrollmentsComponent implements OnInit {
     
     const activeEnrolledStudentIds = new Set(
       enrollments
-        .filter(item => item.enrollment.isActive)
+        .filter(item => item.enrollment.academicYearId === this.selectedYear() && !item.enrollment.isDeleted && item.enrollment.isActive)
         .map(item => item.enrollment.studentId)
     );
 
@@ -279,7 +286,7 @@ export class EnrollmentsComponent implements OnInit {
   availableStudentsForEnrollment = computed(() => {
     const enrolledIds = new Set(
       (this.apiService.enrollments() || [])
-        .filter(item => item.enrollment.isActive)
+        .filter(item => item.enrollment.academicYearId === this.selectedYear() && !item.enrollment.isDeleted && item.enrollment.isActive)
         .map(item => item.enrollment.studentId),
     );
     return (this.apiService.students() || [])

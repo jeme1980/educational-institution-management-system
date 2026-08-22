@@ -5,6 +5,7 @@
     (exportStudents)="exportStudents()"
     (importFile)="importExcel($event)"
     (addStudent)="openCreateModal()"
+    [canCreate]="canCreateStudents()"
   ></app-student-header>
 
   <!-- Metrics Bento Grid -->
@@ -29,6 +30,9 @@
     [currentPage]="currentPage()"
     [pageSize]="pageSize()"
     [isLoading]="apiService.isLoading()"
+    [loadError]="studentLoadError()"
+    [canEdit]="canUpdateStudents()"
+    [canDelete]="canDeleteStudents()"
     (searchChange)="onSearchChange($event)"
     (classFilterChange)="classFilter.set($event); currentPage.set(1)"
     (statusFilterChange)="statusFilter.set($event); currentPage.set(1)"

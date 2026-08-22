@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormGroup } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +13,7 @@ import { TabType } from '../models/student.model';
 })
 export class StudentFormModal {
   apiService = inject(ApiService);
+  classesForSelectedYear = computed(() => this.apiService.classes().filter(item => item.academicYearId === this.apiService.selectedAcademicYearId()));
 
   show = input<boolean>(false);
   isEditing = input<boolean>(false);

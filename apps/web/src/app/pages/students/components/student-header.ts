@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, EventEmitter, Output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
   templateUrl: './student-header.html',
 })
 export class StudentHeader {
+  @Input() canCreate = true;
   @Output() exportTemplate = new EventEmitter<void>();
   @Output() exportStudents = new EventEmitter<void>();
   @Output() importFile = new EventEmitter<Event>();

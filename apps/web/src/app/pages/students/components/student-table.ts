@@ -25,6 +25,9 @@ export class StudentTable {
   currentPage = input<number>(1);
   pageSize = input<number>(10);
   isLoading = input<boolean>(false);
+  loadError = input<string>('');
+  canEdit = input<boolean>(false);
+  canDelete = input<boolean>(false);
 
   searchChange = output<string>();
   classFilterChange = output<string>();

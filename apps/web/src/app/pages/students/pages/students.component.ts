@@ -12,6 +12,7 @@ import { StudentFormModal } from '../components/student-form-modal';
 import { TabType, DetailTabType, ToastState } from '../models/student.model';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,6 +35,7 @@ export class StudentsComponent implements OnInit {
   apiService = inject(ApiService);
   studentStateService = inject(StudentStateService);
   confirmDialog = inject(ConfirmDialogService);
+  authService = inject(AuthService);
   fb = inject(FormBuilder);
 
   searchTerm = signal<string>('');
@@ -57,6 +59,11 @@ export class StudentsComponent implements OnInit {
   toast = signal<ToastState | null>(null);
   importErrors = signal<string[]>([]);
   isExportingStudents = signal(false);
+  studentLoadError = signal('');
+
+  canCreateStudents = computed(() => this.authService.hasPermission('students:create'));
+  canUpdateStudents = computed(() => this.authService.hasPermission('students:update'));
+  canDeleteStudents = computed(() => this.authService.hasPermission('students:delete'));
 
   studentForm = this.fb.group({
     nationalId: ['', [Validators.required, Validators.maxLength(10)]],
@@ -190,6 +197,7 @@ export class StudentsComponent implements OnInit {
   }
 
   private loadCurrentPage() {
+    this.studentLoadError.set('');
     this.studentStateService.loadStudents(this.searchTerm(), false, {
       page: this.currentPage(),
       pageSize: this.pageSize(),
@@ -198,7 +206,7 @@ export class StudentsComponent implements OnInit {
       genderId: this.genderFilter(),
       sortBy: this.sortBy(),
       sortOrder: this.sortOrder(),
-    }).subscribe();
+    }).subscribe({ error: (error) => this.studentLoadError.set(error.message || 'تعذر تحميل قائمة الطلاب.') });
   }
 
   activeStudentsCount = computed(() => {
@@ -350,7 +358,6 @@ export class StudentsComponent implements OnInit {
     const val = this.studentForm.value;
     const studentPayload = {
       nationalId: val.nationalId ?? undefined,
-      institutionId: val.institutionId ?? undefined,
       classId: val.classId ?? undefined,
       studentStatusId: val.studentStatusId ?? undefined,
       firstNameAr: val.firstNameAr ?? '',

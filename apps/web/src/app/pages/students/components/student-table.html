@@ -176,6 +176,12 @@
       <mat-icon class="animate-spin text-primary text-3xl">sync</mat-icon>
       <span class="font-bold text-slate-600">جاري تحميل وتحديث سجلات الطلاب...</span>
     </div>
+  } @else if (loadError()) {
+    <div class="p-16 text-center text-rose-700 space-y-3" id="student-table-error" role="alert">
+      <mat-icon class="text-5xl">error_outline</mat-icon>
+      <div class="text-base font-bold">{{ loadError() }}</div>
+      <button type="button" (click)="clearFilters()" class="rounded-lg border border-primary px-4 py-2 text-xs font-bold text-primary">إعادة المحاولة</button>
+    </div>
   } @else if (students().length === 0) {
     <div class="p-16 text-center text-slate-400 space-y-3" id="student-table-empty">
       <mat-icon class="text-6xl text-slate-300">person_off</mat-icon>
@@ -254,18 +260,15 @@
                   </div>
                   @if (actionMenuId() === student.id) {
                     <div class="absolute left-2 top-12 z-30 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-right shadow-xl" role="menu">
-                      <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
+                      @if (canEdit()) { <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
                         <mat-icon class="text-base text-amber-700">edit</mat-icon>
                         تعديل الطالب
                       </button>
-                      <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
-                        <mat-icon class="text-base text-blue-700">toggle_on</mat-icon>
-                        تعديل الحالة
-                      </button>
-                      <button type="button" (click)="delete.emit(student.id); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50" role="menuitem">
+                      }
+                      @if (canDelete()) { <button type="button" (click)="delete.emit(student.id); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50" role="menuitem">
                         <mat-icon class="text-base">delete</mat-icon>
                         أرشفة/حذف
-                      </button>
+                      </button> }
                     </div>
                   }
                 </td>
@@ -362,6 +365,7 @@
                       <mat-icon class="text-base block">visibility</mat-icon>
                     </button>
                     <button
+                      [hidden]="!canEdit()"
                       (click)="edit.emit(student)"
                       class="p-1.5 rounded-lg hover:bg-amber-50 text-amber-700 transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
                       title="تعديل حقول الطالب"
@@ -369,6 +373,7 @@
                       <mat-icon class="text-base block">edit</mat-icon>
                     </button>
                     <button
+                      [hidden]="!canDelete()"
                       (click)="delete.emit(student.id)"
                       class="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
                       title="حذف الطالب"
@@ -442,6 +447,7 @@
                   <mat-icon class="text-base block">visibility</mat-icon>
                 </button>
                 <button
+                  [hidden]="!canEdit()"
                   (click)="edit.emit(student)"
                   class="p-1.5 rounded-lg hover:bg-amber-50 text-amber-700 transition-all cursor-pointer border-0 bg-transparent"
                   title="تعديل"
@@ -449,6 +455,7 @@
                   <mat-icon class="text-base block">edit</mat-icon>
                 </button>
                 <button
+                  [hidden]="!canDelete()"
                   (click)="delete.emit(student.id)"
                   class="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition-all cursor-pointer border-0 bg-transparent"
                   title="حذف"

@@ -347,6 +347,7 @@ export async function createStudents(req: ContextRequest, res: Response): Promis
     let enrollmentAcademicYearId = acadYearId;
     let classRecord: { academicYearId: string } | null = null;
     if (academicYearId) {
+      if (academicYearId !== acadYearId) throw new Error('The requested academic year must match the current school context');
       const requestedAcademicYear = await tx.academicYear.findFirst({
         where: { id: academicYearId, institutionId: instId },
         select: { id: true },
@@ -357,7 +358,7 @@ export async function createStudents(req: ContextRequest, res: Response): Promis
 
     if (classId) {
       classRecord = await tx.class.findFirst({
-        where: { id: classId, institutionId: instId },
+        where: { id: classId, institutionId: instId, academicYearId: enrollmentAcademicYearId },
         select: { academicYearId: true },
       });
       if (!classRecord) throw new Error('Class does not belong to the current institution');
@@ -490,22 +491,22 @@ export async function updateStudentsById(req: ContextRequest, res: Response): Pr
     const updatedStudent = await tx.student.update({
       where: { id: existingStudent.id },
       data: {
-        nationalId: nationalId !== undefined ? String(nationalId).trim() : existingStudent.nationalId,
-        firstNameAr,
-        lastNameAr,
-        firstNameHe: firstNameHe || null,
-        lastNameHe: lastNameHe || null,
-        genderId: resolvedGenderId,
-        studentStatusId: resolvedStudentStatusId,
-        birthDate: birthDate ? new Date(birthDate) : null,
-        photoUrl: photoUrl || null,
-        email: email || null,
-        phoneNumber: phoneNumber || null,
-        addressAr: addressAr || null,
-        addressHe: addressHe || null,
-        townId: townId || null,
-        notes: notes || null,
-        isActive: isActive !== undefined ? Boolean(isActive) : true,
+        ...(nationalId !== undefined ? { nationalId: String(nationalId).trim() } : {}),
+        ...(firstNameAr !== undefined ? { firstNameAr } : {}),
+        ...(lastNameAr !== undefined ? { lastNameAr } : {}),
+        ...(firstNameHe !== undefined ? { firstNameHe: firstNameHe || null } : {}),
+        ...(lastNameHe !== undefined ? { lastNameHe: lastNameHe || null } : {}),
+        ...(genderId !== undefined ? { genderId: resolvedGenderId } : {}),
+        ...(studentStatusId !== undefined ? { studentStatusId: resolvedStudentStatusId } : {}),
+        ...(birthDate !== undefined ? { birthDate: birthDate ? new Date(birthDate) : null } : {}),
+        ...(photoUrl !== undefined ? { photoUrl: photoUrl || null } : {}),
+        ...(email !== undefined ? { email: email || null } : {}),
+        ...(phoneNumber !== undefined ? { phoneNumber: phoneNumber || null } : {}),
+        ...(addressAr !== undefined ? { addressAr: addressAr || null } : {}),
+        ...(addressHe !== undefined ? { addressHe: addressHe || null } : {}),
+        ...(townId !== undefined ? { townId: townId || null } : {}),
+        ...(notes !== undefined ? { notes: notes || null } : {}),
+        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
         updatedAt: new Date(),
       },
     });
@@ -547,7 +548,7 @@ export async function updateStudentsById(req: ContextRequest, res: Response): Pr
       }
     }
     if (classId) {
-      const classRecord = await tx.class.findFirst({ where: { id: classId, institutionId: instId } });
+      const classRecord = await tx.class.findFirst({ where: { id: classId, institutionId: instId, academicYearId: acadYearId } });
       if (!classRecord) throw new Error('Class does not belong to the current institution');
       const existingEnrollment = await tx.studentEnrollment.findFirst({ where: { studentId: id, institutionId: instId, academicYearId: acadYearId } });
       if (existingEnrollment) {
@@ -884,7 +885,7 @@ export async function updateStudentEnrollmentsById(req: ContextRequest, res: Res
     studentFeatureId,
   } = req.body;
 
-  const existing = await prisma.studentEnrollment.findFirst({ where: { id, institutionId: instId } });
+  const existing = await prisma.studentEnrollment.findFirst({ where: { id, institutionId: instId, academicYearId: req.context!.academicYearId } });
   if (!existing) {
     return res.status(404).json({ error: 'Enrollment record not found or unauthorized' });
   }
@@ -898,12 +899,12 @@ export async function updateStudentEnrollmentsById(req: ContextRequest, res: Res
   const updated = await prisma.studentEnrollment.update({
     where: { id: existing.id },
     data: {
-      classId: classRoomId,
-      startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : null,
-      isActive: isActive !== undefined ? isActive : true,
-      notes: notes || null,
-      studentFeatureId: studentFeatureId || null,
+      ...(classRoomId !== undefined ? { classId: classRoomId } : {}),
+      ...(startDate !== undefined ? { startDate: startDate ? new Date(startDate) : existing.startDate } : {}),
+      ...(endDate !== undefined ? { endDate: endDate ? new Date(endDate) : null } : {}),
+      ...(isActive !== undefined ? { isActive } : {}),
+      ...(notes !== undefined ? { notes: notes || null } : {}),
+      ...(studentFeatureId !== undefined ? { studentFeatureId: studentFeatureId || null } : {}),
       updatedAt: new Date(),
     },
   });

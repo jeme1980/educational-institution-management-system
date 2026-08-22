@@ -33,13 +33,13 @@
     </button>
     <input type="file" #fileInput class="hidden" accept=".xlsx, .xls, .csv" (change)="onFileChange($event)" id="excel-file-input" />
 
-    <button
+    @if (canCreate) { <button
       id="btn-add-new-student"
       (click)="addStudent.emit()"
       class="flex items-center gap-2 bg-primary text-on-primary px-4 py-2.5 rounded-lg hover:bg-primary-container transition-colors active:scale-95 focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
     >
       <mat-icon class="text-[18px]">person_add</mat-icon>
       <span class="font-label-md text-label-md font-semibold">إضافة طالب جديد</span>
-    </button>
+    </button> }
   </div>
 </div>

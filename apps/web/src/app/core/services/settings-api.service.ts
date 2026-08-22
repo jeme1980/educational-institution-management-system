@@ -18,6 +18,7 @@ export class SettingsApiService extends BaseApiService {
   public institution = signal<any>(null);
   public institutions = signal<any[]>([]);
   public institutionError = signal('');
+  public dashboardError = signal('');
   public towns = signal<Town[]>([]);
   public educationStages = signal<LookupItem[]>([]);
   public gradeLevels = signal<GradeLevel[]>([]);
@@ -111,16 +112,26 @@ export class SettingsApiService extends BaseApiService {
     return false;
   }
 
-  async loadDashboardStats() {
+  async loadDashboardStats(): Promise<boolean> {
     try {
       this.isLoading.set(true);
+      this.dashboardError.set('');
       const res = await this.apiFetch('/api/dashboard/stats', { headers: this.headers });
-      const data = await this.safeJson(res);
-      if (data) {
-        this.stats.set(data);
+      if (!res.ok) {
+        this.dashboardError.set('تعذر تحميل بيانات لوحة القيادة. حاول مرة أخرى.');
+        return false;
       }
+      const data = await this.safeJson(res);
+      if (!data) {
+        this.dashboardError.set('تعذر قراءة بيانات لوحة القيادة. حاول مرة أخرى.');
+        return false;
+      }
+      this.stats.set(data);
+      return true;
     } catch (e) {
       console.error('Failed to load stats', e);
+      this.dashboardError.set('تعذر تحميل بيانات لوحة القيادة. تحقق من الاتصال وحاول مرة أخرى.');
+      return false;
     } finally {
       this.isLoading.set(false);
     }

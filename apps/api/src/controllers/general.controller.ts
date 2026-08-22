@@ -40,8 +40,10 @@ export async function getLookups(_req: ContextRequest, res: Response): Promise<a
 export async function getDashboardStats(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId;
   if (!institutionId) return res.status(400).json({ error: 'institutionId is required' });
+  const academicYearId = req.context?.academicYearId;
+  if (!academicYearId) return res.status(409).json({ error: 'academicYearId context is required' });
   const academicYear = await prisma.academicYear.findFirst({
-    where: { institutionId, isCurrent: true },
+    where: { institutionId, id: academicYearId, archivedAt: null },
     select: { id: true, yearLabel: true },
   });
   if (!academicYear) {

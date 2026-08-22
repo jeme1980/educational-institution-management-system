@@ -5,6 +5,24 @@
     <div class="dashboard__hero-actions"><div class="dashboard__year"><mat-icon>calendar_month</mat-icon><span><small>السنة الدراسية</small>{{ stats?.academicYearLabel || 'السنة الدراسية الحالية' }}</span></div><button type="button" class="dashboard__refresh" (click)="refreshDashboard()" aria-label="تحديث بيانات لوحة القيادة"><mat-icon>refresh</mat-icon>تحديث البيانات</button></div>
   </header>
 
+  @if (viewState() === 'loading') {
+    <section class="dashboard-state" role="status" aria-live="polite">
+      <mat-icon>progress_activity</mat-icon>
+      <h2>جاري تحميل بيانات لوحة القيادة</h2>
+      <p>يتم تحميل بيانات المؤسسة والسنة الدراسية المحددة.</p>
+    </section>
+  } @else if (viewState() === 'error') {
+    <section class="dashboard-state dashboard-state--error" role="alert">
+      <mat-icon>error_outline</mat-icon>
+      <h2>تعذر تحميل لوحة القيادة</h2>
+      <p>{{ loadError() }}</p>
+      <button type="button" class="dashboard-state__retry" (click)="refreshDashboard()">إعادة المحاولة</button>
+    </section>
+  } @else {
+    @if (loadError()) {
+      <div class="dashboard-alert" role="alert"><mat-icon>sync_problem</mat-icon><span>{{ loadError() }}</span></div>
+    }
+
   <section class="kpi-grid" aria-label="المؤشرات الرئيسية">
     <app-dashboard-kpi-card label="إجمالي الطلاب النشطين" [value]="stats?.kpis?.activeStudents || 0" icon="groups" toneClass="kpi-tone--primary" />
     <app-dashboard-kpi-card label="الموظفون والمعلمون" [value]="stats?.kpis?.staffMembers || 0" icon="badge" toneClass="kpi-tone--secondary" />
@@ -29,6 +47,21 @@
     <app-dashboard-bar-chart [data]="stats?.studentsByGrade || []" />
   </section>
 
+  @if (quickActions().length) {
+    <section class="quick-actions" aria-labelledby="dashboard-quick-actions-title">
+      <div class="section-heading"><div><span class="panel__kicker">اختصارات العمل</span><h2 id="dashboard-quick-actions-title">إجراءات سريعة</h2></div><mat-icon>bolt</mat-icon></div>
+      <div class="quick-actions__grid">
+        @for (action of quickActions(); track action.route) {
+          <a class="quick-action" [routerLink]="action.route">
+            <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+            <span><strong>{{ action.label }}</strong><small>{{ action.description }}</small></span>
+            <mat-icon class="quick-action__arrow" aria-hidden="true">arrow_back</mat-icon>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
   <section class="dashboard-grid">
     <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">التوزيع الأكاديمي</span><h2>الكثافة حسب الصف والشعبة</h2></div><mat-icon>school</mat-icon></div><div class="compact-list class-density-list">@for (item of (stats?.classDensity || []); track item.id) {<div class="compact-row"><span>{{ item.label }} · {{ item.className }} @if (item.classCode) {<small>({{ item.classCode }})</small>}</span><strong>{{ item.count }}</strong></div>} @empty {<div class="empty-state">لا توجد بيانات صفوف للسنة الحالية.</div>}</div></article>
     <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">النطاق الجغرافي</span><h2>توزيع الطلاب حسب البلدة</h2></div><mat-icon>location_on</mat-icon></div><div class="compact-list">@for (item of (stats?.studentsByTown || []).slice(0, 8); track item.id) {<div class="compact-row"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></div>} @empty {<div class="empty-state">لا توجد بيانات بلدات.</div>}</div></article>
@@ -48,4 +81,5 @@
     <article class="panel"><div class="panel__heading"><div><span class="panel__kicker">الرعاية والدعم</span><h2>اكتمال بيانات الطلاب</h2></div><mat-icon>health_and_safety</mat-icon></div><div class="support-grid"><div><strong>{{ stats?.support?.specialNeeds || 0 }}</strong><span>احتياجات خاصة</span></div><div><strong>{{ stats?.support?.medicalProfiles || 0 }}</strong><span>ملفات طبية</span></div><div><strong>{{ stats?.support?.allergiesOrChronic || 0 }}</strong><span>حساسية/أمراض مزمنة</span></div><div><strong>{{ stats?.support?.guardianCoveragePercent || 0 }}%</strong><span>اكتمال ربط أولياء الأمور</span></div></div></article>
     <app-dashboard-recent-enrollments [rows]="stats?.recentEnrollments || []" />
   </section>
+  }
 </main>

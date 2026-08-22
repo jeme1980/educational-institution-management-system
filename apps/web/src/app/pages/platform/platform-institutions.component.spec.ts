@@ -32,7 +32,7 @@ describe('PlatformInstitutionsComponent subscription onboarding', () => {
     expect(fixture.componentInstance.activePlans()).toEqual([plan]);
     fixture.componentInstance.openCreate();
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[data-testid="institution-plan-select"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="institution-plan-select"]').length).toBe(1);
     fixture.componentInstance.form.patchValue(formValue);
     await fixture.componentInstance.save();
     const create = calls.find((call) => call.options?.method === 'POST');

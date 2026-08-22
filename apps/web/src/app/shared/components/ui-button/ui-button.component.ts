@@ -17,11 +17,13 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
     <button
       class="ui-button"
       [class]="'ui-button ui-button--' + variant() + ' ui-button--' + size()"
+      [class.ui-button--icon-only]="iconOnly()"
       [attr.type]="type()"
       [attr.form]="form() || null"
       [disabled]="disabled() || loading()"
       [attr.aria-busy]="loading()"
       [attr.aria-label]="ariaLabel() || null"
+      [attr.title]="title() || ariaLabel() || null"
       (click)="activated.emit($event)"
     >
       @if (loading()) {
@@ -64,6 +66,9 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
     .ui-button--md { min-height: var(--space-10); }
     .ui-button--lg { min-height: var(--space-12); padding-inline: var(--space-5); font-size: var(--font-md); }
 
+    .ui-button--icon-only { width: var(--control-height); min-width: var(--control-height); padding-inline: 0; }
+    .ui-button--sm.ui-button--icon-only { width: var(--space-8); min-width: var(--space-8); }
+
     .ui-button--primary { background: var(--primary); color: var(--on-primary); }
     .ui-button--primary:hover:not(:disabled) { background: var(--primary-hover); }
 
@@ -96,5 +101,7 @@ export class UiButtonComponent {
   readonly type = input<'button' | 'submit' | 'reset'>('button');
   readonly form = input('');
   readonly ariaLabel = input('');
+  readonly title = input('');
+  readonly iconOnly = input(false);
   readonly activated = output<MouseEvent>();
 }

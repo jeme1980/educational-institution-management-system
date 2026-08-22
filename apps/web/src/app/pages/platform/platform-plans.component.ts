@@ -6,6 +6,7 @@ import { ApiService } from '../../core/services/api.service';
 import { UiButtonComponent } from '../../shared/components/ui-button/ui-button.component';
 import { UiInputComponent } from '../../shared/components/input/ui-input.component';
 import { UiModalComponent } from '../../shared/components/ui-modal/ui-modal.component';
+import { UiTableActionsComponent } from '../../shared/components/ui-table-actions/ui-table-actions.component';
 
 interface PlatformPlan {
   id: string;
@@ -20,7 +21,7 @@ interface PlatformPlan {
   selector: 'app-platform-plans',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiModalComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiModalComponent, UiTableActionsComponent],
   template: `
     <section dir="rtl" class="space-y-5">
       <header class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -46,7 +47,7 @@ interface PlatformPlan {
                 <td class="px-4 font-semibold text-on-surface">{{ item.nameAr }}</td>
                 <td class="px-4 text-on-surface-variant">{{ item.maxStudents ?? 'غير محدود' }}</td>
                 <td class="px-4"><span class="rounded-full px-2.5 py-1 text-xs font-semibold" [class.bg-success-container]="item.isActive" [class.text-success]="item.isActive" [class.bg-neutral-container]="!item.isActive" [class.text-neutral]="!item.isActive">{{ item.isActive ? 'نشطة' : 'معطلة' }}</span></td>
-                <td class="px-4"><div class="flex justify-center gap-2"><ui-button size="sm" variant="secondary" (activated)="openEdit(item)" [ariaLabel]="'تعديل ' + item.nameAr"><mat-icon aria-hidden="true">edit</mat-icon><span>تعديل</span></ui-button><ui-button size="sm" variant="ghost" (activated)="toggle(item)" [ariaLabel]="(item.isActive ? 'تعطيل ' : 'تفعيل ') + item.nameAr" [loading]="savingId() === item.id"><mat-icon aria-hidden="true">{{ item.isActive ? 'toggle_off' : 'toggle_on' }}</mat-icon><span>{{ item.isActive ? 'تعطيل' : 'تفعيل' }}</span></ui-button></div></td>
+                <td class="px-4 text-center"><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="openEdit(item)" [ariaLabel]="'تعديل ' + item.nameAr"><mat-icon aria-hidden="true">edit</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="toggle(item)" [ariaLabel]="(item.isActive ? 'تعطيل ' : 'تفعيل ') + item.nameAr" [loading]="savingId() === item.id"><mat-icon aria-hidden="true">{{ item.isActive ? 'toggle_off' : 'toggle_on' }}</mat-icon></ui-button></ui-table-actions></td>
               </tr>
             } @empty {
               <tr><td colspan="5" class="p-8 text-center text-on-surface-variant">لا توجد خطط.</td></tr>

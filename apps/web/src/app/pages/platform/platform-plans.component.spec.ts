@@ -27,6 +27,10 @@ describe('PlatformPlansComponent', () => {
   });
 
   it('opens edit with current values and sends an allowlisted PATCH', async () => {
+    const actions = [...fixture.nativeElement.querySelectorAll('td:last-child ui-button button')] as HTMLButtonElement[];
+    expect(actions).toHaveLength(2);
+    expect(actions.every((button) => button.classList.contains('ui-button--icon-only'))).toBe(true);
+    expect(actions[0].getAttribute('aria-label')).toContain('تعديل');
     fixture.componentInstance.openEdit(plans[0]);
     fixture.componentInstance.form.nameAr = 'الخطة المحدثة';
     fixture.componentInstance.form.maxStudents = 120;

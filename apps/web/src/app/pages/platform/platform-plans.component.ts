@@ -7,6 +7,7 @@ import { UiButtonComponent } from '../../shared/components/ui-button/ui-button.c
 import { UiInputComponent } from '../../shared/components/input/ui-input.component';
 import { UiModalComponent } from '../../shared/components/ui-modal/ui-modal.component';
 import { UiTableActionsComponent } from '../../shared/components/ui-table-actions/ui-table-actions.component';
+import { PlatformSubscriptionsComponent } from './platform-subscriptions.component';
 
 interface PlatformPlan {
   id: string;
@@ -21,7 +22,7 @@ interface PlatformPlan {
   selector: 'app-platform-plans',
   changeDetection: ChangeDetectionStrategy.OnPush,
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiModalComponent, UiTableActionsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiModalComponent, UiTableActionsComponent, PlatformSubscriptionsComponent],
   template: `
     <section dir="rtl" class="space-y-5">
       <header class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -37,7 +38,9 @@ interface PlatformPlan {
         <p class="rounded-md px-3 py-2 text-sm font-semibold" [class.bg-success-container]="message.type === 'success'" [class.text-success]="message.type === 'success'" [class.bg-danger-container]="message.type === 'error'" [class.text-danger]="message.type === 'error'" role="status">{{ message.text }}</p>
       }
 
-      <div class="overflow-x-auto rounded-md border border-surface-border bg-surface">
+      <div class="flex flex-wrap gap-2 border-b border-surface-border" role="tablist" aria-label="إدارة الخطط والاشتراكات"><button type="button" role="tab" [attr.aria-selected]="view() === 'plans'" class="min-h-10 border-b-2 px-3 text-sm font-semibold" [class.border-primary]="view() === 'plans'" [class.text-primary]="view() === 'plans'" [class.border-transparent]="view() !== 'plans'" [class.text-on-surface-variant]="view() !== 'plans'" (click)="view.set('plans')">الخطط</button><button type="button" role="tab" [attr.aria-selected]="view() === 'subscriptions'" class="min-h-10 border-b-2 px-3 text-sm font-semibold" [class.border-primary]="view() === 'subscriptions'" [class.text-primary]="view() === 'subscriptions'" [class.border-transparent]="view() !== 'subscriptions'" [class.text-on-surface-variant]="view() !== 'subscriptions'" (click)="view.set('subscriptions')">اشتراكات المؤسسات</button></div>
+
+      <div [hidden]="view() !== 'plans'" class="overflow-x-auto rounded-md border border-surface-border bg-surface">
         <table class="w-full min-w-[720px] text-right text-sm">
           <thead class="bg-surface-container-low text-on-surface-variant"><tr><th class="h-10 px-4">الرمز</th><th class="h-10 px-4">الخطة</th><th class="h-10 px-4">حد الطلاب</th><th class="h-10 px-4">الحالة</th><th class="h-10 px-4 text-center">الإجراءات</th></tr></thead>
           <tbody>
@@ -56,7 +59,7 @@ interface PlatformPlan {
         </table>
       </div>
 
-      <ui-modal [open]="showModal()" [title]="(editing() ? 'تعديل خطة - ' : 'إضافة خطة - ') + (editing()?.nameAr || 'خطة جديدة')" [closeOnBackdrop]="!saving()" [closeOnEscape]="!saving()" (closed)="closeModal()">
+      <ui-modal [open]="view() === 'plans' && showModal()" [title]="(editing() ? 'تعديل خطة - ' : 'إضافة خطة - ') + (editing()?.nameAr || 'خطة جديدة')" [closeOnBackdrop]="!saving()" [closeOnEscape]="!saving()" (closed)="closeModal()">
         <form id="platform-plan-form" ui-modal-body class="grid gap-4 sm:grid-cols-2" (ngSubmit)="save()">
           @if (formError()) { <p class="sm:col-span-2 rounded-md bg-danger-container px-3 py-2 text-sm font-semibold text-danger" role="alert">{{ formError() }}</p> }
           <label class="text-sm font-semibold">رمز الخطة <ui-input name="code" [(ngModel)]="form.code" [readOnly]="!!editing()" [required]="!editing()" dir="ltr" /></label>
@@ -66,6 +69,7 @@ interface PlatformPlan {
         </form>
         <div ui-modal-footer class="flex gap-2"><ui-button variant="secondary" type="button" [disabled]="saving()" (activated)="closeModal()">إلغاء</ui-button><ui-button type="submit" form="platform-plan-form" [loading]="saving()"><mat-icon aria-hidden="true">save</mat-icon><span>حفظ</span></ui-button></div>
       </ui-modal>
+      <app-platform-subscriptions [hidden]="view() !== 'subscriptions'" />
     </section>
   `,
   styles: [':host { display: block; }'],
@@ -73,6 +77,7 @@ interface PlatformPlan {
 export class PlatformPlansComponent {
   private readonly api = inject(ApiService);
   readonly plans = signal<PlatformPlan[]>([]);
+  readonly view = signal<'plans' | 'subscriptions'>('plans');
   readonly editing = signal<PlatformPlan | null>(null);
   readonly showModal = signal(false);
   readonly saving = signal(false);

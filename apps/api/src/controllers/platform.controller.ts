@@ -4,6 +4,7 @@ import type { ContextRequest } from '../middleware/context';
 import { platformPrisma } from '../db/platform-prisma';
 import { recordPlatformAuditEvent } from '../services/platform-audit.service';
 import { assignPlatformSubscription, renewPlatformSubscription, transitionPlatformSubscription } from '../services/platform-subscription.service';
+import { getEffectiveSubscriptionState } from '../services/subscription.service';
 import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup } from '../services/school-onboarding.service';
 
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -279,7 +280,8 @@ export async function getInstitution(req: ContextRequest, res: Response): Promis
   const institution = await platformPrisma.institution.findUnique({ where: { id }, include: { ...institutionRelations, subscriptions: { orderBy: { startsAt: 'desc' }, include: { plan: true } } } });
   if (!institution) { res.status(404).json({ error: 'Institution not found.' }); return; }
   const { subscriptions, ...metadata } = institution;
-  res.json({ ...metadata, currentSubscription: subscriptions.find((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'].includes(item.status)) || null, subscriptionHistory: subscriptions, initialAdmin: await getInitialAdminStatus(id) });
+  const subscriptionState = await getEffectiveSubscriptionState(id, platformPrisma);
+  res.json({ ...metadata, currentSubscription: subscriptions.find((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'].includes(item.status)) || null, subscriptionHistory: subscriptions, subscriptionState, initialAdmin: await getInitialAdminStatus(id) });
 }
 
 const onboardingResponse = (value: any) => process.env['NODE_ENV'] === 'production' ? { ...value, setup: { expiresAt: value.setup.expiresAt } } : value;
@@ -302,6 +304,8 @@ export async function createInstitution(req: ContextRequest, res: Response): Pro
   const schoolCode = String(body.schoolCode).trim().toUpperCase();
   const slug = String(body.slug || `school-${schoolCode.toLowerCase().replace(/_/g, '-')}`).trim().toLowerCase();
   const email = body.email ? String(body.email).trim().toLowerCase() : null;
+  const planId = body.planId ? String(body.planId) : null;
+  if (planId && !uuid(planId)) { res.status(400).json({ error: 'Selected plan is invalid.' }); return; }
   if (!/^[A-Z0-9_-]{2,20}$/.test(schoolCode) || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 80 || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) { res.status(400).json({ error: 'Institution code, slug, or email format is invalid.' }); return; }
   try {
     const region = await platformPrisma.region.findUnique({ where: { id: body.regionId }, select: { id: true } });
@@ -311,9 +315,13 @@ export async function createInstitution(req: ContextRequest, res: Response): Pro
       if (!town || town.regionId !== body.regionId) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
     }
     const result = await platformPrisma.$transaction(async (tx) => {
+      const plan = planId ? await tx.plan.findUnique({ where: { id: planId }, select: { id: true, isActive: true } }) : null;
+      if (planId && (!plan || !plan.isActive)) throw Object.assign(new Error('Plan not found or inactive.'), { statusCode: 400 });
       const institution = await tx.institution.create({ data: { schoolCode, slug, nameAr: String(body.nameAr).trim(), nameHe: body.nameHe ? String(body.nameHe).trim() : null, phoneNumber: body.phoneNumber ? String(body.phoneNumber).trim() : null, email, typeId: body.typeId, regionId: body.regionId, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, townId: uuid(body.townId) ? body.townId : null, logoUrl: body.logoUrl || null, brandingSettings: body.brandingSettings || null, createdBy: req.user?.uid || null } });
+      const subscription = plan ? await tx.institutionSubscription.create({ data: { institutionId: institution.id, planId: plan.id, status: 'ACTIVE', startsAt: new Date() }, include: { plan: true } }) : null;
       await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'INSTITUTION_CREATED', entityType: 'Institution', entityId: institution.id, targetInstitutionId: institution.id, metadata: { schoolCode } }, tx);
-      return { institution, subscription: null };
+      if (subscription) await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'SUBSCRIPTION_ASSIGNED', entityType: 'InstitutionSubscription', entityId: subscription.id, targetInstitutionId: institution.id, targetPlanId: planId, metadata: { status: subscription.status, source: 'institution_creation' } }, tx);
+      return { institution, subscription };
     });
     res.status(201).json(result);
   } catch (error) { errorResponse(res, error); }

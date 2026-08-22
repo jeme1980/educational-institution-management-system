@@ -20,6 +20,8 @@ const errorResponse = (res: Response, error: any) => {
   throw error;
 };
 
+type ReferenceValidationError = { message: string; fieldErrors: Record<string, string> };
+
 const providerInput = (body: Record<string, unknown>, partial = false) => {
   const data: { providerCode?: string; name?: string; isActive?: boolean; sortOrder?: number } = {};
   if (!partial || body.providerCode !== undefined) data.providerCode = String(body.providerCode || '').trim();
@@ -126,15 +128,19 @@ const platformReferenceData = (key: PlatformReferenceKey, body: Record<string, u
   return data;
 };
 
-const validatePlatformReferenceData = async (key: PlatformReferenceKey, data: Record<string, unknown>, partial: boolean): Promise<string | null> => {
-  if ((!partial || data.nameAr !== undefined) && key !== 'providers' && !data.nameAr) return 'Arabic name is required.';
-  if (key === 'providers' && ((!partial && (!data.providerCode || !data.name)) || data.providerCode === null || data.name === null)) return 'Provider code and name are required.';
-  if (data.sortOrder !== undefined && (!Number.isInteger(data.sortOrder) || Number(data.sortOrder) < 0)) return 'Sort order must be a non-negative integer.';
-  if (key === 'languages' && data.direction !== undefined && !['rtl', 'ltr'].includes(String(data.direction))) return 'Language direction must be rtl or ltr.';
-  if (key === 'languages' && ((!partial && !data.nativeName) || data.nativeName === null)) return 'Native language name is required.';
-  if (key === 'gradeLevels' && ((!partial && !Number.isInteger(data.codeNumber)) || (data.codeNumber !== undefined && !Number.isInteger(data.codeNumber)))) return 'Grade code must be an integer.';
-  if (key === 'genders' && ((!partial && !/^[a-z]$/i.test(String(data.genderCode || ''))) || (data.genderCode !== undefined && !/^[a-z]$/i.test(String(data.genderCode || ''))))) return 'Gender code must be one letter.';
-  if (key === 'towns' && (!partial || data.regionId !== undefined) && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) return 'An active region is required for a town.';
+const validatePlatformReferenceData = async (key: PlatformReferenceKey, data: Record<string, unknown>, partial: boolean): Promise<ReferenceValidationError | null> => {
+  const invalid = (message: string, field: string): ReferenceValidationError => ({ message, fieldErrors: { [field]: message } });
+  if ((!partial || data.nameAr !== undefined) && key !== 'providers' && !data.nameAr) return invalid('Arabic name is required.', 'nameAr');
+  if (key === 'providers') {
+    if ((!partial || data.providerCode !== undefined) && (!data.providerCode || String(data.providerCode).length > 20)) return invalid(data.providerCode ? 'Provider code must be 20 characters or fewer.' : 'Provider code is required.', 'providerCode');
+    if ((!partial || data.name !== undefined) && (!data.name || String(data.name).length > 150)) return invalid(data.name ? 'Provider name must be 150 characters or fewer.' : 'Provider name is required.', 'name');
+  }
+  if (data.sortOrder !== undefined && (!Number.isInteger(data.sortOrder) || Number(data.sortOrder) < 0)) return invalid('Sort order must be a non-negative integer.', 'sortOrder');
+  if (key === 'languages' && data.direction !== undefined && !['rtl', 'ltr'].includes(String(data.direction))) return invalid('Language direction must be rtl or ltr.', 'direction');
+  if (key === 'languages' && ((!partial && !data.nativeName) || data.nativeName === null)) return invalid('Native language name is required.', 'nativeName');
+  if (key === 'gradeLevels' && ((!partial && !Number.isInteger(data.codeNumber)) || (data.codeNumber !== undefined && !Number.isInteger(data.codeNumber)))) return invalid('Grade code must be an integer.', 'codeNumber');
+  if (key === 'genders' && ((!partial && !/^[a-z]$/i.test(String(data.genderCode || ''))) || (data.genderCode !== undefined && !/^[a-z]$/i.test(String(data.genderCode || ''))))) return invalid('Gender code must be one letter.', 'genderCode');
+  if (key === 'towns' && (!partial || data.regionId !== undefined) && (!uuid(data.regionId) || !(await platformPrisma.region.findFirst({ where: { id: String(data.regionId), isActive: true }, select: { id: true } })))) return invalid('An active region is required for a town.', 'regionId');
   return null;
 };
 
@@ -168,7 +174,7 @@ export async function createPlatformReferenceData(req: ContextRequest, res: Resp
   if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
   const data = platformReferenceData(key, req.body || {});
   const validationError = await validatePlatformReferenceData(key, data, false);
-  if (validationError) { res.status(400).json({ error: validationError }); return; }
+  if (validationError) { res.status(400).json({ code: 'VALIDATION_ERROR', message: validationError.message, fieldErrors: validationError.fieldErrors }); return; }
   try {
     const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
     const created = await platformPrisma.$transaction(async (tx) => {
@@ -177,7 +183,10 @@ export async function createPlatformReferenceData(req: ContextRequest, res: Resp
       return row;
     });
     res.status(201).json(created);
-  } catch (error) { errorResponse(res, error); }
+  } catch (error: any) {
+    if (key === 'providers' && error?.code === 'P2002') { res.status(409).json({ code: 'DUPLICATE_PROVIDER_CODE', message: 'Provider code is already in use.', fieldErrors: { providerCode: 'Provider code is already in use.' } }); return; }
+    errorResponse(res, error);
+  }
 }
 
 export async function updatePlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {
@@ -191,7 +200,7 @@ export async function updatePlatformReferenceData(req: ContextRequest, res: Resp
     if (!current) { res.status(404).json({ error: 'Reference item not found.' }); return; }
     const data = platformReferenceData(key, req.body || {}, true);
     const validationError = await validatePlatformReferenceData(key, data, true);
-    if (validationError) { res.status(400).json({ error: validationError }); return; }
+    if (validationError) { res.status(400).json({ code: 'VALIDATION_ERROR', message: validationError.message, fieldErrors: validationError.fieldErrors }); return; }
     const editableFields = REFERENCE_DISPLAY_FIELDS[key] || [];
     if (current.isSystem === true && Object.keys(data).some((field) => !editableFields.includes(field))) { res.status(409).json({ error: 'System lookup items allow display-field changes only.' }); return; }
     if (key === 'towns' && data.regionId !== undefined && data.regionId !== current.regionId) {
@@ -206,7 +215,10 @@ export async function updatePlatformReferenceData(req: ContextRequest, res: Resp
       return row;
     });
     res.json(updated);
-  } catch (error) { errorResponse(res, error); }
+  } catch (error: any) {
+    if (key === 'providers' && error?.code === 'P2002') { res.status(409).json({ code: 'DUPLICATE_PROVIDER_CODE', message: 'Provider code is already in use.', fieldErrors: { providerCode: 'Provider code is already in use.' } }); return; }
+    errorResponse(res, error);
+  }
 }
 
 export async function deletePlatformReferenceData(req: ContextRequest, res: Response): Promise<void> {

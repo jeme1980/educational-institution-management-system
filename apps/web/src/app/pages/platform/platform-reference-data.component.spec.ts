@@ -47,7 +47,11 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
   });
 
   function setName(value: string): void {
-    const input = fixture.nativeElement.querySelector('input[name="nameAr"]') as HTMLInputElement;
+    setInput('nameAr', value);
+  }
+
+  function setInput(name: string, value: string): void {
+    const input = fixture.nativeElement.querySelector(`input[name="${name}"]`) as HTMLInputElement;
     input.value = value;
     input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.detectChanges();
@@ -82,5 +86,23 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     const update = calls.find((call) => call.options?.method === 'PATCH');
     expect(update?.path).toBe('/api/platform/reference-data/regions/region-1');
     expect(JSON.parse(String(update?.options?.body)).nameAr).toBe('منطقة معدلة');
+  });
+
+  it('submits Provider Create with the provider contract and normalized sort order', async () => {
+    const providerTab = [...fixture.nativeElement.querySelectorAll('nav button')].find((button) => button.textContent?.includes('المزوّدون')) as HTMLButtonElement;
+    providerTab.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('ui-button button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    setInput('providerCode', 'TEST-PROVIDER-001');
+    setInput('name', 'مزود اختبار');
+    setInput('sortOrder', '1');
+    clickSave();
+    await fixture.whenStable();
+
+    const create = calls.find((call) => call.options?.method === 'POST');
+    expect(create?.path).toBe('/api/platform/reference-data/providers');
+    expect(JSON.parse(String(create?.options?.body))).toEqual({ providerCode: 'TEST-PROVIDER-001', name: 'مزود اختبار', sortOrder: 1, isActive: true });
   });
 });

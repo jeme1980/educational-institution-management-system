@@ -95,3 +95,29 @@ test('Platform reference-data authorization distinguishes unauthenticated and sc
   assert.equal((await runMiddleware({})).statusCode, 401);
   assert.equal((await runMiddleware({ user: { uid: schoolUser.id } })).statusCode, 403);
 });
+
+test('Provider reference-data validation returns field errors and handles duplicate codes', async () => {
+  const suffix = Date.now().toString().slice(-8);
+  const actor = await admin.user.findFirstOrThrow({ where: { isPlatformAdmin: true } });
+  const request = { user: { uid: actor.id }, body: {}, params: {}, query: {} };
+  const invalidNumber = await invoke(createPlatformReferenceData, { ...request, params: { table: 'providers' }, body: { providerCode: `N${suffix}`, name: 'Invalid sort order', sortOrder: 'not-a-number', isActive: true } });
+  assert.equal(invalidNumber.statusCode, 400);
+  assert.equal(invalidNumber.body.code, 'VALIDATION_ERROR');
+  assert.equal(invalidNumber.body.fieldErrors.sortOrder, 'Sort order must be a non-negative integer.');
+
+  const missingCode = await invoke(createPlatformReferenceData, { ...request, params: { table: 'providers' }, body: { name: 'Missing code', sortOrder: 1, isActive: true } });
+  assert.equal(missingCode.statusCode, 400);
+  assert.equal(missingCode.body.fieldErrors.providerCode, 'Provider code is required.');
+
+  const created = await invoke(createPlatformReferenceData, { ...request, params: { table: 'providers' }, body: { providerCode: `V${suffix}`, name: 'Valid provider', sortOrder: 1, isActive: true } });
+  assert.equal(created.statusCode, 201);
+  try {
+    const duplicate = await invoke(createPlatformReferenceData, { ...request, params: { table: 'providers' }, body: { providerCode: `V${suffix}`, name: 'Duplicate provider', sortOrder: 1, isActive: true } });
+    assert.equal(duplicate.statusCode, 409);
+    assert.equal(duplicate.body.code, 'DUPLICATE_PROVIDER_CODE');
+    assert.equal(duplicate.body.fieldErrors.providerCode, 'Provider code is already in use.');
+  } finally {
+    await admin.platformAuditLog.deleteMany({ where: { entityId: created.body.id } });
+    await admin.provider.delete({ where: { id: created.body.id } });
+  }
+});

@@ -6,7 +6,7 @@ import { hashPassword } from './password';
 
 const invoke = async (handler: any, req: any) => {
   let statusCode = 200; let body: any;
-  const res: any = { status: (code: number) => { statusCode = code; return res; }, json: (value: any) => { body = value; return res; } };
+  const res: any = { status: (code: number) => { statusCode = code; return res; }, setHeader: () => res, json: (value: any) => { body = value; return res; } };
   await handler(req, res);
   return { statusCode, body };
 };

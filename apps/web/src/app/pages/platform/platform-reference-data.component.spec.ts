@@ -113,6 +113,20 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     expect(fixture.componentInstance.showModal()).toBe(false);
   });
 
+  it('updates a system Education Type with display fields only', async () => {
+    fixture.componentInstance.activeTable.set('educationTypes');
+    fixture.componentInstance.items.set([{ id: 'education-type-1', nameAr: 'تعليم عام', nameHe: 'חינוך כללי', sortOrder: 1, isActive: true, isSystem: true }]);
+    fixture.componentInstance.openEdit(fixture.componentInstance.items()[0]);
+    fixture.componentInstance.form.nameAr = 'تعليم محدث';
+    await fixture.componentInstance.save();
+
+    const update = calls.find((call) => call.options?.method === 'PATCH');
+    expect(update?.path).toBe('/api/platform/reference-data/educationTypes/education-type-1');
+    expect(JSON.parse(String(update?.options?.body))).toEqual({ nameAr: 'تعليم محدث', nameHe: 'חינוך כללי', sortOrder: 1 });
+    expect(JSON.parse(String(update?.options?.body))).not.toHaveProperty('isActive');
+    expect(fixture.componentInstance.showModal()).toBe(false);
+  });
+
   it('removes a deleted row after a successful DELETE response', async () => {
     const remove = fixture.nativeElement.querySelector('button[aria-label^="حذف"]') as HTMLButtonElement;
     remove.click();

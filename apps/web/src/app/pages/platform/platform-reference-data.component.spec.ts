@@ -54,6 +54,15 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     setInput('nameAr', value);
   }
 
+  it('keeps the selected reference-data item on semantic active colors', () => {
+    const selected = fixture.nativeElement.querySelector('nav button') as HTMLButtonElement;
+    const icon = selected.querySelector('mat-icon') as HTMLElement;
+
+    expect(selected.classList).toContain('bg-primary');
+    expect(selected.classList).toContain('text-on-primary');
+    expect(icon).toBeTruthy();
+  });
+
   function setInput(name: string, value: string): void {
     const input = fixture.nativeElement.querySelector(`input[name="${name}"]`) as HTMLInputElement;
     input.value = value;

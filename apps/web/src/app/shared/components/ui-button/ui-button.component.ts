@@ -18,6 +18,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
       class="ui-button"
       [class]="'ui-button ui-button--' + variant() + ' ui-button--' + size()"
       [attr.type]="type()"
+      [attr.form]="form() || null"
       [disabled]="disabled() || loading()"
       [attr.aria-busy]="loading()"
       [attr.aria-label]="ariaLabel() || null"
@@ -93,6 +94,7 @@ export class UiButtonComponent {
   readonly loading = input(false);
   readonly disabled = input(false);
   readonly type = input<'button' | 'submit' | 'reset'>('button');
+  readonly form = input('');
   readonly ariaLabel = input('');
   readonly activated = output<MouseEvent>();
 }

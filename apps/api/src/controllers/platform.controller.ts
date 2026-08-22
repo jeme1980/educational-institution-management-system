@@ -5,7 +5,7 @@ import { platformPrisma } from '../db/platform-prisma';
 import { recordPlatformAuditEvent } from '../services/platform-audit.service';
 import { assignPlatformSubscription, renewPlatformSubscription, transitionPlatformSubscription } from '../services/platform-subscription.service';
 import { getEffectiveSubscriptionState } from '../services/subscription.service';
-import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup } from '../services/school-onboarding.service';
+import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup, revokeInitialAdminSetup } from '../services/school-onboarding.service';
 
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 const current = { status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as SubscriptionStatus[] } };
@@ -284,6 +284,14 @@ export async function getInstitution(req: ContextRequest, res: Response): Promis
   res.json({ ...metadata, currentSubscription: subscriptions.find((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'].includes(item.status)) || null, subscriptionHistory: subscriptions, subscriptionState, initialAdmin: await getInitialAdminStatus(id) });
 }
 
+export async function getInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
+  const id = String(req.params.id || '');
+  if (!uuid(id)) { res.status(400).json({ error: 'Invalid institution id.' }); return; }
+  const institution = await platformPrisma.institution.findUnique({ where: { id }, select: { id: true } });
+  if (!institution) { res.status(404).json({ error: 'Institution not found.' }); return; }
+  res.json(await getInitialAdminStatus(id));
+}
+
 const onboardingResponse = (value: any) => process.env['NODE_ENV'] === 'production' ? { ...value, setup: { expiresAt: value.setup.expiresAt } } : value;
 
 export async function provisionInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
@@ -295,6 +303,10 @@ export async function provisionInitialAdmin(req: ContextRequest, res: Response):
 
 export async function reissueInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
   try { res.json(onboardingResponse(await reissueInitialAdminSetup({ institutionId: String(req.params.id || ''), actorUserId: req.user?.uid }))); } catch (error) { errorResponse(res, error); }
+}
+
+export async function revokeInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
+  try { res.json(await revokeInitialAdminSetup({ institutionId: String(req.params.id || ''), actorUserId: req.user?.uid })); } catch (error) { errorResponse(res, error); }
 }
 
 export async function createInstitution(req: ContextRequest, res: Response): Promise<void> {

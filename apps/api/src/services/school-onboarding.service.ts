@@ -42,7 +42,7 @@ export async function getInitialAdminStatus(institutionId: string, client: Prism
       pendingSetup: admin.user.mustChangePassword,
       latestToken: latest,
     });
-    return { hasInitialAdmin: true, status, admin: { id: admin.user.id, email: admin.user.email, displayName: `${admin.staffMember.firstNameAr} ${admin.staffMember.familyNameAr}`.trim(), isActive: admin.user.isActive }, setup: latest ? { expiresAt: latest.expiresAt, usedAt: latest.usedAt } : null };
+    return { hasInitialAdmin: true, status, admin: { id: admin.user.id, email: admin.user.email, displayName: `${admin.staffMember.firstNameAr} ${admin.staffMember.familyNameAr}`.trim(), isActive: admin.user.isActive, activatedAt: admin.user.mustChangePassword ? null : admin.user.updatedAt }, setup: latest ? { expiresAt: latest.expiresAt, usedAt: latest.usedAt } : null };
   }, client);
 }
 
@@ -50,8 +50,9 @@ export async function provisionInitialSchoolAdmin(input: { institutionId: string
   const normalizedEmail = input.email.trim().toLowerCase();
   if (!normalizedEmail || !input.firstNameAr.trim() || !input.familyNameAr.trim()) throw Object.assign(new Error('Administrator email and required name fields are required.'), { statusCode: 400 });
   return withPlatformInstitutionContext(input.institutionId, async (tx) => {
-    const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { id: true, nameAr: true } });
+    const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { id: true, nameAr: true, archivedAt: true } });
     if (!institution) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
+    if (institution.archivedAt) throw Object.assign(new Error('Archived institutions cannot receive an administrator setup link.'), { statusCode: 409, code: 'INSTITUTION_ARCHIVED' });
     const subscription = await tx.institutionSubscription.findFirst({ where: { institutionId: input.institutionId, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] } }, orderBy: { startsAt: 'desc' } });
     if (!subscription) throw Object.assign(new Error('An active subscription is required before provisioning the initial administrator.'), { statusCode: 409 });
     if (await getInitialAdmin(tx, input.institutionId)) throw Object.assign(new Error('The initial administrator is already provisioned.'), { statusCode: 409 });
@@ -74,6 +75,8 @@ export async function provisionInitialSchoolAdmin(input: { institutionId: string
 
 export async function reissueInitialAdminSetup(input: { institutionId: string; actorUserId?: string }) {
   return withPlatformInstitutionContext(input.institutionId, async (tx) => {
+    const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { archivedAt: true } });
+    if (institution?.archivedAt) throw Object.assign(new Error('Archived institutions cannot receive an administrator setup link.'), { statusCode: 409, code: 'INSTITUTION_ARCHIVED' });
     const admin = await getInitialAdmin(tx, input.institutionId);
     if (!admin) throw Object.assign(new Error('The initial administrator has not been provisioned.'), { statusCode: 404 });
     if (!admin.user.isActive || !admin.isActive || admin.archivedAt) throw Object.assign(new Error('The initial administrator account is disabled.'), { statusCode: 409 });
@@ -81,5 +84,19 @@ export async function reissueInitialAdminSetup(input: { institutionId: string; a
     const token = await issueAccountSetupToken(tx, admin.userId);
     await recordPlatformAuditEvent({ actorUserId: input.actorUserId, action: 'ACCOUNT_SETUP_REISSUED', entityType: 'InstitutionUser', entityId: admin.id, targetInstitutionId: input.institutionId, metadata: { userId: admin.userId } }, tx);
     return { institutionId: input.institutionId, email: admin.user.email, setup: setupDeliveryMetadata(token) };
+  });
+}
+
+export async function revokeInitialAdminSetup(input: { institutionId: string; actorUserId?: string }) {
+  return withPlatformInstitutionContext(input.institutionId, async (tx) => {
+    const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { archivedAt: true } });
+    if (institution?.archivedAt) throw Object.assign(new Error('Archived institutions cannot receive administrator setup changes.'), { statusCode: 409, code: 'INSTITUTION_ARCHIVED' });
+    const admin = await getInitialAdmin(tx, input.institutionId);
+    if (!admin) throw Object.assign(new Error('The initial administrator has not been provisioned.'), { statusCode: 404 });
+    if (!admin.user.mustChangePassword) throw Object.assign(new Error('The initial administrator account is already active.'), { statusCode: 409 });
+    const revokedAt = new Date();
+    const result = await tx.userAccountSetupToken.updateMany({ where: { userId: admin.userId, usedAt: null }, data: { usedAt: revokedAt } });
+    await recordPlatformAuditEvent({ actorUserId: input.actorUserId, action: 'ACCOUNT_SETUP_REVOKED', entityType: 'InstitutionUser', entityId: admin.id, targetInstitutionId: input.institutionId, metadata: { userId: admin.userId, revokedCount: result.count } }, tx);
+    return { institutionId: input.institutionId, revokedAt, revokedCount: result.count };
   });
 }

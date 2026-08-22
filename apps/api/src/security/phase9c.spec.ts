@@ -3,7 +3,7 @@ import test from 'node:test';
 import { testAdminPrisma as platformPrisma } from '../db/test-admin-prisma';
 import { hashPassword } from '../security/password';
 import { requirePlatformAdmin } from '../middleware/platform-auth.middleware';
-import { provisionInitialSchoolAdmin, reissueInitialAdminSetup } from '../services/school-onboarding.service';
+import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup, revokeInitialAdminSetup } from '../services/school-onboarding.service';
 import { completeAccountSetup } from '../controllers/account-setup.controller';
 import { createAuthLogin } from '../controllers/auth.controller';
 
@@ -34,6 +34,9 @@ test('Phase 9C: initial administrator provisioning and secure account setup', as
     assert.equal(detail?.roles[0]?.role.isSystem, true);
 
     const oldToken = tokenFromSetupUrl(provisioned.setup.setupUrl!);
+    await revokeInitialAdminSetup({ institutionId: institution.id, actorUserId: actor.id });
+    assert.equal((await getInitialAdminStatus(institution.id)).status, 'SETUP_EXPIRED');
+    assert.equal((await invoke(completeAccountSetup, { token: oldToken, password: 'School@2026!', confirmPassword: 'School@2026!' })).statusCode, 400);
     const reissued = await reissueInitialAdminSetup({ institutionId: institution.id, actorUserId: actor.id });
     assert.ok(reissued.setup.setupUrl);
     assert.notEqual(oldToken, tokenFromSetupUrl(reissued.setup.setupUrl!));

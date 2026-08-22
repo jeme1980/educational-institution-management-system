@@ -31,6 +31,8 @@ describe('PlatformInstitutionsComponent subscription onboarding', () => {
   it('loads active plans and sends the selected plan only on create', async () => {
     expect(fixture.componentInstance.activePlans()).toEqual([plan]);
     fixture.componentInstance.openCreate();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="institution-plan-select"]')).not.toBeNull();
     fixture.componentInstance.form.patchValue(formValue);
     await fixture.componentInstance.save();
     const create = calls.find((call) => call.options?.method === 'POST');
@@ -39,6 +41,8 @@ describe('PlatformInstitutionsComponent subscription onboarding', () => {
 
   it('does not include planId in edit payloads', async () => {
     fixture.componentInstance.openEdit({ id: 'institution-1', ...formValue });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-testid="institution-plan-select"]')).toBeNull();
     fixture.componentInstance.form.patchValue({ nameAr: 'Updated', planId: 'plan-1' });
     await fixture.componentInstance.save();
     const update = calls.find((call) => call.options?.method === 'PATCH');

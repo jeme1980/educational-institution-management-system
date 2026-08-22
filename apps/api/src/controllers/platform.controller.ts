@@ -14,7 +14,7 @@ const errorResponse = (res: Response, error: any) => {
   if (error?.code === 'P2025') { res.status(404).json({ error: 'Reference or platform record not found.' }); return; }
   const statusCode = Number(error?.statusCode);
   if (Number.isInteger(statusCode) && statusCode >= 400 && statusCode < 500) {
-    res.status(statusCode).json({ error: error?.message || 'Platform operation failed.', ...(error?.code ? { code: error.code } : {}) });
+    res.status(statusCode).json({ error: error?.message || 'Platform operation failed.', ...(error?.code ? { code: error.code } : {}), ...(error?.field ? { field: error.field } : {}), ...(error?.currentUsage !== undefined ? { currentUsage: error.currentUsage } : {}) });
     return;
   }
   throw error;
@@ -382,14 +382,71 @@ export async function listPlans(_req: ContextRequest, res: Response): Promise<vo
 export async function createPlan(req: ContextRequest, res: Response): Promise<void> {
   const body = req.body || {};
   if (!body.code || !body.nameAr) { res.status(400).json({ error: 'Plan code and Arabic name are required.' }); return; }
-  try { const plan = await platformPrisma.plan.create({ data: { code: String(body.code).trim().toUpperCase(), nameAr: String(body.nameAr), nameHe: body.nameHe || null, descriptionAr: body.descriptionAr || null, descriptionHe: body.descriptionHe || null, maxStudents: body.maxStudents == null ? null : Number(body.maxStudents), maxStaff: body.maxStaff == null ? null : Number(body.maxStaff), maxUsers: body.maxUsers == null ? null : Number(body.maxUsers) } }); await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'PLAN_CREATED', entityType: 'Plan', entityId: plan.id, targetPlanId: plan.id, metadata: { code: plan.code } }); res.status(201).json(plan); } catch (error) { errorResponse(res, error); }
+  const parsed = parsePlanPatch(Object.fromEntries(planEditableFields.filter((field) => body[field] !== undefined).map((field) => [field, body[field]])));
+  if (parsed.error) { res.status(400).json({ code: parsed.error.code, error: parsed.error.message, ...(parsed.error.field ? { field: parsed.error.field } : {}) }); return; }
+  try { const plan = await platformPrisma.plan.create({ data: { code: String(body.code).trim().toUpperCase(), ...(parsed.data as any) } }); await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'PLAN_CREATED', entityType: 'Plan', entityId: plan.id, targetPlanId: plan.id, metadata: { code: plan.code } }); res.status(201).json(plan); } catch (error) { errorResponse(res, error); }
+}
+
+const planEditableFields = ['nameAr', 'nameHe', 'descriptionAr', 'descriptionHe', 'maxStudents', 'maxStaff', 'maxUsers', 'isActive'] as const;
+type PlanEditableField = typeof planEditableFields[number];
+
+function parsePlanPatch(body: Record<string, unknown>): { data?: Record<string, unknown>; changedFields?: PlanEditableField[]; error?: { message: string; field?: string; code?: string } } {
+  const immutable = Object.keys(body).find((field) => !planEditableFields.includes(field as PlanEditableField));
+  if (immutable) return { error: { code: 'IMMUTABLE_FIELD', field: immutable, message: `Plan field '${immutable}' cannot be modified.` } };
+  const data: Record<string, unknown> = {};
+  const changedFields = Object.keys(body) as PlanEditableField[];
+  for (const field of changedFields) {
+    const value = body[field];
+    if (field === 'nameAr') {
+      if (typeof value !== 'string' || !value.trim()) return { error: { code: 'VALIDATION_ERROR', field, message: 'Plan Arabic name is required.' } };
+      data[field] = value.trim();
+    } else if (field === 'nameHe' || field === 'descriptionAr' || field === 'descriptionHe') {
+      if (value !== null && value !== undefined && typeof value !== 'string') return { error: { code: 'VALIDATION_ERROR', field, message: `${field} must be a string or null.` } };
+      data[field] = typeof value === 'string' && value.trim() ? value.trim() : null;
+    } else if (field === 'isActive') {
+      if (typeof value !== 'boolean') return { error: { code: 'VALIDATION_ERROR', field, message: 'isActive must be a boolean.' } };
+      data[field] = value;
+    } else if (value !== null && value !== undefined) {
+      if (!Number.isInteger(value) || Number(value) < 0) return { error: { code: 'VALIDATION_ERROR', field, message: `${field} must be a non-negative integer or null.` } };
+      data[field] = Number(value);
+    } else {
+      data[field] = null;
+    }
+  }
+  if (!changedFields.length) return { error: { code: 'VALIDATION_ERROR', message: 'At least one editable plan field is required.' } };
+  return { data, changedFields };
 }
 
 export async function updatePlan(req: ContextRequest, res: Response): Promise<void> {
   const id = String(req.params.id || '');
   if (!uuid(id)) { res.status(400).json({ error: 'Invalid plan id.' }); return; }
-  const body = req.body || {};
-  try { const plan = await platformPrisma.plan.update({ where: { id }, data: { nameAr: body.nameAr, nameHe: body.nameHe || null, descriptionAr: body.descriptionAr || null, descriptionHe: body.descriptionHe || null, maxStudents: body.maxStudents == null ? null : Number(body.maxStudents), maxStaff: body.maxStaff == null ? null : Number(body.maxStaff), maxUsers: body.maxUsers == null ? null : Number(body.maxUsers), isActive: body.isActive === undefined ? undefined : Boolean(body.isActive) } }); await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'PLAN_UPDATED', entityType: 'Plan', entityId: id, targetPlanId: id, metadata: { changedFields: Object.keys(body) } }); res.json(plan); } catch (error) { errorResponse(res, error); }
+  const parsed = parsePlanPatch(req.body || {});
+  if (parsed.error) { res.status(400).json({ code: parsed.error.code, error: parsed.error.message, ...(parsed.error.field ? { field: parsed.error.field } : {}) }); return; }
+  try {
+    const plan = await platformPrisma.$transaction(async (tx) => {
+      const currentPlan = await tx.plan.findUnique({ where: { id } });
+      if (!currentPlan) throw Object.assign(new Error('Plan not found.'), { statusCode: 404 });
+      const limits = ['maxStudents', 'maxStaff', 'maxUsers'] as const;
+      const subscriptions = await tx.institutionSubscription.findMany({ where: { planId: id, status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] }, AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }, { OR: [{ trialEndsAt: null }, { trialEndsAt: { gt: new Date() } }] }] }, select: { institutionId: true } });
+      const institutionIds = [...new Set(subscriptions.map((subscription) => subscription.institutionId))];
+      const usage = await Promise.all(institutionIds.map(async (institutionId) => ({
+        students: await tx.student.count({ where: { institutionId, isActive: true } }),
+        staff: await tx.staffMember.count({ where: { institutionId, archivedAt: null } }),
+        users: await tx.institutionUser.count({ where: { institutionId, isActive: true, archivedAt: null } }),
+      })));
+      for (const field of limits) {
+        const requested = parsed.data?.[field];
+        if (requested !== undefined && requested !== null) {
+          const currentUsage = Math.max(0, ...usage.map((item) => field === 'maxStudents' ? item.students : field === 'maxStaff' ? item.staff : item.users));
+          if (Number(requested) < currentUsage) throw Object.assign(new Error(`${field} cannot be lower than current usage (${currentUsage}).`), { statusCode: 409, code: 'PLAN_LIMIT_BELOW_USAGE', field, currentUsage });
+        }
+      }
+      const updated = await tx.plan.update({ where: { id }, data: parsed.data as any });
+      await recordPlatformAuditEvent({ actorUserId: req.user?.uid, action: 'PLAN_UPDATED', entityType: 'Plan', entityId: id, targetPlanId: id, metadata: { changedFields: parsed.changedFields } }, tx);
+      return updated;
+    });
+    res.json(plan);
+  } catch (error) { errorResponse(res, error); }
 }
 
 export async function listProviders(_req: ContextRequest, res: Response): Promise<void> {

@@ -28,6 +28,10 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
           return jsonResponse(created, 201);
         }
         const id = path.split('/').pop();
+        if (options.method === 'DELETE') {
+          regions = regions.filter((item) => item.id !== id);
+          return jsonResponse({ success: true, id });
+        }
         const updated = { ...regions.find((item) => item.id === id), ...payload, id };
         regions = regions.map((item) => item.id === id ? updated : item);
         return jsonResponse(updated);
@@ -73,6 +77,7 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     const create = calls.find((call) => call.options?.method === 'POST');
     expect(create?.path).toBe('/api/platform/reference-data/regions');
     expect(JSON.parse(String(create?.options?.body)).nameAr).toBe('منطقة جديدة');
+    expect(fixture.componentInstance.showModal()).toBe(false);
   });
 
   it('submits Edit through the same native DOM submit button', async () => {
@@ -86,6 +91,7 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     const update = calls.find((call) => call.options?.method === 'PATCH');
     expect(update?.path).toBe('/api/platform/reference-data/regions/region-1');
     expect(JSON.parse(String(update?.options?.body)).nameAr).toBe('منطقة معدلة');
+    expect(fixture.componentInstance.showModal()).toBe(false);
   });
 
   it('submits Provider Create with the provider contract and normalized sort order', async () => {
@@ -104,5 +110,16 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     const create = calls.find((call) => call.options?.method === 'POST');
     expect(create?.path).toBe('/api/platform/reference-data/providers');
     expect(JSON.parse(String(create?.options?.body))).toEqual({ providerCode: 'TEST-PROVIDER-001', name: 'مزود اختبار', sortOrder: 1, isActive: true });
+    expect(fixture.componentInstance.showModal()).toBe(false);
+  });
+
+  it('removes a deleted row after a successful DELETE response', async () => {
+    const remove = fixture.nativeElement.querySelector('button[aria-label^="حذف"]') as HTMLButtonElement;
+    remove.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(calls.some((call) => call.options?.method === 'DELETE')).toBe(true);
+    expect(fixture.nativeElement.textContent).not.toContain('منطقة أصلية');
   });
 });

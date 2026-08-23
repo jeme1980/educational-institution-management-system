@@ -277,8 +277,8 @@
                       </ui-button>
                     }
                     @if (canDelete()) {
-                      <ui-button size="sm" variant="danger" [iconOnly]="true" [ariaLabel]="'حذف الطالب ' + student.firstNameAr" title="حذف الطالب" (activated)="delete.emit(student.id)">
-                        <mat-icon aria-hidden="true">delete</mat-icon>
+                      <ui-button size="sm" variant="danger" [iconOnly]="true" [ariaLabel]="'أرشفة الطالب ' + student.firstNameAr" title="أرشفة الطالب" (activated)="delete.emit(student.id)">
+                        <mat-icon aria-hidden="true">archive</mat-icon>
                       </ui-button>
                     }
                   </ui-table-actions>

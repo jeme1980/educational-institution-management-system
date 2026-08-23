@@ -8,6 +8,7 @@ import { StaffDevelopment } from '../../../core/models/api.models';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   selector: 'app-staff-development',
@@ -19,6 +20,10 @@ export class StaffDevelopmentComponent implements OnInit {
   readonly apiService = inject(ApiService);
   private readonly fb = inject(FormBuilder);
   private readonly confirmDialog = inject(ConfirmDialogService);
+  private readonly authService = inject(AuthService);
+  readonly canCreate = computed(() => this.authService.hasPermission('teachers:create'));
+  readonly canUpdate = computed(() => this.authService.hasPermission('teachers:update'));
+  readonly canDelete = computed(() => this.authService.hasPermission('teachers:delete'));
 
   readonly searchTerm = signal('');
   readonly showModal = signal(false);
@@ -192,12 +197,14 @@ export class StaffDevelopmentComponent implements OnInit {
   updateStaffFilter(event: Event): void { this.selectedStaffId.set((event.target as HTMLSelectElement).value); }
 
   openAdd(): void {
+    if (!this.canCreate()) return;
     this.editingId.set(null);
     this.form.reset({ staffMemberId: this.apiService.staff()[0]?.id || '', courseCode: '', courseName: '', providerId: '', hoursCount: null, startDate: '', endDate: '' });
     this.showModal.set(true);
   }
 
   openEdit(item: StaffDevelopment): void {
+    if (!this.canUpdate()) return;
     this.editingId.set(item.id);
     this.form.reset({ staffMemberId: item.staffMemberId, courseCode: item.courseCode, courseName: item.courseName, providerId: item.providerId || item.provider?.id || '', hoursCount: item.hoursCount ?? null, startDate: this.dateInput(item.startDate), endDate: this.dateInput(item.endDate) });
     this.showModal.set(true);
@@ -206,6 +213,7 @@ export class StaffDevelopmentComponent implements OnInit {
   closeModal(): void { this.showModal.set(false); this.editingId.set(null); }
 
   async save(): Promise<void> {
+    if (this.editingId() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.isSaving.set(true);
     const value = this.form.getRawValue();
@@ -216,6 +224,7 @@ export class StaffDevelopmentComponent implements OnInit {
   }
 
   async remove(item: StaffDevelopment): Promise<void> {
+    if (!this.canDelete()) return;
     const confirmed = await this.confirmDialog.confirm({ title: 'حذف سجل الاستكمال', message: `هل تريد حذف استكمال «${item.courseName}»؟`, variant: 'danger' });
     if (confirmed) await this.apiService.deleteStaffDevelopment(item.id);
   }

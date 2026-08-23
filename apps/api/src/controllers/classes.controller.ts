@@ -37,6 +37,7 @@ export async function getClasses(req: ContextRequest, res: Response): Promise<an
       institutionId,
       academicYearId,
       classId: { in: classList.map((item) => item.id) },
+      isActive: true,
       isDeleted: false,
     },
     _count: { _all: true },
@@ -54,6 +55,19 @@ export async function createClasses(req: AuthRequest, res: Response): Promise<an
     return res.status(400).json({ error: 'institution, academic year, stage, grade, class type, composition and name are required' });
   }
   const classCode = `${relations.gradeCodeNumber}-${normalizedParallelNumber}`;
+  const activeDuplicate = await prisma.class.findFirst({
+    where: {
+      institutionId,
+      academicYearId,
+      archivedAt: null,
+      OR: [
+        { classCode },
+        { stageId: relations.stageId, gradeLevelId: relations.gradeLevelId, parallelNumber: normalizedParallelNumber },
+      ],
+    },
+    select: { id: true },
+  });
+  if (activeDuplicate) return res.status(409).json({ error: `A class with code ${classCode} already exists in this academic year`, code: 'CLASS_DUPLICATE' });
   try {
     const inserted = await prisma.class.create({
       data: {
@@ -106,6 +120,20 @@ export async function updateClassesById(req: AuthRequest, res: Response): Promis
     return res.status(400).json({ error: 'stage, grade, class type, composition and name are required' });
   }
   const classCode = `${relations.gradeCodeNumber}-${normalizedParallelNumber}`;
+  const activeDuplicate = await prisma.class.findFirst({
+    where: {
+      institutionId,
+      academicYearId,
+      archivedAt: null,
+      id: { not: id },
+      OR: [
+        { classCode },
+        { stageId: relations.stageId, gradeLevelId: relations.gradeLevelId, parallelNumber: normalizedParallelNumber },
+      ],
+    },
+    select: { id: true },
+  });
+  if (activeDuplicate) return res.status(409).json({ error: `A class with code ${classCode} already exists in this academic year`, code: 'CLASS_DUPLICATE' });
   try {
     const updated = await prisma.class.update({
       where: { id },

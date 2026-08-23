@@ -11,7 +11,7 @@
       </div>
       <div class="flex flex-wrap gap-2">
         <button type="button" (click)="refresh()" [disabled]="isLoading()" class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><mat-icon class="text-[18px]">refresh</mat-icon>تحديث</button>
-        <button type="button" (click)="openAddModal()" class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-container"><mat-icon class="text-[18px]">add</mat-icon>إضافة شعبة</button>
+        <button type="button" (click)="openAddModal()" [hidden]="!canCreate()" class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-container"><mat-icon class="text-[18px]">add</mat-icon>إضافة شعبة</button>
       </div>
     </header>
 

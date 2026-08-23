@@ -13,6 +13,7 @@ export class ClassesApiService extends BaseApiService {
   public lastError = signal('');
 
   async loadClasses() {
+    this.lastError.set('');
     try {
       const res = await this.apiFetch('/api/classes', { headers: this.headers });
       if (res.ok) {
@@ -24,9 +25,12 @@ export class ClassesApiService extends BaseApiService {
           gradeLevel: classItem.gradeLevel?.nameAr || '',
           gradeLevelInfo: classItem.gradeLevel || null,
         })));
+      } else {
+        this.lastError.set(await this.readError(res));
       }
     } catch (e) {
       console.error('Failed to load classes', e);
+      this.lastError.set('تعذر تحميل الصفوف والشعب.');
     }
   }
 
@@ -120,6 +124,7 @@ export class ClassesApiService extends BaseApiService {
       }
     } catch (e) {
       console.error('Failed to load study groups', e);
+      this.studyGroupError.set('تعذر تحميل مجموعات التعلم.');
     } finally {
       this.isLoading.set(false);
     }

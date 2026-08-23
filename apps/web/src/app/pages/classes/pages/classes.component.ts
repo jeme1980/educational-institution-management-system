@@ -7,6 +7,7 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +19,7 @@ import { UiSelectComponent } from '../../../shared/components/select/ui-select.c
 export class ClassesComponent implements OnInit {
   readonly apiService = inject(ApiService);
   readonly confirmDialog = inject(ConfirmDialogService);
+  readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly searchTerm = signal('');
@@ -32,6 +34,9 @@ export class ClassesComponent implements OnInit {
   readonly isLoading = signal(true);
   readonly pageError = signal('');
   readonly toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly canCreate = computed(() => this.authService.hasPermission('settings:create'));
+  readonly canUpdate = computed(() => this.authService.hasPermission('settings:create'));
+  readonly canDelete = computed(() => this.authService.hasPermission('settings:create'));
 
   readonly classForm = this.fb.nonNullable.group({
     institutionId: ['', Validators.required],
@@ -92,6 +97,7 @@ export class ClassesComponent implements OnInit {
         this.apiService.loadClasses(),
         this.apiService.loadEnrollments(),
       ]);
+      if (this.apiService.classesApi.lastError()) throw new Error(this.apiService.classesApi.lastError());
     } catch {
       this.pageError.set('تعذر تحميل بيانات الصفوف والشعب. تحقق من الاتصال ثم أعد المحاولة.');
     } finally {
@@ -125,6 +131,7 @@ export class ClassesComponent implements OnInit {
   private academicYearId(): string { return this.apiService.selectedAcademicYearId() || this.apiService.academicYears().find(y => y.isCurrent)?.id || this.apiService.academicYears()[0]?.id || ''; }
 
   openAddModal(): void {
+    if (!this.canCreate()) return;
     this.editingClass.set(null);
     this.classForm.reset({ institutionId: this.institutionId(), academicYearId: this.academicYearId(), stageId: this.firstId(this.educationStages()), gradeLevelId: this.firstId(this.gradeLevels()), parallelNumber: 1, classCode: '', nameAr: '', nameHe: '', typeId: this.firstId(this.classTypes()), compositionId: this.firstId(this.compositionTypes()) });
     this.updateClassCode();
@@ -132,6 +139,7 @@ export class ClassesComponent implements OnInit {
   }
 
   openEditModal(item: ClassItem): void {
+    if (!this.canUpdate()) return;
     this.editingClass.set(item);
     this.classForm.reset({ institutionId: item.institutionId, academicYearId: item.academicYearId, stageId: item.stageId, gradeLevelId: item.gradeLevelId, parallelNumber: item.parallelNumber, classCode: item.classCode || '', nameAr: item.nameAr, nameHe: item.nameHe || '', typeId: item.typeId, compositionId: item.compositionId });
     this.showModal.set(true);
@@ -162,6 +170,7 @@ export class ClassesComponent implements OnInit {
   }
 
   async deleteClass(item: ClassItem): Promise<void> {
+    if (!this.canDelete()) return;
     if (this.isDeleting()) return;
     const confirmed = await this.confirmDialog.confirm({ title: 'حذف أو أرشفة الشعبة', message: `سيتم حذف أو أرشفة «${item.nameAr}». هل تريد المتابعة؟`, variant: 'warning' });
     if (!confirmed) return;

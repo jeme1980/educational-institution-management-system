@@ -117,18 +117,16 @@ export async function getStudents(req: ContextRequest, res: Response): Promise<a
   });
   const total = await prisma.student.count({ where });
   const studentIds = studentsPage.map((student) => student.id);
-  const [enrollments, medicalProfiles, guardianLinks, towns] = await Promise.all([
+  const [enrollments, guardianLinks, towns] = await Promise.all([
     prisma.studentEnrollment.findMany({
       where: { studentId: { in: studentIds }, institutionId: instId, isDeleted: false, isActive: true, academicYearId: acadYearId },
     }),
-    prisma.studentMedicalProfile.findMany({ where: { studentId: { in: studentIds }, institutionId: instId } }),
     prisma.studentGuardian.findMany({ where: { studentId: { in: studentIds }, institutionId: instId, isPrimaryContact: true } }),
     prisma.town.findMany({ where: { id: { in: studentsPage.map((student) => student.townId).filter((id): id is string => Boolean(id)) } } }),
   ]);
   const guardianIds = guardianLinks.map((link) => link.guardianId);
   const guardians = await prisma.guardian.findMany({ where: { id: { in: guardianIds }, institutionId: instId } });
   const enrollmentByStudent = new Map(enrollments.map((enrollment) => [enrollment.studentId, enrollment]));
-  const medicalByStudent = new Map(medicalProfiles.map((profile) => [profile.studentId, profile]));
   const linkByStudent = new Map(guardianLinks.map((link) => [link.studentId, link]));
   const guardianById = new Map(guardians.map((guardian) => [guardian.id, guardian]));
   const townById = new Map(towns.map((town) => [town.id, town]));
@@ -138,7 +136,6 @@ export async function getStudents(req: ContextRequest, res: Response): Promise<a
     return {
       ...student,
       classId: enrollment?.classId || null,
-      medicalProfile: medicalByStudent.get(student.id) || null,
       guardian: link ? guardianById.get(link.guardianId) || null : null,
       relationTypeId: link?.relationTypeId || null,
       town: student.townId ? townById.get(student.townId) || null : null,

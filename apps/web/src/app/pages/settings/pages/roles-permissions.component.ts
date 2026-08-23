@@ -27,12 +27,16 @@ export class RolesPermissionsComponent implements OnInit {
   selectedRole = signal<RoleWithPermissions | null>(null);
   
   // Logical Modules mapping
-  modules = signal<{ code: string; name: string }[]>([
+  modules = computed(() => [...new Set(this.permissions().map((permission) => permission.code.split(':')[0]))]
+    .sort()
+    .map((code) => ({ code, name: code })));
+  /* Permission modules are derived from the backend catalog below.
     { code: 'students', name: 'إدارة شؤون الطلاب والسجلات الطبية' },
     { code: 'teachers', name: 'إدارة شؤون الكادر التعليمي والتعيينات' },
     { code: 'exams', name: 'إدارة الامتحانات وتوزيع بنوك الأسئلة ورصد العلامات' },
     { code: 'settings', name: 'إدارة إعدادات النظام والجداول المساعدة للمؤسسة' }
-  ]);
+
+  */
 
   // Loading & Action states
   isLoading = signal<boolean>(true);

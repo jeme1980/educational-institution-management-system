@@ -2,6 +2,16 @@ import { Response } from 'express';
 import { ContextRequest } from '../middleware/context';
 import { prisma } from '../db/prisma';
 
+const SENSITIVE_METADATA_KEY = /password|token|secret|jwt|hash|medical|diagnosis|allergy|medication|condition/i;
+
+function safeAuditMetadata(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(safeAuditMetadata);
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .filter(([key]) => !SENSITIVE_METADATA_KEY.test(key))
+    .map(([key, item]) => [key, safeAuditMetadata(item)]));
+}
+
 export async function getAuditLogs(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId || '';
   const page = Math.max(1, Number(req.query.page || 1));
@@ -16,11 +26,11 @@ export async function getAuditLogs(req: ContextRequest, res: Response): Promise<
     prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * pageSize, take: pageSize }),
     prisma.auditLog.count({ where }),
   ]);
-  return res.json({ items, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+  return res.json({ items: items.map((item) => ({ ...item, metadata: safeAuditMetadata(item.metadata) })), page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
 }
 
 export async function getAuditLogById(req: ContextRequest, res: Response): Promise<any> {
   const item = await prisma.auditLog.findFirst({ where: { id: String(req.params.id), institutionId: req.context?.institutionId || '' } });
   if (!item) return res.status(404).json({ error: 'سجل التدقيق غير موجود.' });
-  return res.json(item);
+  return res.json({ ...item, metadata: safeAuditMetadata(item.metadata) });
 }

@@ -9,7 +9,7 @@ import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.c
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 
-type InstitutionLookupKey = 'specializations' | 'questionTypes' | 'examTypes' | 'jobRoles';
+type InstitutionLookupKey = 'specializations' | 'jobRoles';
 
 interface InstitutionLookupDefinition {
   key: InstitutionLookupKey;
@@ -32,8 +32,6 @@ export class LookupTablesComponent implements OnInit {
 
   readonly definitions: InstitutionLookupDefinition[] = [
     { key: 'specializations', label: 'التخصصات', icon: 'workspace_premium' },
-    { key: 'questionTypes', label: 'أنواع الأسئلة', icon: 'quiz' },
-    { key: 'examTypes', label: 'أنواع الامتحانات', icon: 'assignment' },
     { key: 'jobRoles', label: 'المسميات الوظيفية', icon: 'badge', hasTeachingRole: true },
   ];
 
@@ -55,8 +53,6 @@ export class LookupTablesComponent implements OnInit {
 
   readonly currentItems = computed(() => {
     const table = this.activeTable();
-    if (table === 'questionTypes') return this.apiService.questionTypes();
-    if (table === 'examTypes') return this.apiService.examTypes();
     if (table === 'jobRoles') return this.apiService.jobRoles();
     return this.apiService.publicLookups()[table] || [];
   });
@@ -130,10 +126,6 @@ export class LookupTablesComponent implements OnInit {
       : commonPayload;
     const saved = table === 'jobRoles'
       ? (editing ? await this.apiService.updateJobRole(editing.id, payload) : await this.apiService.createJobRole(payload))
-      : table === 'questionTypes'
-      ? (editing ? await this.apiService.updateQuestionType(editing.id, payload) : await this.apiService.createQuestionType(payload))
-      : table === 'examTypes'
-      ? (editing ? await this.apiService.updateExamType(editing.id, payload) : await this.apiService.createExamType(payload))
       : (editing ? await this.apiService.updatePublicLookup(table, editing.id, payload) : await this.apiService.createPublicLookup(table, payload));
     this.isSubmitting.set(false);
     if (saved) {
@@ -151,10 +143,6 @@ export class LookupTablesComponent implements OnInit {
     const table = this.activeTable();
     const deleted = table === 'jobRoles'
       ? await this.apiService.deleteJobRole(item.id)
-      : table === 'questionTypes'
-      ? await this.apiService.deleteQuestionType(item.id)
-      : table === 'examTypes'
-      ? await this.apiService.deleteExamType(item.id)
       : await this.apiService.deletePublicLookup(table, item.id);
     this.showToast(deleted ? 'تم حذف السجل بنجاح' : 'تعذر حذف السجل، قد يكون مرتبطًا ببيانات أخرى', deleted ? 'success' : 'error');
   }

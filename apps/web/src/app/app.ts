@@ -21,6 +21,7 @@ export interface SchoolNavItem {
 export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
   { path: '/dashboard', label: 'لوحة القيادة', icon: 'grid_view' },
   { path: '/students', label: 'قائمة الطلاب', icon: 'groups', permission: 'students:read' },
+  { path: '/attendance', label: 'الحضور والغياب', icon: 'event_available', permission: 'attendance:read' },
   { path: '/enrollments', label: 'بيانات الالتحاق', icon: 'badge', permission: 'students:update' },
   { path: '/registered-students', label: 'الطلاب المسجلون', icon: 'assignment_ind', permission: 'students:read' },
   { path: '/staff', label: 'الكادر والتعيينات', icon: 'supervisor_account', permission: 'teachers:read' },

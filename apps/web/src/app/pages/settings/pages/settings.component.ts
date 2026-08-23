@@ -7,11 +7,12 @@ import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-settings',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, RouterLinkActive, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, RouterLinkActive, UiModalComponent, UiPageHeaderComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css'
 })

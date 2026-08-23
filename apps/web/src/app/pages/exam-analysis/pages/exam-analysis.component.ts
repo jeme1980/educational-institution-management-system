@@ -14,6 +14,7 @@ import { PerformanceBarChartComponent } from '../components/performance-bar-char
 import { PerformanceDonutChartComponent } from '../components/performance-donut-chart.component';
 import { QuestionSuccessChartComponent } from '../components/question-success-chart.component';
 import { TopicOverviewChartComponent } from '../components/topic-overview-chart.component';
+import { SkillOverviewChartComponent } from '../components/skill-overview-chart.component';
 import {
   AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
@@ -33,6 +34,7 @@ export interface InterventionGroupView {
 export type QuestionSortKey = 'question' | 'topic' | 'skill' | 'average' | 'successRate';
 export type QuestionSortDirection = 'asc' | 'desc';
 export type TopicSortKey = 'mastery-desc' | 'mastery-asc' | 'questions-desc' | 'name';
+export type SkillSortKey = TopicSortKey;
 
 export function questionDetailUnavailable(questions: QuestionAnalysis[], attendedCount: number, hasMatchingQuestionScore: boolean): boolean {
   return questions.length > 0 && attendedCount > 0 && !hasMatchingQuestionScore && questions.every(question => question.unansweredRate === 100);
@@ -74,6 +76,10 @@ export function filterAndSortTopics(topics: DimensionAnalysis[], search: string,
   });
 }
 
+export function filterAndSortSkills(skills: DimensionAnalysis[], search: string, sort: SkillSortKey): DimensionAnalysis[] {
+  return filterAndSortTopics(skills, search, sort);
+}
+
 const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
   high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
   'upper-mid': { name: 'مجموعة الإتقان', color: '#2563eb', duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
@@ -96,7 +102,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, SkillOverviewChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -130,6 +136,9 @@ export class ExamAnalysisComponent implements OnInit {
   topicSearch = signal('');
   topicSort = signal<TopicSortKey>('mastery-desc');
   selectedTopicId = signal('');
+  skillSearch = signal('');
+  skillSort = signal<SkillSortKey>('mastery-desc');
+  selectedSkillId = signal('');
   readonly hasStudentRows = computed(() => (this.dataset()?.students.length ?? 0) > 0);
   readonly availableExams = computed(() => {
     const yearId = this.api.selectedAcademicYearId();
@@ -275,6 +284,28 @@ export class ExamAnalysisComponent implements OnInit {
     if (!topicId) return [] as { name: string; count: number }[];
     const counts = new Map<string, number>();
     this.questions().filter(question => question.topicId === topicId).forEach(question => counts.set(question.typeName, (counts.get(question.typeName) || 0) + 1));
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, 'ar'));
+  });
+  classifiedSkills = computed(() => this.skills().filter(skill => skill.name !== 'غير مصنف'));
+  unclassifiedSkills = computed(() => this.skills().filter(skill => skill.name === 'غير مصنف'));
+  unclassifiedSkillQuestionCount = computed(() => this.questions().filter(question => !question.skillId || question.skillName === 'غير مصنف').length);
+  visibleSkills = computed(() => filterAndSortSkills(this.classifiedSkills(), this.skillSearch(), this.skillSort()));
+  strongSkillLevelId = computed(() => [...this.levels()].sort((left, right) => right.max - left.max)[0]?.id || '');
+  weakSkillLevelId = computed(() => [...this.levels()].sort((left, right) => left.min - right.min)[0]?.id || '');
+  strongSkillsCount = computed(() => this.classifiedSkills().filter(skill => skill.level.id === this.strongSkillLevelId()).length);
+  weakSkillsCount = computed(() => this.classifiedSkills().filter(skill => skill.level.id === this.weakSkillLevelId()).length);
+  skillsInsightText = computed(() => {
+    const skills = this.classifiedSkills();
+    if (!skills.length) return 'لم يتم تصنيف الأسئلة حسب المهارات لهذا الامتحان — تحقق من ربط الأسئلة بالمهارات في إعداد بنك الأسئلة.';
+    const strongest = [...skills].sort((left, right) => right.masteryRate - left.masteryRate)[0];
+    const weakest = [...skills].sort((left, right) => left.masteryRate - right.masteryRate)[0];
+    return `أقوى مهارة: ${strongest.name} (${this.format(strongest.masteryRate)}%) · تحتاج دعمًا: ${weakest.name} (${this.format(weakest.masteryRate)}%).`;
+  });
+  selectedSkillQuestionTypes = computed(() => {
+    const skillId = this.selectedSkillId();
+    if (!skillId) return [] as { name: string; count: number }[];
+    const counts = new Map<string, number>();
+    this.questions().filter(question => question.skillId === skillId).forEach(question => counts.set(question.typeName, (counts.get(question.typeName) || 0) + 1));
     return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, 'ar'));
   });
   questionTypes = computed(() => {

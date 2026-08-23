@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, filterAndSortQuestions, filterAndSortTopics, questionDetailUnavailable } from './exam-analysis.component';
+import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, questionDetailUnavailable } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
@@ -153,5 +153,34 @@ describe('ExamAnalysis topic presentation', () => {
     expect(overviewTemplate).toContain("@if (activeTab() === 'skills')");
     expect(overviewTemplate).toContain("@if (activeTab() === 'topics')");
     expect(overviewTemplate).toContain('selectedTopicQuestionTypes()');
+  });
+});
+
+describe('ExamAnalysis skill presentation', () => {
+  const level = { id: 'high', name: 'مرتفع', min: 85, max: 100, color: '#16a34a' };
+  const skill = (overrides: Partial<DimensionAnalysis> = {}): DimensionAnalysis => ({
+    id: 'skill-1', name: 'الحساب', questionCount: 2, maxPoints: 20, averagePerformance: 90, masteryRate: 90, masteredStudents: 2, supportStudents: 0, unansweredRate: 0, level, ...overrides,
+  });
+
+  it('keeps classified and unclassified skills separate from KPI data', () => {
+    const skills = [skill(), skill({ id: 'unclassified', name: 'غير مصنف' })];
+    expect(skills.filter(item => item.name !== 'غير مصنف')).toHaveLength(1);
+    expect(skills.filter(item => item.name === 'غير مصنف')).toHaveLength(1);
+  });
+
+  it('searches and sorts skills with the supported options', () => {
+    const skills = [skill({ id: 'b', name: 'القراءة', masteryRate: 60, questionCount: 4 }), skill({ id: 'a', name: 'الكتابة', masteryRate: 90, questionCount: 1 })];
+    expect(filterAndSortSkills(skills, 'كتابة', 'name').map(item => item.id)).toEqual(['a']);
+    expect(filterAndSortSkills(skills, '', 'mastery-asc').map(item => item.id)).toEqual(['b', 'a']);
+    expect(filterAndSortSkills(skills, '', 'questions-desc').map(item => item.id)).toEqual(['b', 'a']);
+  });
+
+  it('keeps Skills state isolated and uses the skill-specific chart wrapper', () => {
+    expect(overviewTemplate).toContain('skillSearch()');
+    expect(overviewTemplate).toContain('skillSort()');
+    expect(overviewTemplate).toContain('selectedSkillId()');
+    expect(overviewTemplate).toContain('<app-skill-overview-chart');
+    expect(overviewTemplate).toContain('selectedSkillQuestionTypes()');
+    expect(overviewTemplate).toContain("@if (activeTab() === 'topics')");
   });
 });

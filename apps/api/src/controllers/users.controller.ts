@@ -154,7 +154,7 @@ export async function getPermissions(req: ContextRequest, res: Response): Promis
   
   const instId = req.context?.institutionId || '';
   await ensureRolesAndPermissionsSeeded(instId);
-  const perms = await prisma.permission.findMany();
+  const perms = await prisma.permission.findMany({ where: { isActive: true }, orderBy: [{ module: 'asc' }, { action: 'asc' }] });
   return res.json(perms.map((permission) => ({ ...permission, code: `${permission.module}:${permission.action.toLowerCase()}` })));
 
 }
@@ -230,6 +230,10 @@ export async function updateRolesById(req: ContextRequest, res: Response): Promi
     return res.status(404).json({ error: '״§„״¯ˆ״± ״§„…״·„ˆ״¨ ״÷״± …ˆ״¬ˆ״¯' });
   }
 
+  if (existing.isSystem) {
+    return res.status(400).json({ error: 'System roles cannot be edited.' });
+  }
+
   const normalizedPermissionIds = Array.isArray(permissionIds) ? [...new Set(permissionIds.map(String))] : [];
   if (normalizedPermissionIds.length) {
     const permissionCount = await prisma.permission.count({ where: { id: { in: normalizedPermissionIds } } });
@@ -237,24 +241,21 @@ export async function updateRolesById(req: ContextRequest, res: Response): Promi
   }
 
   // Update role metadata
-  const updated = await prisma.role.update({ where: { id: roleId }, data: {
-      nameAr: nameAr,
+  const updated = await prisma.$transaction(async (tx) => {
+    const role = await tx.role.update({ where: { id: roleId }, data: {
+      nameAr,
       nameHe: nameHe || null,
       isActive: isActive === undefined ? true : isActive,
+      archivedAt: isActive === false ? new Date() : null,
       updatedAt: new Date()
     } });
-
-  // Re-map permissions: delete old, write new
-  await prisma.rolePermission.deleteMany({ where: { roleId, institutionId: instId } });
-
-  if (normalizedPermissionIds.length > 0) {
-    const mappings = normalizedPermissionIds.map(pId => ({
-      institutionId: instId,
-      roleId: roleId,
-      permissionId: pId
-    }));
-    await prisma.rolePermission.createMany({ data: mappings });
-  }
+    await tx.rolePermission.deleteMany({ where: { roleId, institutionId: instId } });
+    if (normalizedPermissionIds.length > 0) {
+      await tx.rolePermission.createMany({ data: normalizedPermissionIds.map((permissionId) => ({ institutionId: instId, roleId, permissionId })) });
+    }
+    await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ROLE_UPDATED', entityType: 'Role', entityId: roleId, metadata: { permissionCount: normalizedPermissionIds.length } });
+    return role;
+  });
 
   return res.json({ ...updated, code: updated.id, permissionIds: normalizedPermissionIds });
 
@@ -275,14 +276,12 @@ export async function deleteRolesById(req: ContextRequest, res: Response): Promi
     return res.status(400).json({ error: '״¹״°״±״§‹״ „״§ …ƒ† ״­״° ״§„״£״¯ˆ״§״± ״§„†״¸״§…״© ״§„…״¯…״¬״©' });
   }
 
-  // Delete mappings first
   await prisma.$transaction(async (tx) => {
-    await tx.rolePermission.deleteMany({ where: { roleId, institutionId: instId } });
-    await tx.institutionUserRole.deleteMany({ where: { roleId, institutionId: instId } });
-    await tx.role.delete({ where: { id: roleId } });
+    await tx.role.update({ where: { id: roleId }, data: { isActive: false, archivedAt: new Date(), updatedAt: new Date() } });
+    await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ROLE_ARCHIVED', entityType: 'Role', entityId: roleId });
   });
 
-  return res.json({ message: 'Role deleted successfully', id: roleId });
+  return res.json({ message: 'Role archived successfully', id: roleId });
 
 }
 
@@ -371,9 +370,12 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
 
   const displayName = `${staff.firstNameAr} ${staff.familyNameAr}`;
   const normEmail = String(email).trim().toLowerCase();
-  const existing = await prisma.user.findFirst({ where: { normalizedEmail: normEmail } });
-  if (existing) {
-    return res.status(400).json({ error: '‡״°״§ ״§„״¨״±״¯ ״§„״¥„ƒ״×״±ˆ† …״³״¬„ ״¨״§„״¹„ „…״³״×״®״¯… ״¢״®״±' });
+  const existing = await prisma.user.findFirst({ where: { normalizedEmail: normEmail }, include: { institutionUsers: { where: { institutionId: instId }, select: { id: true } } } });
+  if (existing?.isPlatformAdmin) {
+    return res.status(409).json({ error: 'Platform administrator accounts cannot be assigned as school users.' });
+  }
+  if (existing?.institutionUsers.length) {
+    return res.status(409).json({ error: 'This email is already linked to this school account.' });
   }
 
   const normalizedRoleIds = Array.isArray(roleIds) ? [...new Set(roleIds.map(String))] : [];
@@ -383,7 +385,7 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
   }
 
   const created = await prisma.$transaction(async (tx) => {
-    const newUser = await tx.user.create({ data: {
+    const newUser = existing || await tx.user.create({ data: {
       email: normEmail,
       normalizedEmail: normEmail,
       passwordHash: await createPendingAccountPasswordHash(),
@@ -406,9 +408,9 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
         createdBy: req.user?.uid || null,
       })) });
     }
-    const setup = await issueAccountSetupToken(tx, newUser.id);
+    const setup = newUser.mustChangePassword ? await issueAccountSetupToken(tx, newUser.id) : null;
     await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'USER_CREATED', entityType: 'InstitutionUser', entityId: newInstUser.id, metadata: { userId: newUser.id, email: normEmail } });
-    await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ACCOUNT_SETUP_ISSUED', entityType: 'InstitutionUser', entityId: newInstUser.id, metadata: { userId: newUser.id, expiresAt: setup.expiresAt.toISOString() } });
+    if (setup) await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ACCOUNT_SETUP_ISSUED', entityType: 'InstitutionUser', entityId: newInstUser.id, metadata: { userId: newUser.id, expiresAt: setup.expiresAt.toISOString() } });
     if (normalizedRoleIds.length > 0) {
       await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ROLE_ASSIGN', entityType: 'InstitutionUser', entityId: newInstUser.id, metadata: { roleCount: normalizedRoleIds.length } });
     }
@@ -420,8 +422,8 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
     id: created.newInstUser.id,
     userId: created.newUser.id,
     displayName,
-    accountStatus: 'PENDING_SETUP',
-    setup: setupDeliveryMetadata(created.setup),
+    accountStatus: created.newUser.mustChangePassword ? 'PENDING_SETUP' : 'ACTIVE',
+    setup: created.setup ? setupDeliveryMetadata(created.setup) : null,
   });
 }
 
@@ -442,29 +444,38 @@ export async function patchInstitutionUsersById(req: ContextRequest, res: Respon
 
   const targetUserId = instUser.userId;
 
+  if (req.user?.uid === targetUserId && isActive === false) {
+    return res.status(400).json({ error: 'You cannot disable your own institution membership.', code: 'SELF_LOCKOUT_PREVENTED' });
+  }
+
+  const normalizedRoleIds = roleIds && Array.isArray(roleIds) ? [...new Set(roleIds.map(String))] : null;
+  if (normalizedRoleIds) {
+    const roleCount = await prisma.role.count({ where: { id: { in: normalizedRoleIds }, institutionId: instId, isActive: true, archivedAt: null } });
+    if (roleCount !== normalizedRoleIds.length) return res.status(400).json({ error: 'يوجد دور غير صالح لهذه المؤسسة.' });
+    if (req.user?.uid === targetUserId) {
+      const currentSystemRole = await prisma.institutionUserRole.findFirst({ where: { institutionId: instId, institutionUserId: instUserId, role: { isSystem: true, isActive: true, archivedAt: null } }, select: { roleId: true } });
+      if (currentSystemRole && !normalizedRoleIds.includes(currentSystemRole.roleId)) {
+        return res.status(400).json({ error: 'You cannot remove your own administrator role.', code: 'SELF_LOCKOUT_PREVENTED' });
+      }
+    }
+  }
+
   // Toggle active state if passed
   if (isActive !== undefined) {
     await prisma.institutionUser.update({ where: { id: instUserId }, data: { isActive, updatedAt: new Date() } });
-    await prisma.user.update({ where: { id: targetUserId }, data: { isActive, updatedAt: new Date() } });
     if (!isActive) await invalidateUserSessions(targetUserId);
+    await recordAuditEvent(prisma, { institutionId: instId, actorUserId: req.user?.uid, action: isActive ? 'USER_ENABLED' : 'USER_DISABLED', entityType: 'InstitutionUser', entityId: instUserId, metadata: { userId: targetUserId } });
   }
 
   // Update Role IDs if passed
-  if (roleIds && Array.isArray(roleIds)) {
-    await prisma.institutionUserRole.deleteMany({ where: { institutionUserId: instUserId, institutionId: instId } });
-    
-    const normalizedRoleIds = [...new Set(roleIds.map(String))];
-    if (normalizedRoleIds.length > 0) {
-      const roleCount = await prisma.role.count({ where: { id: { in: normalizedRoleIds }, institutionId: instId, isActive: true } });
-      if (roleCount !== normalizedRoleIds.length) return res.status(400).json({ error: 'يوجد دور غير صالح لهذه المؤسسة.' });
-      const userRoleMappings = normalizedRoleIds.map(rId => ({
-        institutionId: instId,
-        institutionUserId: instUserId,
-        roleId: rId
-      }));
-      await prisma.institutionUserRole.createMany({ data: userRoleMappings });
-    }
-    await recordAuditEvent(prisma, { institutionId: instId, actorUserId: req.user?.uid, action: 'ROLE_ASSIGN', entityType: 'InstitutionUser', entityId: instUserId, metadata: { roleCount: normalizedRoleIds.length } });
+  if (normalizedRoleIds) {
+    await prisma.$transaction(async (tx) => {
+      await tx.institutionUserRole.deleteMany({ where: { institutionUserId: instUserId, institutionId: instId } });
+      if (normalizedRoleIds.length > 0) {
+        await tx.institutionUserRole.createMany({ data: normalizedRoleIds.map((roleId) => ({ institutionId: instId, institutionUserId: instUserId, roleId })) });
+      }
+      await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ROLE_ASSIGN', entityType: 'InstitutionUser', entityId: instUserId, metadata: { roleCount: normalizedRoleIds.length } });
+    });
   }
 
   return res.json({ message: '״×… ״×״­״¯״« ״¨״§†״§״× ״§„…״³״×״®״¯… ˆ״µ„״§״­״§״×‡ ״¨†״¬״§״­' });

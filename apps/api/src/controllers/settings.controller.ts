@@ -50,7 +50,15 @@ export async function updateInstitutionProfile(req: ContextRequest, res: Respons
   if (!existing) return res.status(404).json({ error: 'Institution not found.' });
   if (!existing.status.allowsWrites) return res.status(403).json({ error: 'Institution settings are read-only.' });
   const updated = await prisma.$transaction(async (tx) => {
-    const result = await tx.institution.update({ where: { id: institutionId }, data: { nameAr: data.nameAr, nameHe: data.nameHe || null, phoneNumber: data.phoneNumber || null, email: data.email || null, logoUrl: data.logoUrl || null, updatedAt: new Date() }, select: institutionProfileSelect });
+    const updateData = {
+      ...(data.nameAr !== undefined ? { nameAr: data.nameAr } : {}),
+      ...(data.nameHe !== undefined ? { nameHe: data.nameHe || null } : {}),
+      ...(data.phoneNumber !== undefined ? { phoneNumber: data.phoneNumber || null } : {}),
+      ...(data.email !== undefined ? { email: data.email || null } : {}),
+      ...(data.logoUrl !== undefined ? { logoUrl: data.logoUrl || null } : {}),
+      updatedAt: new Date(),
+    };
+    const result = await tx.institution.update({ where: { id: institutionId }, data: updateData, select: institutionProfileSelect });
     await recordAuditEvent(tx, { institutionId, actorUserId: req.user?.uid, action: 'UPDATE', entityType: 'Institution', entityId: institutionId, metadata: { changedFields: Object.keys(data) } });
     return result;
   });

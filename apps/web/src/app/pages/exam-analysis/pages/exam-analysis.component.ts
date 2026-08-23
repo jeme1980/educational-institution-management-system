@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
-import { AnalysisStatCardComponent } from '../components/analysis-stat-card.component';
+import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import {
   AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
@@ -43,7 +46,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, AnalysisStatCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

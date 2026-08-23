@@ -1,29 +1,22 @@
 <div dir="rtl" class="analysis-page mx-auto min-h-[calc(100vh-4rem)] max-w-[1600px] space-y-5 p-4 md:p-6">
-  <header class="analysis-hero rounded-3xl p-5 text-white md:p-7">
-    <div class="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-      <div>
-        <div class="mb-2 flex items-center gap-2 text-xs text-blue-100"><mat-icon class="text-lg">analytics</mat-icon> الامتحانات والتقييمات / التحليل</div>
-        <h1 class="text-2xl font-black md:text-3xl">شاشة تحليل الامتحان</h1>
-        <p class="mt-2 max-w-2xl text-xs leading-6 text-slate-200">تحليل تشخيصي للطلاب والأسئلة والمهارات والموضوعات مع توصيات قابلة للتنفيذ.</p>
-        @if (dataset(); as current) {
-          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-            <span><b>الامتحان:</b> {{ current.exam.titleAr }}</span>
-            <span><b>المادة:</b> {{ examSubjectLabel() }}</span>
-            <span><b>الفترة:</b> {{ examPeriodLabel() }}</span>
-            <span><b>الشعبة:</b> {{ examGroupsLabel() }}</span>
-            <span><b>السنة:</b> {{ selectedYearLabel() }}</span>
-          </div>
-        }
-      </div>
-      <div class="flex flex-wrap gap-2 print:hidden">
-        <button (click)="exportResults()" class="action-button bg-white/10"><mat-icon>table_view</mat-icon> تصدير Excel</button>
-        <button (click)="printReport()" class="action-button bg-white text-[#00236f]"><mat-icon>picture_as_pdf</mat-icon> تقرير PDF / طباعة</button>
-      </div>
+  <ui-page-header eyebrow="التقييم والنتائج / تحليل الامتحانات" title="تحليل الامتحانات" description="تحليل تشخيصي للطلاب والأسئلة والمهارات والموضوعات مع توصيات قابلة للتنفيذ.">
+    <div ui-page-actions class="print:hidden">
+      <ui-button variant="secondary" (activated)="exportResults()"><mat-icon aria-hidden="true">table_view</mat-icon> تصدير Excel</ui-button>
+      <ui-button variant="primary" (activated)="printReport()"><mat-icon aria-hidden="true">picture_as_pdf</mat-icon> تقرير PDF / طباعة</ui-button>
     </div>
-  </header>
+  </ui-page-header>
 
-  <section class="analysis-filter-card rounded-2xl border border-slate-200 bg-white p-4 shadow-xs print:hidden">
-    <div class="mb-3 flex items-center justify-between"><h2 class="section-title"><mat-icon>filter_alt</mat-icon> اختيار الامتحان والتصفية</h2><span class="text-[10px] text-slate-400">تُحدّث المؤشرات مباشرة</span></div>
+  @if (dataset(); as current) {
+    <section class="analysis-context" aria-label="سياق الامتحان">
+      <div><span>الامتحان</span><strong>{{ current.exam.titleAr }}</strong></div>
+      <div><span>المادة</span><strong>{{ examSubjectLabel() }}</strong></div>
+      <div><span>الفترة</span><strong>{{ examPeriodLabel() }}</strong></div>
+      <div><span>الشعبة</span><strong>{{ examGroupsLabel() }}</strong></div>
+      <div><span>السنة</span><strong>{{ selectedYearLabel() }}</strong></div>
+    </section>
+  }
+
+  <ui-filter-panel class="analysis-filter-card print:hidden" title="اختيار الامتحان والتصفية" icon="filter_alt">
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
       <label class="filter-field"><span>السنة الدراسية</span><select disabled><option>السنة الحالية</option></select></label>
       <label class="filter-field"><span>الفصل الدراسي</span><select disabled><option>جميع الفصول</option></select></label>
@@ -34,7 +27,7 @@
       <label class="filter-field"><span>تاريخ الامتحان</span><input disabled [value]="dataset()?.exam.examDate ? (dataset()?.exam.examDate | date:'yyyy-MM-dd') : ''" /></label>
       <label class="filter-field"><span>المعلم</span><select disabled><option>{{ dataset()?.exam.teacherName || 'غير متوفر في بيانات الامتحان' }}</option></select></label>
     </div>
-  </section>
+  </ui-filter-panel>
 
   @if (loading()) {
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">@for (item of [1,2,3,4,5,6,7,8]; track item) {<div class="h-32 animate-pulse rounded-2xl bg-slate-200"></div>}</div>
@@ -45,7 +38,7 @@
   } @else if (!hasStudentRows()) {
     <div class="analysis-empty-card" role="status"><mat-icon>grading</mat-icon><strong>لا توجد نتائج مرصودة لهذا الامتحان بعد</strong><p>أضف درجات الطلاب أو سجّل حالات الغياب أولًا حتى تظهر مؤشرات التحليل.</p></div>
   } @else {
-    <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+    <section class="analysis-levels">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div><h2 class="section-title"><mat-icon>tune</mat-icon> مفتاح العلامات ومستويات الأداء</h2><div class="mt-3 flex flex-wrap gap-2">@for (level of levels(); track level.id) {<span class="level-chip" [style.--level-color]="level.color"><i></i>{{ level.name }} · {{ level.min }}–{{ level.max }}</span>}</div></div>
         <button (click)="showLevelsEditor.set(!showLevelsEditor())" class="secondary-button print:hidden"><mat-icon>edit</mat-icon> تعديل المفتاح</button>
@@ -71,16 +64,20 @@
 
     @if (activeTab() === 'overview') {
       @if (dataQualityWarnings().length) { <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div class="flex items-center gap-2"><mat-icon>warning</mat-icon><span>تنبيه حول جودة بيانات التحليل</span></div><ul class="mt-2 list-inside list-disc space-y-1 text-xs font-medium">@for (warning of dataQualityWarnings(); track warning) {<li>{{ warning }}</li>}</ul><button type="button" (click)="activeTab.set('questions')" class="mt-3 text-xs font-black text-amber-800 underline">مراجعة الأسئلة</button></div> }
-      <div class="overview-kpis grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-        <app-analysis-stat-card label="متوسط العلامات" [value]="format(summary().average) + '%'" icon="monitoring" />
-        <app-analysis-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" />
-        <app-analysis-stat-card label="الانحراف المعياري" [value]="format(summary().standardDeviation)" icon="scatter_plot" />
-        <app-analysis-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" color="#16a34a" />
-        <app-analysis-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" />
-        <app-analysis-stat-card label="الحضور والغياب" [value]="summary().attended + ' / ' + summary().absent" icon="groups" hint="حاضر / غائب" />
-        <app-analysis-stat-card label="متوسط الإجابات الصحيحة" [value]="format(summary().averageCorrect)" icon="check_circle" color="#16a34a" />
-        <app-analysis-stat-card label="متوسط الإجابات الخاطئة" [value]="format(summary().averageWrong)" icon="cancel" color="#dc2626" />
-        <app-analysis-stat-card label="متوسط غير المجاب" [value]="format(summary().averageUnanswered)" icon="help" color="#f59e0b" />
+      <div class="overview-kpis">
+        <div class="overview-kpi-row overview-kpi-row--primary">
+          <ui-stat-card label="متوسط العلامات" [value]="format(summary().average) + '%'" icon="monitoring" tone="primary" />
+          <ui-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" tone="primary" />
+          <ui-stat-card label="الانحراف المعياري" [value]="format(summary().standardDeviation)" icon="scatter_plot" tone="neutral" />
+          <ui-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" tone="success" />
+          <ui-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" tone="primary" />
+        </div>
+        <div class="overview-kpi-row overview-kpi-row--secondary">
+          <ui-stat-card label="الحضور والغياب" [value]="summary().attended + ' / ' + summary().absent" icon="groups" helper="حاضر / غائب" tone="neutral" />
+          <ui-stat-card label="متوسط الإجابات الصحيحة" [value]="format(summary().averageCorrect)" icon="check_circle" tone="success" />
+          <ui-stat-card label="متوسط الإجابات الخاطئة" [value]="format(summary().averageWrong)" icon="cancel" tone="danger" />
+          <ui-stat-card label="متوسط غير المجاب" [value]="format(summary().averageUnanswered)" icon="help" tone="warning" />
+        </div>
       </div>
       <div class="overview-visuals mt-4 grid gap-4 lg:grid-cols-[7fr_3fr]">
         <section class="panel"><h2 class="section-title">توزيع مستويات الأداء</h2><div class="mt-5 flex flex-col items-center gap-6 sm:flex-row"><div class="donut" [style.background]="donutGradient()"><div><b>{{ summary().attended }}</b><span>طالب</span></div></div><div class="flex-1 space-y-3">@for (level of levelCounts(); track level.id) {<div><div class="mb-1 flex justify-between text-xs"><span class="font-bold">{{ level.name }}</span><span>{{ level.count }} · {{ format(levelPercent(level.count)) }}%</span></div><div class="h-2 rounded-full bg-slate-100"><div class="h-full rounded-full" [style.background]="level.color" [style.width.%]="levelPercent(level.count)"></div></div></div>}</div></div></section>

@@ -18,8 +18,12 @@
   }
 
   @if (pageError()) { <div role="alert" class="rounded-xl border border-error/30 bg-error-container px-4 py-3 text-sm text-error">{{ pageError() }}</div> }
+  <ui-page-header title="المواد الدراسية والمناهج" description="تخطيط وتوجيه المقررات التعليمية والوحدات التفصيلية والمهارات المعتمدة." eyebrow="بوابة شؤون المناهج">
+    <div ui-page-actions><ui-button size="sm" variant="primary" [hidden]="!canCreate()" (activated)="openCreateSubjectModal()"><mat-icon icon class="text-base">add_circle</mat-icon>إضافة مادة تعليمية</ui-button></div>
+  </ui-page-header>
+
   <!-- Page Header -->
-  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+  <div class="legacy-subjects-header hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
     <div>
       <span class="text-[11px] font-extrabold text-[#00236f] bg-[#00236f]/5 px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">بوابة شؤون المناهج</span>
       <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">المواد الدراسية والمناهج</h1>
@@ -36,8 +40,15 @@
     </button>
   </div>
 
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <ui-stat-card label="إجمالي المواد" [value]="totalSubjects()" helper="المواد الأكاديمية" icon="menu_book" tone="primary" />
+    <ui-stat-card label="الوحدات التعليمية" [value]="totalTopics()" helper="الوحدات المرتبطة" icon="view_module" tone="success" />
+    <ui-stat-card label="المهارات" [value]="totalSkills()" helper="المهارات المعتمدة" icon="auto_awesome" tone="warning" />
+    <ui-stat-card label="متوسط الوحدات لكل مادة" [value]="avgTopicsPerSubject()" helper="مؤشر المحتوى الأكاديمي" icon="insights" tone="neutral" />
+  </div>
+
   <!-- Quick Metrics Dashboard (Bento Grid) -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+  <div class="legacy-subjects-metrics hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
     <!-- Metric 1: Total Subjects -->
     <div class="bg-white border border-slate-200/80 rounded-2xl p-4 min-h-[104px] flex items-center justify-between gap-3 shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
       <div class="space-y-0.5 min-w-0">

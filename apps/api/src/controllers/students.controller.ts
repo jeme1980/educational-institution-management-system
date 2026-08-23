@@ -31,6 +31,14 @@ async function resolveRelationTypeId(tx: any, value?: string | null): Promise<st
   return fallback.id;
 }
 
+async function resolveStrictRelationTypeId(tx: any, value?: string | null): Promise<string> {
+  if (isUuid(value)) {
+    const relationType = await tx.relationType.findFirst({ where: { id: value, isActive: true } });
+    if (relationType) return relationType.id;
+  }
+  throw new Error('INVALID_RELATION_TYPE');
+}
+
 async function resolveEnrollmentStatusId(tx: any): Promise<string> {
   const fallback = await tx.enrollmentStatus.findFirst({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } });
   if (!fallback) throw new Error('„״§ ˆ״¬״¯ ˆ״¶״¹ ״×״³״¬„ ״¹״§„  ״§„״¬״¯״§ˆ„ ״§„…״³״§״¹״¯״©.');
@@ -187,6 +195,14 @@ async function ensureStudentInInstitution(institutionId: string, studentId: stri
   return prisma.student.findFirst({ where: { id: studentId, institutionId }, select: { id: true } });
 }
 
+async function ensureActiveStudentInInstitution(institutionId: string, studentId: string) {
+  return prisma.student.findFirst({ where: { id: studentId, institutionId, isActive: true }, select: { id: true } });
+}
+
+export async function getRelationTypes(_req: ContextRequest, res: Response): Promise<any> {
+  return res.json(await prisma.relationType.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { nameAr: 'asc' }] }));
+}
+
 export async function getStudentGuardians(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context!.institutionId;
   const studentId = req.params['id'] as string;
@@ -203,11 +219,12 @@ export async function createStudentGuardian(req: ContextRequest, res: Response):
   const institutionId = req.context!.institutionId;
   const studentId = req.params['id'] as string;
   const input = req.body;
-  if (!await ensureStudentInInstitution(institutionId, studentId)) return res.status(404).json({ error: 'Student not found' });
+  if (!await ensureActiveStudentInInstitution(institutionId, studentId)) return res.status(404).json({ error: 'Student is archived or inactive.' });
   try {
+    let guardianCreated = false;
     const link = await prisma.$transaction(async (tx) => {
       let guardian = input.guardianId
-        ? await tx.guardian.findFirst({ where: { id: input.guardianId, institutionId, isDeleted: false } })
+        ? await tx.guardian.findFirst({ where: { id: input.guardianId, institutionId, isDeleted: false, isActive: true } })
         : null;
       if (input.guardianId && !guardian) throw new Error('Guardian does not belong to the current institution');
       if (!guardian) {
@@ -217,14 +234,14 @@ export async function createStudentGuardian(req: ContextRequest, res: Response):
           ...(data.primaryPhoneNumber ? [{ primaryPhoneNumber: data.primaryPhoneNumber }] : []),
           ...(data.email ? [{ email: data.email }] : []),
         ] } });
-        if (!guardian) guardian = await tx.guardian.create({ data: { institutionId, ...data, isActive: true } });
+        if (!guardian) { guardian = await tx.guardian.create({ data: { institutionId, ...data, isActive: true } }); guardianCreated = true; }
       }
       const isPrimary = input.isPrimaryContact ?? false;
       if (isPrimary) await tx.studentGuardian.updateMany({ where: { institutionId, studentId, isPrimaryContact: true }, data: { isPrimaryContact: false } });
       return tx.studentGuardian.create({
         data: {
           institutionId, studentId, guardianId: guardian.id,
-          relationTypeId: await resolveRelationTypeId(tx, input.relationTypeId),
+          relationTypeId: await resolveStrictRelationTypeId(tx, input.relationTypeId),
           isPrimaryContact: isPrimary,
           isFinancialResponsible: Boolean(input.isFinancialResponsible),
           hasCustody: Boolean(input.hasCustody),
@@ -233,8 +250,11 @@ export async function createStudentGuardian(req: ContextRequest, res: Response):
         include: { guardian: true, relationType: true },
       });
     });
+    if (guardianCreated) await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'GUARDIAN_CREATED', entityType: 'Guardian', entityId: link.guardianId });
+    await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'STUDENT_GUARDIAN_LINKED', entityType: 'StudentGuardian', entityId: link.id, metadata: { studentId, guardianId: link.guardianId } });
     return res.status(201).json(link);
   } catch (error: any) {
+    if (error?.message === 'INVALID_RELATION_TYPE') return res.status(400).json({ error: 'Invalid or inactive relation type.' });
     if (error?.code === 'P2002') return res.status(409).json({ error: 'This guardian is already linked to the student' });
     throw error;
   }
@@ -246,20 +266,23 @@ export async function updateStudentGuardian(req: ContextRequest, res: Response):
   const input = req.body;
   const existing = await prisma.studentGuardian.findFirst({ where: { id: linkId, institutionId }, include: { guardian: true } });
   if (!existing) return res.status(404).json({ error: 'Guardian relation not found' });
+  if (!await ensureActiveStudentInInstitution(institutionId, existing.studentId)) return res.status(404).json({ error: 'Student is archived or inactive.' });
   try {
     const link = await prisma.$transaction(async (tx) => {
       if (input.isPrimaryContact === true) await tx.studentGuardian.updateMany({ where: { institutionId, studentId: existing.studentId, isPrimaryContact: true, id: { not: linkId } }, data: { isPrimaryContact: false } });
       if (Object.keys(guardianDataFromInput(input)).some((key) => input[key] !== undefined)) await tx.guardian.update({ where: { id: existing.guardianId }, data: guardianDataFromInput({ ...existing.guardian, ...input }) });
       return tx.studentGuardian.update({ where: { id: linkId }, data: {
-        ...(input.relationTypeId !== undefined ? { relationTypeId: await resolveRelationTypeId(tx, input.relationTypeId) } : {}),
+        ...(input.relationTypeId !== undefined ? { relationTypeId: await resolveStrictRelationTypeId(tx, input.relationTypeId) } : {}),
         ...(input.isPrimaryContact !== undefined ? { isPrimaryContact: Boolean(input.isPrimaryContact) } : {}),
         ...(input.isFinancialResponsible !== undefined ? { isFinancialResponsible: Boolean(input.isFinancialResponsible) } : {}),
         ...(input.hasCustody !== undefined ? { hasCustody: Boolean(input.hasCustody) } : {}),
         ...(input.canPickup !== undefined ? { canPickup: Boolean(input.canPickup) } : {}),
       }, include: { guardian: true, relationType: true } });
     });
+    await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'GUARDIAN_UPDATED', entityType: 'StudentGuardian', entityId: link.id, metadata: { studentId: existing.studentId, guardianId: existing.guardianId } });
     return res.json(link);
   } catch (error: any) {
+    if (error?.message === 'INVALID_RELATION_TYPE') return res.status(400).json({ error: 'Invalid or inactive relation type.' });
     if (error?.code === 'P2002') return res.status(409).json({ error: 'This guardian is already linked to the student' });
     throw error;
   }

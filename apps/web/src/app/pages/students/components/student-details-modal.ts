@@ -43,6 +43,7 @@ export class StudentDetailsModal {
   editingMedical = signal(false);
   guardianToDelete = signal<StudentGuardian | null>(null);
   isRemovingGuardian = signal(false);
+  relationTypes = signal<{ id: string; nameAr: string; nameHe?: string | null }[]>([]);
 
   constructor() {
     effect(() => {
@@ -55,6 +56,7 @@ export class StudentDetailsModal {
     if (!studentId) return;
     this.isProfileLoading.set(true);
     this.profileError.set(null);
+    this.relationTypes.set((this.apiService.lookups()?.relationTypes || []).filter((item: any) => item.isActive !== false));
     this.studentStateService.getStudentGuardians(studentId).subscribe({ next: (items) => this.guardians.set(items), error: (error) => this.profileError.set(error.message) });
     this.studentStateService.getStudentMedicalProfile(studentId).subscribe({
       next: (profile) => { this.medicalProfile.set(profile); this.medicalDraft.set({ ...profile }); this.isProfileLoading.set(false); },
@@ -64,7 +66,7 @@ export class StudentDetailsModal {
 
   openGuardianCreate() {
     this.editingGuardianId.set(null);
-    this.guardianDraft.set({ relationTypeId: 'parent', isPrimaryContact: this.guardians().length === 0, isFinancialResponsible: false, hasCustody: false, canPickup: false });
+    this.guardianDraft.set({ relationTypeId: this.relationTypes()[0]?.id || '', isPrimaryContact: this.guardians().length === 0, isFinancialResponsible: false, hasCustody: false, canPickup: false });
     this.showGuardianForm.set(true);
   }
 

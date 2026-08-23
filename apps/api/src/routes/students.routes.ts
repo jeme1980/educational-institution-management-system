@@ -25,9 +25,11 @@ router.delete('/students/:id', requireAuth, requirePermission('students', 'delet
 router.patch('/students/:id/restore', requireAuth, requirePermission('students', 'update'), asyncHandler(controller.restoreStudentsById));
 router.get('/students/:id/grades', requireAuth, requirePermission('students', 'read'), asyncHandler(controller.getStudentsByIdGrades));
 router.get('/students/:id/guardians', requireAuth, requirePermission('guardian', 'read'), asyncHandler(controller.getStudentGuardians));
+router.get('/relation-types', requireAuth, requirePermission('guardian', 'read'), asyncHandler(controller.getRelationTypes));
 router.post('/students/:id/guardians', requireAuth, requirePermission('guardian', 'create'), validateRequest(guardianCreateSchema), asyncHandler(controller.createStudentGuardian));
 router.get('/students/:id/medical-profile', requireAuth, requirePermission('medical-profile', 'read'), asyncHandler(controller.getStudentMedicalProfile));
 router.put('/students/:id/medical-profile', requireAuth, requirePermission('medical-profile', 'update'), validateRequest(medicalProfileSchema), asyncHandler(controller.upsertStudentMedicalProfile));
+router.patch('/students/:id/medical-profile', requireAuth, requirePermission('medical-profile', 'update'), validateRequest(medicalProfileSchema), asyncHandler(controller.upsertStudentMedicalProfile));
 router.delete('/students/:id/medical-profile', requireAuth, requirePermission('medical-profile', 'update'), asyncHandler(controller.deleteStudentMedicalProfile));
 router.put('/student-guardians/:id', requireAuth, requirePermission('guardian', 'update'), validateRequest(guardianUpdateSchema), asyncHandler(controller.updateStudentGuardian));
 router.delete('/students/:studentId/guardians/:linkId', requireAuth, requirePermission('guardian', 'delete'), asyncHandler(controller.deleteStudentGuardian));

@@ -16,9 +16,10 @@ export class ExamAnalysisDataService {
   async load(examId: string): Promise<ExamAnalysisDataset> {
     const exam = this.api.exams().find(item => item.id === examId) || await this.api.examsApi.loadExam(examId);
     if (!exam) throw new Error('EXAM_NOT_FOUND');
-    const [rawQuestions, groups] = await Promise.all([
+    const [rawQuestions, groups, backendAnalysis] = await Promise.all([
       this.api.loadExamQuestions(examId),
       this.api.loadExamStudyGroups(examId),
+      this.api.loadExamAnalysis(examId),
     ]);
     const topics = this.api.topics();
     // Exam study-group links contain the actual group under `studyGroup`.
@@ -73,6 +74,6 @@ export class ExamAnalysisDataService {
         });
       }
     }
-    return { exam, students, questions, groups: groupTargets };
+    return { exam, students, questions, groups: groupTargets, backendAnalysis };
   }
 }

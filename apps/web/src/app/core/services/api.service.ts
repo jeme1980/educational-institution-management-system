@@ -180,6 +180,7 @@ export class ApiService extends BaseApiService {
   saveExamBuilder(id: string, payload: any) { return this.examsApi.saveExamBuilder(id, payload); }
   deleteExam(id: string) { return this.examsApi.deleteExam(id); }
   loadExamResults(examId: string) { return this.examsApi.loadExamResults(examId); }
+  loadExamAnalysis(examId: string) { return this.examsApi.loadExamAnalysis(examId); }
   saveExamResults(examId: string, results: any[]) { return this.examsApi.saveExamResults(examId, results); }
   importExamResults(examId: string, file: File) { return this.examsApi.importExamResults(examId, file); }
   loadExamTypes() { return this.examsApi.loadExamTypes(); }

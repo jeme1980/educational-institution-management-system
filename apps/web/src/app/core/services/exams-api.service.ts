@@ -155,6 +155,16 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
+  async loadExamAnalysis(examId: string) {
+    try {
+      const res = await this.apiFetch(`/api/exams/${examId}/analysis`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) {
+      console.error('Failed to load exam analysis', e);
+    }
+    return null;
+  }
+
   async saveExamResults(examId: string, results: any[]) {
     try {
       const res = await this.apiFetch(`/api/exams/${examId}/results`, {

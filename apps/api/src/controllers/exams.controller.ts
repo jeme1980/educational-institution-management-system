@@ -240,6 +240,29 @@ export async function getExamsByIdResults(req: ContextRequest, res: Response): P
   return getExamsByIdResultsEnhanced(req, res);
 }
 
+export async function getExamsByIdAnalysis(req: ContextRequest, res: Response): Promise<any> {
+  const { institutionId, academicYearId } = context(req);
+  const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true, institutionId: true, academicYearId: true, subjectId: true, maxScore: true } });
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+  const eligible = eligibleStudentIds(await getEligibleExamStudents(exam));
+  const [questions, results] = await Promise.all([
+    prisma.examQuestion.findMany({ where: { institutionId, examId: exam.id }, select: { id: true, questionNumber: true, maxScore: true, topicId: true, skillId: true } }),
+    prisma.studentExamResult.findMany({ where: { institutionId, examId: exam.id, studentId: { in: [...eligible] } }, select: { studentId: true, totalScore: true, isAbsence: true } }),
+  ]);
+  const attended = results.filter(result => !result.isAbsence);
+  const scores = await prisma.studentQuestionScore.findMany({ where: { institutionId, examQuestionId: { in: questions.map(question => question.id) }, studentId: { in: attended.map(result => result.studentId) } }, select: { examQuestionId: true, studentId: true, score: true } });
+  const maxScore = Number(exam.maxScore) || 0;
+  const percentages = attended.map(result => maxScore ? Number(result.totalScore) / maxScore * 100 : 0);
+  const average = percentages.length ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length : 0;
+  const questionAnalysis = questions.map(question => {
+    const rows = scores.filter(score => score.examQuestionId === question.id);
+    const achieved = rows.reduce((sum, row) => sum + Number(row.score), 0);
+    const questionMax = Number(question.maxScore) || 0;
+    return { questionId: question.id, questionNumber: question.questionNumber, topicId: question.topicId, skillId: question.skillId, answeredCount: rows.length, successRate: attended.length && questionMax ? achieved / (attended.length * questionMax) * 100 : 0 };
+  });
+  return res.json({ source: 'database', scope: { institutionId, academicYearId, examId: exam.id }, summary: { registered: eligible.size, attended: attended.length, absent: results.filter(result => result.isAbsence).length, average, highest: percentages.length ? Math.max(...percentages) : 0, lowest: percentages.length ? Math.min(...percentages) : 0, passRate: attended.length ? attended.filter(result => maxScore && Number(result.totalScore) / maxScore >= 0.5).length / attended.length * 100 : 0 }, questions: questionAnalysis });
+}
+
 export async function getExamTypes(req: ContextRequest, res: Response): Promise<any> { return res.json(await prisma.examType.findMany({ where: { institutionId: context(req).institutionId, isActive: true }, orderBy: { sortOrder: 'asc' } })); }
 export async function getExamStatuses(_req: ContextRequest, res: Response): Promise<any> { return res.json([{ id: 'DRAFT', nameAr: '…״³ˆ״¯״©' }, { id: 'PUBLISHED', nameAr: '…†״´ˆ״±' }]); }
 export async function getQuestionTypes(req: ContextRequest, res: Response): Promise<any> { return res.json(await prisma.questionType.findMany({ where: { institutionId: context(req).institutionId, isActive: true }, orderBy: { sortOrder: 'asc' } })); }

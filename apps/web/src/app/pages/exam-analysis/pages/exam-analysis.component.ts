@@ -101,7 +101,11 @@ export class ExamAnalysisComponent implements OnInit {
     if (!data) return [];
     return this.calculator.students(this.filteredBaseStudents(), data.questions, Number(data.exam.maxScore), this.levels());
   });
-  summary = computed(() => this.calculator.summary(this.students()));
+  summary = computed(() => {
+    const calculated = this.calculator.summary(this.students());
+    const backend = this.dataset()?.backendAnalysis?.summary;
+    return this.selectedGroupId() === 'ALL' && backend ? { ...calculated, ...backend } : calculated;
+  });
   dataQualityWarnings = computed(() => {
     const data = this.dataset();
     if (!data) return [] as string[];

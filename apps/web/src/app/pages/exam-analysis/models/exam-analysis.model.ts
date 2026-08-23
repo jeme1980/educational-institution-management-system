@@ -39,6 +39,7 @@ export interface ExamAnalysisDataset {
   students: AnalysisStudent[];
   questions: AnalysisQuestion[];
   groups: any[];
+  backendAnalysis?: any;
 }
 
 export interface StudentAnalysis extends AnalysisStudent {

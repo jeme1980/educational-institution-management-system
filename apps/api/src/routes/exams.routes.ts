@@ -15,6 +15,7 @@ router.put('/exams/:id', requireAuth, requirePermission('exams', 'update'), asyn
 router.put('/exams/:id/builder', requireAuth, requirePermission('exams', 'update'), asyncHandler(controller.saveExamBuilder));
 router.delete('/exams/:id', requireAuth, requirePermission('exams', 'delete'), asyncHandler(controller.deleteExamsById));
 router.get('/exams/:id/results', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdResults));
+router.get('/exams/:id/analysis', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamsByIdAnalysis));
 router.post('/exams/:id/results/import', requireAuth, requirePermission('exams', 'update'), express.raw({ type: '*/*', limit: '10mb' }), asyncHandler(importExamResults));
 router.post('/exams/:id/results', requireAuth, requirePermission('exams', 'update'), validateRequest(examResultsSchema), asyncHandler(controller.createExamsByIdResultsEnhanced));
 router.get('/exams/:id/results/:studentId', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getExamStudentResult));

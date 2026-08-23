@@ -9,11 +9,16 @@ import { UiInputComponent } from '../../../shared/components/input/ui-input.comp
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
 
 @Component({
   selector: 'app-staff-development',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent, UiFilterPanelComponent],
   templateUrl: './staff-development.component.html',
+  styles: ['main > header, main > section:nth-of-type(2), main > section:nth-of-type(3) { display: none; }'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StaffDevelopmentComponent implements OnInit {

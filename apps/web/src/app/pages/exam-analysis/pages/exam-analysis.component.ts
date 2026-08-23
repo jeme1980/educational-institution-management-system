@@ -8,6 +8,8 @@ import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-pan
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { PerformanceBarChartComponent } from '../components/performance-bar-chart.component';
+import { PerformanceDonutChartComponent } from '../components/performance-donut-chart.component';
 import {
   AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
@@ -22,52 +24,6 @@ export interface InterventionGroupView {
   students: StudentAnalysis[];
   duration: string;
   activity: string;
-}
-
-export interface OverviewChartSegment {
-  id: string;
-  name: string;
-  color: string;
-  count: number;
-  percentage: number;
-  dasharray: string;
-  dashoffset: number;
-}
-
-export interface OverviewGroupBar {
-  id: string;
-  name: string;
-  average: number;
-  passRate: number;
-  height: number;
-}
-
-export function buildOverviewChartSegments(levels: (PerformanceLevel & { count: number })[], total: number): OverviewChartSegment[] {
-  let offset = 0;
-  return levels.map(level => {
-    const percentage = total > 0 ? level.count / total * 100 : 0;
-    const segment = {
-      id: level.id,
-      name: level.name,
-      color: level.color,
-      count: level.count,
-      percentage,
-      dasharray: `${percentage} ${Math.max(0, 100 - percentage)}`,
-      dashoffset: -offset,
-    };
-    offset += percentage;
-    return segment;
-  });
-}
-
-export function buildOverviewGroupBars(groups: { id: string; name: string; summary: { average: number; passRate: number } }[]): OverviewGroupBar[] {
-  return groups.map(group => ({
-    id: group.id,
-    name: group.name,
-    average: Number.isFinite(group.summary.average) ? Math.max(0, Math.min(100, group.summary.average)) : 0,
-    passRate: Number.isFinite(group.summary.passRate) ? Math.max(0, Math.min(100, group.summary.passRate)) : 0,
-    height: Number.isFinite(group.summary.average) ? Math.max(0, Math.min(100, group.summary.average)) : 0,
-  }));
 }
 
 const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
@@ -92,7 +48,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -232,8 +188,6 @@ export class ExamAnalysisComponent implements OnInit {
     ...level,
     count: this.students().filter(student => !student.isAbsent && student.level.id === level.id).length,
   })));
-  overviewChartSegments = computed(() => buildOverviewChartSegments(this.levelCounts(), this.summary().attended));
-  overviewGroupBars = computed(() => buildOverviewGroupBars(this.groupComparisons()));
   visibleStudents = computed(() => {
     const term = this.studentSearch().trim().toLocaleLowerCase();
     const filter = this.levelFilter();
@@ -329,16 +283,7 @@ export class ExamAnalysisComponent implements OnInit {
   }
 
   format(value: number) { return Number(value || 0).toFixed(1); }
-  chartBarLabelY(height: number) { return Math.max(16, 212 - height * 1.8); }
   levelPercent(count: number) { const total = this.summary().attended; return total ? count / total * 100 : 0; }
-  donutGradient() {
-    let cursor = 0;
-    const stops = this.levelCounts().map(level => {
-      const start = cursor; cursor += this.levelPercent(level.count);
-      return `${level.color} ${start}% ${cursor}%`;
-    });
-    return `conic-gradient(${stops.length ? stops.join(',') : '#e2e8f0 0 100%'})`;
-  }
   groupComparisons() {
     const data = this.dataset();
     if (!data) return [];

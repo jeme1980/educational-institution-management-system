@@ -9,12 +9,14 @@ import {TitleStrategy} from '@angular/router';
 import {routes} from './app.routes';
 import {authInterceptor} from './core/interceptors/auth.interceptor';
 import {AppTitleStrategy} from './core/services/app-title.strategy';
+import { provideCharts, withDefaultRegisterables } from 'ng2-charts';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(), 
     provideRouter(routes),
     {provide: TitleStrategy, useClass: AppTitleStrategy},
-    provideHttpClient(withInterceptors([authInterceptor]))
+    provideHttpClient(withInterceptors([authInterceptor])),
+    provideCharts(withDefaultRegisterables())
   ],
 };

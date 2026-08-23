@@ -33,6 +33,10 @@ Reuse the existing shared components before creating local variants:
 
 New reusable UI belongs under `apps/web/src/app/shared/components/`. A feature-local component is appropriate only when its behavior is not reusable.
 
+## Analytical charts
+
+The project chart standard is Chart.js through `ng2-charts`. Feature-owned chart wrappers belong with the feature, while shared theme/configuration belongs under `apps/web/src/app/shared/charts/`. Chart options must read semantic tokens at runtime so light/dark theme changes update without a full reload, and must configure RTL text direction, responsive sizing, tooltips, and reduced-motion behavior. Charts must have an accessible label plus a textual summary or legend; colour alone is not sufficient. D3 and additional chart libraries are not part of the standard unless a future visualization cannot reasonably be implemented with Chart.js.
+
 ## Buttons and forms
 
 - Primary: academic blue surface with white text.

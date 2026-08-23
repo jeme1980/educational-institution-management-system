@@ -11,6 +11,7 @@ import { UiInputComponent } from '../../../shared/components/input/ui-input.comp
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { UiConfirmDialogComponent } from '../../../shared/components/ui-confirm-dialog/ui-confirm-dialog.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,6 +23,11 @@ import { UiConfirmDialogComponent } from '../../../shared/components/ui-confirm-
 export class StaffComponent implements OnInit {
   apiService = inject(ApiService);
   fb = inject(FormBuilder);
+  authService = inject(AuthService);
+  pageError = signal('');
+  canCreate = computed(() => this.authService.hasPermission('teachers:create'));
+  canUpdate = computed(() => this.authService.hasPermission('teachers:update'));
+  canDelete = computed(() => this.authService.hasPermission('teachers:delete'));
 
   activeTab = signal<'staff_members' | 'staff_assignments'>('staff_members');
   searchTerm = signal<string>('');
@@ -98,6 +104,7 @@ export class StaffComponent implements OnInit {
       this.apiService.loadSubjects(),
       this.apiService.loadStaffAssignments(),
     ]);
+    if (this.apiService.usersApi.staffError()) this.pageError.set(this.apiService.usersApi.staffError());
 
     // Preselect defaults
     const staffList = this.apiService.staff();
@@ -418,6 +425,7 @@ export class StaffComponent implements OnInit {
   }
 
   openAddModal() {
+    if (!this.canCreate()) return;
     this.isEditMode.set(false);
     this.selectedStaffId.set(null);
     this.staffForm.reset({
@@ -437,6 +445,7 @@ export class StaffComponent implements OnInit {
   }
 
   openEditModal(m: StaffMember) {
+    if (!this.canUpdate()) return;
     this.isEditMode.set(true);
     this.selectedStaffId.set(m.id);
     this.staffForm.patchValue({
@@ -460,6 +469,7 @@ export class StaffComponent implements OnInit {
   }
 
   async saveStaff() {
+    if (this.isEditMode() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.staffForm.invalid) {
       this.staffForm.markAllAsTouched();
       return;
@@ -496,6 +506,7 @@ export class StaffComponent implements OnInit {
   }
 
   async confirmDelete() {
+    if (!this.canDelete()) return;
     const m = this.memberToDelete();
     if (!m || this.isDeletingMember()) return;
     this.isDeletingMember.set(true);
@@ -512,6 +523,7 @@ export class StaffComponent implements OnInit {
 
   // --- ASSIGNMENT ACTIONS ---
   openAddAssignmentModal() {
+    if (!this.canCreate()) return;
     this.isAssignmentEditMode.set(false);
     this.selectedAssignmentId.set(null);
     const staff = this.apiService.staff();
@@ -536,6 +548,7 @@ export class StaffComponent implements OnInit {
   }
 
   openEditAssignmentModal(a: StaffAssignment) {
+    if (!this.canUpdate()) return;
     this.isAssignmentEditMode.set(true);
     this.selectedAssignmentId.set(a.id);
     this.assignmentForm.patchValue({
@@ -560,6 +573,7 @@ export class StaffComponent implements OnInit {
   }
 
   async saveAssignment() {
+    if (this.isAssignmentEditMode() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.assignmentForm.invalid) {
       this.assignmentForm.markAllAsTouched();
       this.apiService.usersApi.staffAssignmentError.set('يرجى استكمال الحقول المطلوبة قبل الحفظ.');
@@ -598,6 +612,7 @@ export class StaffComponent implements OnInit {
   }
 
   async confirmDeleteAssignment() {
+    if (!this.canDelete()) return;
     const a = this.assignmentToDelete();
     if (!a || this.isDeletingAssignment()) return;
     this.isDeletingAssignment.set(true);

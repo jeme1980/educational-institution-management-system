@@ -1,6 +1,7 @@
 <div class="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] p-4 md:p-6" id="staff-container">
       <!-- Page Title & Main Actions -->
-      <app-staff-header [activeTab]="activeTab()" (exportList)="exportStaffList()" (openAddModal)="openAddModal()" (openAddAssignmentModal)="openAddAssignmentModal()"></app-staff-header>
+      <app-staff-header [activeTab]="activeTab()" [canCreate]="canCreate()" (exportList)="exportStaffList()" (openAddModal)="openAddModal()" (openAddAssignmentModal)="openAddAssignmentModal()"></app-staff-header>
+      @if (pageError()) { <div role="alert" class="rounded-xl border border-error/30 bg-error-container px-4 py-3 text-sm text-error">{{ pageError() }}</div> }
 
       <!-- Tab Switcher -->
       <div class="flex items-center gap-2 border-b border-surface-border mb-6">

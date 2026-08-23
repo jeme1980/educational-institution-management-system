@@ -22,7 +22,7 @@ import { MatIconModule } from '@angular/material/icon';
           <span>تصدير القائمة</span>
         </button>
         
-        @if (activeTab() === 'staff_members') {
+        @if (activeTab() === 'staff_members' && canCreate()) {
           <button
             (click)="openAddModal.emit()"
             type="button"
@@ -31,7 +31,7 @@ import { MatIconModule } from '@angular/material/icon';
             <mat-icon class="text-[18px]">add</mat-icon>
             <span class="font-label-md text-label-md font-semibold">إضافة موظف جديد</span>
           </button>
-        } @else {
+        } @else if (canCreate()) {
           <button
             (click)="openAddAssignmentModal.emit()"
             type="button"
@@ -50,4 +50,5 @@ export class StaffHeaderComponent {
   exportList = output<void>();
   openAddModal = output<void>();
   openAddAssignmentModal = output<void>();
+  canCreate = input(true);
 }

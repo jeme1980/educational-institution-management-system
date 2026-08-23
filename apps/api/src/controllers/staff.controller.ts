@@ -45,23 +45,29 @@ export async function createStaff(req: AuthRequest, res: Response): Promise<any>
   if (!uuid(institutionId) || !String(firstNameAr || '').trim() || !String(familyNameAr || '').trim()) return res.status(400).json({ error: 'المؤسسة والاسم الأول واسم العائلة حقول مطلوبة وصحيحة.' });
   if (genderId && (!uuid(genderId) || !(await prisma.gender.findFirst({ where: { id: genderId, isActive: true } })))) return res.status(400).json({ error: 'الجنس المحدد غير صالح.' });
   if (specializationId && (!uuid(specializationId) || !(await prisma.specialization.findFirst({ where: { id: specializationId, institutionId, isActive: true } })))) return res.status(400).json({ error: 'التخصص المحدد غير صالح.' });
-  const inserted = await prisma.staffMember.create({
-    data: {
-      institutionId,
-      nationalId: nationalId || null,
-      firstNameAr: firstNameAr || '…ˆ״¸',
-      firstNameHe: firstNameHe || null,
-      familyNameAr: familyNameAr || '״¬״¯״¯',
-      familyNameHe: familyNameHe || null,
-      genderId: genderId || null,
-      specializationId: specializationId || null,
-      phoneNumber: phoneNumber || null,
-      email: email || null,
-      createdBy: uuid(req.user?.uid),
-      archivedAt: archivedAt ? new Date(archivedAt) : null,
-    },
-  });
-  res.status(201).json(inserted);
+  try {
+    const inserted = await prisma.staffMember.create({
+      data: {
+        institutionId,
+        nationalId: String(nationalId || '').trim() || null,
+        firstNameAr: String(firstNameAr).trim(),
+        firstNameHe: String(firstNameHe || '').trim() || null,
+        familyNameAr: String(familyNameAr).trim(),
+        familyNameHe: String(familyNameHe || '').trim() || null,
+        genderId: genderId || null,
+        specializationId: specializationId || null,
+        phoneNumber: String(phoneNumber || '').trim() || null,
+        email: String(email || '').trim() || null,
+        createdBy: uuid(req.user?.uid),
+        archivedAt: archivedAt ? new Date(archivedAt) : null,
+      },
+    });
+    return res.status(201).json(inserted);
+  } catch (error) {
+    if (isUniqueViolationError(error)) return res.status(409).json({ error: 'رقم الهوية مستخدم مسبقًا داخل المؤسسة.' });
+    console.error('Failed to create staff member', error);
+    return res.status(500).json({ error: 'تعذر حفظ بيانات الموظف.' });
+  }
 }
 
 export async function updateStaffById(req: AuthRequest, res: Response): Promise<any> {
@@ -73,25 +79,31 @@ export async function updateStaffById(req: AuthRequest, res: Response): Promise<
   if (!uuid(institutionId) || !String(firstNameAr || '').trim() || !String(familyNameAr || '').trim()) return res.status(400).json({ error: 'المؤسسة والاسم الأول واسم العائلة حقول مطلوبة وصحيحة.' });
   if (genderId && (!uuid(genderId) || !(await prisma.gender.findFirst({ where: { id: genderId, isActive: true } })))) return res.status(400).json({ error: 'الجنس المحدد غير صالح.' });
   if (specializationId && (!uuid(specializationId) || !(await prisma.specialization.findFirst({ where: { id: specializationId, institutionId, isActive: true } })))) return res.status(400).json({ error: 'التخصص المحدد غير صالح.' });
-  const updated = await prisma.staffMember.update({
-    where: { id: existing.id },
-    data: {
-      nationalId: nationalId !== undefined ? nationalId : null,
-      firstNameAr,
-      firstNameHe: firstNameHe !== undefined ? firstNameHe : null,
-      familyNameAr,
-      familyNameHe: familyNameHe !== undefined ? familyNameHe : null,
-      genderId: genderId !== undefined ? genderId : null,
-      specializationId: specializationId !== undefined ? specializationId : null,
-      phoneNumber: phoneNumber !== undefined ? phoneNumber : null,
-      email: email !== undefined ? email : null,
-      institutionId,
-      updatedAt: new Date(),
-      updatedBy: uuid(req.user?.uid),
-      archivedAt: archivedAt ? new Date(archivedAt) : null,
-    },
-  });
-  return res.json(updated);
+  try {
+    const updated = await prisma.staffMember.update({
+      where: { id: existing.id },
+      data: {
+        nationalId: String(nationalId || '').trim() || null,
+        firstNameAr: String(firstNameAr).trim(),
+        firstNameHe: String(firstNameHe || '').trim() || null,
+        familyNameAr: String(familyNameAr).trim(),
+        familyNameHe: String(familyNameHe || '').trim() || null,
+        genderId: genderId || null,
+        specializationId: specializationId || null,
+        phoneNumber: String(phoneNumber || '').trim() || null,
+        email: String(email || '').trim() || null,
+        institutionId,
+        updatedAt: new Date(),
+        updatedBy: uuid(req.user?.uid),
+        archivedAt: archivedAt ? new Date(archivedAt) : null,
+      },
+    });
+    return res.json(updated);
+  } catch (error) {
+    if (isUniqueViolationError(error)) return res.status(409).json({ error: 'رقم الهوية مستخدم مسبقًا داخل المؤسسة.' });
+    console.error('Failed to update staff member', error);
+    return res.status(500).json({ error: 'تعذر تحديث بيانات الموظف.' });
+  }
 }
 
 export async function deleteStaffById(req: AuthRequest, res: Response): Promise<any> {
@@ -259,11 +271,14 @@ export async function createStaffAssignments(req: AuthRequest, res: Response): P
   const institutionId = institutionIdFrom(req);
   const { academicYearId, staffMemberId, jobRoleId, startDate, endDate, isPrimary, isActive, notes, archivedAt } = req.body;
   const subjectIds = requestedSubjectIds(req.body.subjects ?? req.body.subjectIds) || [];
+  if (!uuid(institutionId) || !uuid(academicYearId) || !uuid(staffMemberId) || !uuid(jobRoleId) || !subjectIds.every((subjectId) => uuid(subjectId))) {
+    return res.status(400).json({ error: 'معرف المؤسسة والسنة والموظف والدور والمواد يجب أن تكون UUID صحيحة.' });
+  }
   try {
     const [staff, role, year] = await Promise.all([
-      prisma.staffMember.findFirst({ where: { id: staffMemberId, institutionId } }),
-      prisma.jobRole.findFirst({ where: { id: jobRoleId, institutionId } }),
-      prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId } }),
+      prisma.staffMember.findFirst({ where: { id: staffMemberId, institutionId, archivedAt: null } }),
+      prisma.jobRole.findFirst({ where: { id: jobRoleId, institutionId, isActive: true, archivedAt: null } }),
+      prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId, archivedAt: null } }),
     ]);
     if (!staff || !role || !year || !(await validateSubjects(institutionId, academicYearId, subjectIds))) {
       return res.status(400).json({ error: 'Staff, job role, academic year, and subjects must belong to the current institution and academic year' });
@@ -290,13 +305,16 @@ export async function updateStaffAssignmentsById(req: AuthRequest, res: Response
   const institutionId = institutionIdFrom(req);
   const { academicYearId, staffMemberId, jobRoleId, startDate, endDate, isPrimary, isActive, notes, archivedAt } = req.body;
   const requestedSubjects = requestedSubjectIds(req.body.subjects ?? req.body.subjectIds);
+  if (!uuid(institutionId) || !uuid(academicYearId) || !uuid(staffMemberId) || !uuid(jobRoleId) || (requestedSubjects && !requestedSubjects.every((subjectId) => uuid(subjectId)))) {
+    return res.status(400).json({ error: 'معرف المؤسسة والسنة والموظف والدور والمواد يجب أن تكون UUID صحيحة.' });
+  }
   try {
     const existing = await prisma.staffAssignment.findFirst({ where: { id, institutionId } });
     if (!existing) return res.status(404).json({ error: 'Staff assignment not found' });
     const [staff, role, year] = await Promise.all([
-      prisma.staffMember.findFirst({ where: { id: staffMemberId, institutionId } }),
-      prisma.jobRole.findFirst({ where: { id: jobRoleId, institutionId } }),
-      prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId } }),
+      prisma.staffMember.findFirst({ where: { id: staffMemberId, institutionId, archivedAt: null } }),
+      prisma.jobRole.findFirst({ where: { id: jobRoleId, institutionId, isActive: true, archivedAt: null } }),
+      prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId, archivedAt: null } }),
     ]);
     if (!staff || !role || !year || (requestedSubjects && !(await validateSubjects(institutionId, academicYearId, requestedSubjects)))) {
       return res.status(400).json({ error: 'Staff, job role, academic year, and subjects must belong to the current institution and academic year' });

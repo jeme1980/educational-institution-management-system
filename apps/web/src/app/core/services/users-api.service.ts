@@ -25,14 +25,18 @@ export class UsersApiService extends BaseApiService {
   }
 
   async loadStaff() {
+    this.staffError.set('');
     try {
       const res = await this.apiFetch('/api/staff', { headers: this.headers });
       if (res.ok) {
         const data = await res.json();
         this.staff.set(data);
+      } else {
+        this.staffError.set(await this.readStaffError(res));
       }
     } catch (e) {
       console.error('Failed to load staff', e);
+      this.staffError.set('تعذر تحميل بيانات الموظفين.');
     }
   }
 
@@ -86,6 +90,7 @@ export class UsersApiService extends BaseApiService {
   }
 
   async deleteStaff(id: string) {
+    this.staffError.set('');
     try {
       const res = await this.apiFetch(`/api/staff/${id}`, {
         method: 'DELETE',
@@ -95,8 +100,10 @@ export class UsersApiService extends BaseApiService {
         await this.loadStaff();
         return true;
       }
+      this.staffError.set(await this.readStaffError(res));
     } catch (e) {
       console.error('Failed to delete staff', e);
+      this.staffError.set('تعذر أرشفة الموظف.');
     }
     return false;
   }

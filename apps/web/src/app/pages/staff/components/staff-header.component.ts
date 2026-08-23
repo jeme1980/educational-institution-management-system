@@ -1,13 +1,26 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-staff-header',
-  imports: [CommonModule, MatIconModule],
+  imports: [CommonModule, MatIconModule, UiButtonComponent, UiPageHeaderComponent],
   template: `
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <ui-page-header title="إدارة الكادر والتعيينات" description="عرض وإدارة السجلات الوظيفية والتعيينات الأكاديمية للطاقم التدريسي والإداري." eyebrow="الموارد البشرية">
+      <div ui-page-actions class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <ui-button size="sm" variant="secondary" (activated)="exportList.emit()"><mat-icon icon class="text-base">download</mat-icon>تصدير القائمة</ui-button>
+        @if (activeTab() === 'staff_members' && canCreate()) {
+          <ui-button size="sm" variant="primary" (activated)="openAddModal.emit()"><mat-icon icon class="text-base">add</mat-icon>إضافة موظف جديد</ui-button>
+        } @else if (canCreate()) {
+          <ui-button size="sm" variant="primary" (activated)="openAddAssignmentModal.emit()"><mat-icon icon class="text-base">add_task</mat-icon>إضافة تعيين جديد</ui-button>
+        }
+      </div>
+    </ui-page-header>
+
+    <div class="legacy-staff-header hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
       <div>
         <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">إدارة الكادر والتعيينات</h1>
         <p class="font-body-md text-body-md text-on-surface-variant mt-1">عرض وإدارة السجلات الوظيفية والتعيينات الأكاديمية لطاقم التدريس والإدارة.</p>

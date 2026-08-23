@@ -7,12 +7,14 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-classes',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './classes.component.html',
   styleUrl: './classes.component.css',
 })

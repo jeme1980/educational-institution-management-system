@@ -1,6 +1,13 @@
 <div class="min-h-[calc(100vh-4rem)] bg-slate-50 p-4 md:p-6" dir="rtl">
   <div class="mx-auto max-w-360 space-y-6">
-    <header class="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
+    <ui-page-header title="إدارة الصفوف والشعب" description="إنشاء وتنظيم الشعب الدراسية وربطها بالمرحلة والصف والسنة الدراسية." eyebrow="البيانات الأكاديمية">
+      <div ui-page-actions class="flex flex-wrap items-center gap-2">
+        <ui-button size="sm" variant="secondary" [disabled]="isLoading()" (activated)="refresh()"><mat-icon icon class="text-base">refresh</mat-icon>تحديث</ui-button>
+        <ui-button size="sm" variant="primary" [hidden]="!canCreate()" (activated)="openAddModal()"><mat-icon icon class="text-base">add</mat-icon>إضافة شعبة</ui-button>
+      </div>
+    </ui-page-header>
+
+    <header class="legacy-classes-header hidden flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
       <div class="flex items-start gap-3">
         <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-primary"><mat-icon>domain</mat-icon></div>
         <div>
@@ -18,6 +25,13 @@
     @if (pageError()) {<div class="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><span class="flex items-center gap-2"><mat-icon>error_outline</mat-icon>{{ pageError() }}</span><button type="button" (click)="refresh()" class="font-bold underline">إعادة المحاولة</button></div>}
 
     <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ui-stat-card label="إجمالي الشعب" [value]="totalClasses()" helper="كل الشعب المسجلة" icon="meeting_room" tone="primary" />
+      <ui-stat-card label="الشعب العادية" [value]="regularClassesCount()" helper="الشعب الأكاديمية" icon="school" tone="success" />
+      <ui-stat-card label="الشعب الخاصة" [value]="specialClassesCount()" helper="البرامج الخاصة" icon="accessible" tone="warning" />
+      <ui-stat-card label="السنة الدراسية الحالية" [value]="activeContextLabel()" helper="السياق النشط" icon="calendar_month" tone="neutral" />
+    </section>
+
+    <section class="legacy-classes-metrics hidden grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="stat-card flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div><p class="text-xs font-semibold text-slate-500">إجمالي الشعب</p><p class="mt-1 text-2xl font-bold text-slate-900">{{ totalClasses() }}</p></div><span class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-primary"><mat-icon>meeting_room</mat-icon></span></div>
       <div class="stat-card flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div><p class="text-xs font-semibold text-slate-500">إجمالي الصفوف العادية</p><p class="mt-1 text-2xl font-bold text-slate-900">{{ regularClassesCount() }}</p></div><span class="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><mat-icon>school</mat-icon></span></div>
       <div class="stat-card flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div><p class="text-xs font-semibold text-slate-500">إجمالي الصفوف الخاصة</p><p class="mt-1 text-2xl font-bold text-slate-900">{{ specialClassesCount() }}</p></div><span class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700"><mat-icon>accessible</mat-icon></span></div>

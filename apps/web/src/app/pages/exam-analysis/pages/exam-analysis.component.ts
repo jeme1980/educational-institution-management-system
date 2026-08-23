@@ -13,6 +13,34 @@ import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calcula
 import { sanitizeWorkbookTextCells } from '../../../core/utils/spreadsheet-security';
 import { ExamAnalysisDataService } from '../services/exam-analysis-data.service';
 
+export interface InterventionGroupView {
+  name: string;
+  color: string;
+  students: StudentAnalysis[];
+  duration: string;
+  activity: string;
+}
+
+const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
+  high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
+  'upper-mid': { name: 'مجموعة الإتقان', color: '#2563eb', duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
+  'lower-mid': { name: 'مجموعة التعزيز', color: '#f59e0b', duration: '3 أسابيع', activity: 'أوراق عمل علاجية وتغذية راجعة' },
+  low: { name: 'مجموعة التدخل المكثف', color: '#dc2626', duration: '4 أسابيع', activity: 'تعليم مصغر ومتابعة فردية' },
+};
+
+export function buildInterventionGroups(levels: PerformanceLevel[], students: StudentAnalysis[]): InterventionGroupView[] {
+  return levels.map((level) => {
+    const plan = INTERVENTION_PLANS[level.id];
+    return {
+      name: plan?.name || level.name,
+      color: level.color,
+      students: students.filter(student => !student.isAbsent && student.level.id === level.id),
+      duration: plan?.duration || 'حسب الحاجة',
+      activity: plan?.activity || 'تدريب تدريجي مناسب للدرجة',
+    };
+  });
+}
+
 @Component({
   selector: 'app-exam-analysis',
   imports: [CommonModule, FormsModule, MatIconModule, AnalysisStatCardComponent],
@@ -180,12 +208,7 @@ export class ExamAnalysisComponent implements OnInit {
       ...(interventionStudents.length ? [{ icon: 'person_alert', title: 'تدخل فردي', detail: `${interventionStudents.length} طالب دون مستوى 55% ويحتاجون خطة متابعة قصيرة المدى.` }] : []),
     ];
   });
-  interventionGroups = computed(() => [
-    { name: 'مجموعة الإثراء', color: '#16a34a', students: this.students().filter(student => !student.isAbsent && student.normalizedScore >= 85), duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
-    { name: 'مجموعة الإتقان', color: '#2563eb', students: this.students().filter(student => !student.isAbsent && student.normalizedScore >= 70 && student.normalizedScore < 85), duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
-    { name: 'مجموعة التعزيز', color: '#f59e0b', students: this.students().filter(student => !student.isAbsent && student.normalizedScore >= 55 && student.normalizedScore < 70), duration: '3 أسابيع', activity: 'أوراق عمل علاجية وتغذية راجعة' },
-    { name: 'مجموعة التدخل المكثف', color: '#dc2626', students: this.students().filter(student => !student.isAbsent && student.normalizedScore < 55), duration: '4 أسابيع', activity: 'تعليم مصغر ومتابعة فردية' },
-  ]);
+  interventionGroups = computed(() => buildInterventionGroups(this.levels(), this.students()));
 
   async ngOnInit() {
     try {

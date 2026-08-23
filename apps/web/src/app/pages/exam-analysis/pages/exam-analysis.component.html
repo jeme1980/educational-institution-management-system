@@ -78,8 +78,6 @@
         <app-analysis-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" color="#16a34a" />
         <app-analysis-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" />
         <app-analysis-stat-card label="الحضور والغياب" [value]="summary().attended + ' / ' + summary().absent" icon="groups" hint="حاضر / غائب" />
-        <app-analysis-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" />
-        <app-analysis-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" color="#16a34a" />
         <app-analysis-stat-card label="متوسط الإجابات الصحيحة" [value]="format(summary().averageCorrect)" icon="check_circle" color="#16a34a" />
         <app-analysis-stat-card label="متوسط الإجابات الخاطئة" [value]="format(summary().averageWrong)" icon="cancel" color="#dc2626" />
         <app-analysis-stat-card label="متوسط غير المجاب" [value]="format(summary().averageUnanswered)" icon="help" color="#f59e0b" />

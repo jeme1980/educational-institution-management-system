@@ -22,7 +22,7 @@ test('Phase 9B: platform identity, boundaries and subscription administration', 
   const planA = await platformPrisma.plan.create({ data: { code: `9B_A_${suffix}`, nameAr: 'Phase 9B A', maxStudents: 2 } });
   const planB = await platformPrisma.plan.create({ data: { code: `9B_B_${suffix}`, nameAr: 'Phase 9B B', maxStudents: 5 } });
   const platformUser = await prisma.user.create({ data: { email: `platform-${suffix}@example.com`, normalizedEmail: `platform-${suffix}@example.com`, passwordHash: await hashPassword('Platform@2026!'), isPlatformAdmin: true } });
-  const schoolUser = await prisma.user.findFirstOrThrow({ where: { institutionUser: { isNot: null } } });
+  const schoolUser = await prisma.user.findFirstOrThrow({ where: { institutionUsers: { some: {} } } });
   try {
     assert.equal((await runMiddleware(requirePlatformAdmin, { user: { uid: platformUser.id } })).nextCalled, true);
     const schoolDenied = await runMiddleware(requirePlatformAdmin, { user: { uid: schoolUser.id } });

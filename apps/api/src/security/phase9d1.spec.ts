@@ -19,7 +19,7 @@ test('Phase 9D-1: platform institution creation flow', async () => {
   const base = await platformPrisma.institution.findFirstOrThrow();
   const suffix = Date.now().toString().slice(-8);
   const plan = await platformPrisma.plan.create({ data: { code: `10C6C_${suffix}`, nameAr: 'Phase 10C-6C fixture plan', maxStudents: 100, isActive: true } });
-  const schoolUser = await platformPrisma.user.findFirstOrThrow({ where: { institutionUser: { isNot: null } } });
+  const schoolUser = await platformPrisma.user.findFirstOrThrow({ where: { institutionUsers: { some: {} } } });
   const actor = await platformPrisma.user.create({ data: { email: `phase9d1-${suffix}@example.com`, normalizedEmail: `phase9d1-${suffix}@example.com`, passwordHash: await hashPassword('Platform@2026!'), isPlatformAdmin: true } });
   let institutionId = '';
   let provisioned: any;

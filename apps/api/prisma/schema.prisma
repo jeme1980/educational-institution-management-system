@@ -493,7 +493,7 @@ model StaffMember {
   specialization    Specialization?      @relation(fields: [specializationId], references: [id], onDelete: SetNull)
   gender            Gender?              @relation(fields: [genderId], references: [id], onDelete: Restrict)
   assignments       StaffAssignment[]
-  institutionUser   InstitutionUser?
+  institutionUsers  InstitutionUser[]
   principalProfiles InstitutionProfile[] @relation("InstitutionProfilePrincipal")
   developments      StaffDevelopment[]
 
@@ -653,7 +653,7 @@ model User {
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
   versionNumber       Int                     @default(1)
-  institutionUser     InstitutionUser?
+  institutionUsers    InstitutionUser[]
   sessions            UserSession[]
   setupTokens         UserAccountSetupToken[]
 
@@ -715,8 +715,8 @@ model PlatformAuditLog {
 model InstitutionUser {
   id            String                @id @default(uuid()) @db.Uuid
   institutionId String                @db.Uuid
-  userId        String                @unique @db.Uuid
-  staffMemberId String                @unique @db.Uuid
+  userId        String                @db.Uuid
+  staffMemberId String                @db.Uuid
   isActive      Boolean               @default(true)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
@@ -729,6 +729,7 @@ model InstitutionUser {
   roles         InstitutionUserRole[]
 
   @@unique([institutionId, staffMemberId])
+  @@unique([institutionId, userId])
   @@unique([institutionId, id])
   @@index([institutionId, isActive])
   @@map("institution_users")

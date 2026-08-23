@@ -55,8 +55,8 @@ test('Phase 10C-3: global references are school read-only and Provider is platfo
     isPlatformAdmin: true,
   } });
   const schoolIdentity = await admin.user.findFirstOrThrow({
-    where: { isPlatformAdmin: false, isActive: true, mustChangePassword: false, institutionUser: { isNot: null } },
-    include: { institutionUser: true },
+    where: { isPlatformAdmin: false, isActive: true, mustChangePassword: false, institutionUsers: { some: {} } },
+    include: { institutionUsers: true },
   });
   let providerId = '';
   const server = createServer(app);
@@ -90,7 +90,7 @@ test('Phase 10C-3: global references are school read-only and Provider is platfo
     await assertDatabaseDenied(() => prisma.$executeRawUnsafe('DELETE FROM public.providers WHERE FALSE'));
     await assertDatabaseDenied(() => prisma.$executeRawUnsafe('UPDATE public.regions SET "nameAr" = "nameAr" WHERE FALSE'));
 
-    const contexts = [schoolIdentity.institutionUser!.institutionId, randomUUID()];
+    const contexts = [schoolIdentity.institutionUsers[0]!.institutionId, randomUUID()];
     const visibleProviderIds = await Promise.all(contexts.map(async () =>
       (await prisma.provider.findMany({ where: { isActive: true }, select: { id: true }, orderBy: { id: 'asc' } })).map((item) => item.id)));
     assert.deepEqual(visibleProviderIds[0], visibleProviderIds[1]);
@@ -99,7 +99,7 @@ test('Phase 10C-3: global references are school read-only and Provider is platfo
       const result = await invoke(handler, {
         params: { table: 'providers', id: randomUUID() },
         body: { providerCode: `SCHOOL_${suffix}`, name: 'School denied provider' },
-        context: { institutionId: schoolIdentity.institutionUser!.institutionId, academicYearId: '' },
+        context: { institutionId: schoolIdentity.institutionUsers[0]!.institutionId, academicYearId: '' },
         user: { uid: schoolIdentity.id },
       });
       assert.equal(result.statusCode, 403);
@@ -156,7 +156,7 @@ test('Phase 10C-3: global references are school read-only and Provider is platfo
 
     const schoolToken = await createLocalAccessToken(schoolIdentity.id, schoolIdentity.email, schoolIdentity.securityStamp);
     const schoolPlatformResponse = await fetch(`${baseUrl}/api/platform/providers`, {
-      headers: { authorization: `Bearer ${schoolToken}`, 'x-institution-id': schoolIdentity.institutionUser!.institutionId },
+      headers: { authorization: `Bearer ${schoolToken}`, 'x-institution-id': schoolIdentity.institutionUsers[0]!.institutionId },
     });
     assert.equal(schoolPlatformResponse.status, 403);
 

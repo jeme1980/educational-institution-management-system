@@ -91,7 +91,7 @@ test('Platform reference data supports safe CRUD, protection, dependencies, and 
 });
 
 test('Platform reference-data authorization distinguishes unauthenticated and school users', async () => {
-  const schoolUser = await admin.user.findFirstOrThrow({ where: { institutionUser: { isNot: null } } });
+  const schoolUser = await admin.user.findFirstOrThrow({ where: { institutionUsers: { some: {} } } });
   assert.equal((await runMiddleware({})).statusCode, 401);
   assert.equal((await runMiddleware({ user: { uid: schoolUser.id } })).statusCode, 403);
 });

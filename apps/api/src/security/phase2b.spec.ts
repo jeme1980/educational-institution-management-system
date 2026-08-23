@@ -26,7 +26,7 @@ async function main() {
     }
 
     const identity = await testAdminPrisma.user.findFirst({
-      where: { isActive: true, institutionUser: { is: { isActive: true, archivedAt: null, roles: { some: { role: { isActive: true, archivedAt: null, rolePermissions: { some: { permission: { module: 'students', action: 'READ', isActive: true } } } } } } } } },
+      where: { isActive: true, institutionUsers: { some: { isActive: true, archivedAt: null, roles: { some: { role: { isActive: true, archivedAt: null, rolePermissions: { some: { permission: { module: 'students', action: 'READ', isActive: true } } } } } } } } },
       select: { id: true, email: true },
     });
     if (identity) {

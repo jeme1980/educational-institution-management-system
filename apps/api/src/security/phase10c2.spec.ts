@@ -142,11 +142,11 @@ test('Phase 10C-2: restricted platform role preserves platform workflows and den
     const rawSetupToken = tokenFromSetupUrl(reissued.setup.setupUrl!);
     const storedSetupToken = await platformPrisma.userAccountSetupToken.findUnique({
       where: { tokenHash: setupTokenHash(rawSetupToken) },
-      include: { user: { include: { institutionUser: true } } },
+      include: { user: { include: { institutionUsers: true } } },
     });
     assert.ok(storedSetupToken);
     assert.equal(storedSetupToken.usedAt, null);
-    assert.ok(storedSetupToken.user.institutionUser);
+    assert.ok(storedSetupToken.user.institutionUsers.length);
     assert.equal(storedSetupToken.user.mustChangePassword, true);
     const setup = await invoke(completeAccountSetup, {
       token: rawSetupToken,

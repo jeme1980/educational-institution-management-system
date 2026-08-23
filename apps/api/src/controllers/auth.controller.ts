@@ -156,17 +156,19 @@ export async function getAuthMe(req: ContextRequest, res: Response): Promise<any
 
   const userRecord: any = await prisma.user.findFirst({
     where: { normalizedEmail: email.trim().toLowerCase(), isActive: true },
-    include: { institutionUser: { include: { institution: { select: { archivedAt: true } } } } },
+    include: { institutionUsers: { include: { institution: { select: { archivedAt: true } } } } },
   });
 
-  if (!userRecord?.isPlatformAdmin && (!userRecord?.institutionUser?.isActive || userRecord.institutionUser.archivedAt)) {
+  const membership = userRecord?.institutionUsers?.find((item: any) => item.institutionId === instId && item.isActive && !item.archivedAt)
+    || userRecord?.institutionUsers?.find((item: any) => item.isActive && !item.archivedAt)
+    || userRecord?.institutionUsers?.[0];
+  if (!userRecord?.isPlatformAdmin && (!membership?.isActive || membership.archivedAt)) {
     return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' });
   }
-  if (!userRecord?.isPlatformAdmin && userRecord.institutionUser.institution.archivedAt) {
+  if (!userRecord?.isPlatformAdmin && membership.institution.archivedAt) {
     return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' });
   }
 
-  const membership = userRecord.institutionUser;
   const userContext = await buildUserContext(
     { ...userRecord, institutionId: membership?.institutionId || instId, displayName: name },
     membership?.institutionId || instId,

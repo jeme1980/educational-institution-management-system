@@ -57,9 +57,9 @@ export async function bootstrapPlatformAdmin(client: PrismaClient): Promise<Plat
   const password = process.env['PLATFORM_ADMIN_PASSWORD'];
   if (!email && !password) return 'SKIPPED';
   if (!email || !password) throw new Error('PLATFORM_ADMIN_EMAIL and PLATFORM_ADMIN_PASSWORD must be provided together.');
-  const existing = await client.user.findUnique({ where: { normalizedEmail: email }, include: { institutionUser: true } });
+  const existing = await client.user.findUnique({ where: { normalizedEmail: email }, include: { institutionUsers: { select: { id: true } } } });
   if (existing) {
-    if (!existing.isPlatformAdmin || existing.institutionUser) throw new Error('The configured platform administrator email is already assigned to a school account.');
+    if (!existing.isPlatformAdmin || existing.institutionUsers.length) throw new Error('The configured platform administrator email is already assigned to a school account.');
     return 'EXISTS';
   }
   await client.user.create({ data: { email, normalizedEmail: email, passwordHash: await hashPassword(password), isActive: true, isPlatformAdmin: true, mustChangePassword: false } });

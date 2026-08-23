@@ -57,9 +57,9 @@ export async function provisionInitialSchoolAdmin(input: { institutionId: string
     if (!subscription) throw Object.assign(new Error('An active subscription is required before provisioning the initial administrator.'), { statusCode: 409 });
     if (await getInitialAdmin(tx, input.institutionId)) throw Object.assign(new Error('The initial administrator is already provisioned.'), { statusCode: 409 });
 
-    const existingUser = await tx.user.findUnique({ where: { normalizedEmail }, include: { institutionUser: true } });
+    const existingUser = await tx.user.findUnique({ where: { normalizedEmail }, include: { institutionUsers: { select: { institutionId: true } } } });
     if (existingUser?.isPlatformAdmin) throw Object.assign(new Error('This email belongs to a platform administrator.'), { statusCode: 409 });
-    if (existingUser?.institutionUser) throw Object.assign(new Error('This email is already linked to a school account.'), { statusCode: 409 });
+    if (existingUser?.institutionUsers.length) throw Object.assign(new Error('This email is already linked to a school account.'), { statusCode: 409 });
 
     if (existingUser) throw Object.assign(new Error('This email is already registered.'), { statusCode: 409 });
     const user = await tx.user.create({ data: { email: normalizedEmail, normalizedEmail, passwordHash: await createPendingAccountPasswordHash(), isActive: true, mustChangePassword: true } });

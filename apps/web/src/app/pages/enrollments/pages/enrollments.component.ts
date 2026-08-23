@@ -6,12 +6,15 @@ import { ApiService, ClassItem } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-enrollments',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiSelectComponent, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiSelectComponent, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './enrollments.component.html',
   styleUrl: './enrollments.component.css'
 })

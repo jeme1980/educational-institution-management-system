@@ -34,8 +34,8 @@
       @for (item of visibleSchoolNavItems(); track item.path) {
         <a
           [routerLink]="item.path"
-          routerLinkActive="bg-primary text-on-primary font-bold shadow-xs"
-          class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          routerLinkActive="school-sidebar-nav__link--active bg-primary text-on-primary font-bold shadow-xs"
+          class="school-sidebar-nav__link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-on-surface-variant hover:text-primary hover:bg-surface-container-high transition-all group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <mat-icon class="text-xl text-current">{{ item.icon }}</mat-icon>
           <span>{{ item.label }}</span>
@@ -210,7 +210,7 @@
 
         <nav aria-label="التنقل الرئيسي على الهاتف" class="nav-sequence flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           @for (item of visibleSchoolNavItems(); track item.path) {
-            <a (click)="closeMobileMenu(false)" [routerLink]="item.path" routerLinkActive="bg-primary text-on-primary font-bold" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <a (click)="closeMobileMenu(false)" [routerLink]="item.path" routerLinkActive="school-sidebar-nav__link--active bg-primary text-on-primary font-bold" class="school-sidebar-nav__link flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-on-surface-variant hover:bg-surface-container-high transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
               <mat-icon aria-hidden="true" class="text-lg text-current">{{ item.icon }}</mat-icon>
               <span>{{ item.label }}</span>
             </a>

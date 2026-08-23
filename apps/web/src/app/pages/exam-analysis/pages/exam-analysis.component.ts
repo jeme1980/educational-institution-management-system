@@ -13,8 +13,9 @@ import { UiTableActionsComponent } from '../../../shared/components/ui-table-act
 import { PerformanceBarChartComponent } from '../components/performance-bar-chart.component';
 import { PerformanceDonutChartComponent } from '../components/performance-donut-chart.component';
 import { QuestionSuccessChartComponent } from '../components/question-success-chart.component';
+import { TopicOverviewChartComponent } from '../components/topic-overview-chart.component';
 import {
-  AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, ExamAnalysisDataset, PerformanceLevel,
+  AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
 } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
@@ -31,6 +32,7 @@ export interface InterventionGroupView {
 
 export type QuestionSortKey = 'question' | 'topic' | 'skill' | 'average' | 'successRate';
 export type QuestionSortDirection = 'asc' | 'desc';
+export type TopicSortKey = 'mastery-desc' | 'mastery-asc' | 'questions-desc' | 'name';
 
 export function questionDetailUnavailable(questions: QuestionAnalysis[], attendedCount: number, hasMatchingQuestionScore: boolean): boolean {
   return questions.length > 0 && attendedCount > 0 && !hasMatchingQuestionScore && questions.every(question => question.unansweredRate === 100);
@@ -61,6 +63,17 @@ export function filterAndSortQuestions(questions: QuestionAnalysis[], search: st
   return [...filtered].sort((left, right) => (direction === 'asc' ? 1 : -1) * compare(left, right));
 }
 
+export function filterAndSortTopics(topics: DimensionAnalysis[], search: string, sort: TopicSortKey): DimensionAnalysis[] {
+  const term = search.trim().toLocaleLowerCase();
+  const filtered = topics.filter(topic => !term || topic.name.trim().toLocaleLowerCase().includes(term));
+  return [...filtered].sort((left, right) => {
+    if (sort === 'name') return left.name.localeCompare(right.name, 'ar') || left.id.localeCompare(right.id);
+    if (sort === 'questions-desc') return right.questionCount - left.questionCount || right.masteryRate - left.masteryRate;
+    if (sort === 'mastery-asc') return left.masteryRate - right.masteryRate || left.questionCount - right.questionCount;
+    return right.masteryRate - left.masteryRate || right.questionCount - left.questionCount;
+  });
+}
+
 const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
   high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
   'upper-mid': { name: 'مجموعة الإتقان', color: '#2563eb', duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
@@ -83,7 +96,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -114,6 +127,9 @@ export class ExamAnalysisComponent implements OnInit {
   questionSearch = signal('');
   questionSort = signal<QuestionSortKey>('question');
   questionSortDirection = signal<QuestionSortDirection>('asc');
+  topicSearch = signal('');
+  topicSort = signal<TopicSortKey>('mastery-desc');
+  selectedTopicId = signal('');
   readonly hasStudentRows = computed(() => (this.dataset()?.students.length ?? 0) > 0);
   readonly availableExams = computed(() => {
     const yearId = this.api.selectedAcademicYearId();
@@ -238,6 +254,28 @@ export class ExamAnalysisComponent implements OnInit {
   topics = computed(() => {
     const data = this.dataset();
     return data ? this.calculator.dimensions('topic', data.questions, this.filteredBaseStudents(), this.levels()) : [];
+  });
+  classifiedTopics = computed(() => this.topics().filter(topic => topic.name !== 'غير مصنف'));
+  unclassifiedTopics = computed(() => this.topics().filter(topic => topic.name === 'غير مصنف'));
+  unclassifiedTopicQuestionCount = computed(() => this.questions().filter(question => !question.topicId || question.topicName === 'غير مصنف').length);
+  visibleTopics = computed(() => filterAndSortTopics(this.classifiedTopics(), this.topicSearch(), this.topicSort()));
+  strongTopicLevelId = computed(() => [...this.levels()].sort((left, right) => right.max - left.max)[0]?.id || '');
+  weakTopicLevelId = computed(() => [...this.levels()].sort((left, right) => left.min - right.min)[0]?.id || '');
+  strongTopicsCount = computed(() => this.classifiedTopics().filter(topic => topic.level.id === this.strongTopicLevelId()).length);
+  weakTopicsCount = computed(() => this.classifiedTopics().filter(topic => topic.level.id === this.weakTopicLevelId()).length);
+  topicsInsightText = computed(() => {
+    const topics = this.classifiedTopics();
+    if (!topics.length) return 'لم يتم تصنيف الأسئلة حسب الموضوع لهذا الامتحان — تحقق من ربط الأسئلة بالموضوعات في إعداد بنك الأسئلة.';
+    const strongest = [...topics].sort((left, right) => right.masteryRate - left.masteryRate)[0];
+    const weakest = [...topics].sort((left, right) => left.masteryRate - right.masteryRate)[0];
+    return `أقوى موضوع: ${strongest.name} (${this.format(strongest.masteryRate)}%) · يحتاج دعمًا: ${weakest.name} (${this.format(weakest.masteryRate)}%).`;
+  });
+  selectedTopicQuestionTypes = computed(() => {
+    const topicId = this.selectedTopicId();
+    if (!topicId) return [] as { name: string; count: number }[];
+    const counts = new Map<string, number>();
+    this.questions().filter(question => question.topicId === topicId).forEach(question => counts.set(question.typeName, (counts.get(question.typeName) || 0) + 1));
+    return [...counts.entries()].map(([name, count]) => ({ name, count })).sort((left, right) => right.count - left.count || left.name.localeCompare(right.name, 'ar'));
   });
   questionTypes = computed(() => {
     const data = this.dataset();

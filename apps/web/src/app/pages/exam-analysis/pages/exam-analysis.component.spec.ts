@@ -2,12 +2,13 @@ import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, QuestionAnalysis } from '../models/exam-analysis.model';
+import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, filterAndSortQuestions, questionDetailUnavailable } from './exam-analysis.component';
+import { buildInterventionGroups, filterAndSortQuestions, filterAndSortTopics, questionDetailUnavailable } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
+import { topicOverviewBarData } from '../components/topic-overview-chart.component';
 
 const overviewTemplate = readFileSync(new URL('./exam-analysis.component.html', import.meta.url), 'utf8');
 
@@ -118,5 +119,39 @@ describe('ExamAnalysis question integrity', () => {
 
   it('does not expose subtopic behavior when the model has no subtopic field', () => {
     expect('subTopicId' in question()).toBe(false);
+  });
+});
+
+describe('ExamAnalysis topic presentation', () => {
+  const level = { id: 'high', name: 'مرتفع', min: 85, max: 100, color: '#16a34a' };
+  const topic = (overrides: Partial<DimensionAnalysis> = {}): DimensionAnalysis => ({
+    id: 'topic-1', name: 'الجبر', questionCount: 2, maxPoints: 20, averagePerformance: 90, masteryRate: 90, masteredStudents: 2, supportStudents: 0, unansweredRate: 0, level, ...overrides,
+  });
+
+  it('keeps classified, unclassified, and partial topic states distinct', () => {
+    const classified = [topic(), topic({ id: 'topic-2', name: 'الهندسة', masteryRate: 40, level: { ...level, id: 'low', name: 'منخفض' } })];
+    expect(classified.filter(item => item.name !== 'غير مصنف')).toHaveLength(2);
+    expect([topic({ name: 'غير مصنف' })].filter(item => item.name === 'غير مصنف')).toHaveLength(1);
+  });
+
+  it('sorts topics by mastery, question count, and name', () => {
+    const topics = [topic({ id: 'b', name: 'باء', masteryRate: 60, questionCount: 4 }), topic({ id: 'a', name: 'ألف', masteryRate: 90, questionCount: 1 })];
+    expect(filterAndSortTopics(topics, '', 'mastery-desc').map(item => item.id)).toEqual(['a', 'b']);
+    expect(filterAndSortTopics(topics, '', 'mastery-asc').map(item => item.id)).toEqual(['b', 'a']);
+    expect(filterAndSortTopics(topics, '', 'questions-desc').map(item => item.id)).toEqual(['b', 'a']);
+    expect(filterAndSortTopics(topics, 'ألف', 'name').map(item => item.id)).toEqual(['a']);
+  });
+
+  it('feeds the topic chart with visible topics and finite mastery values', () => {
+    const data = topicOverviewBarData([topic({ masteryRate: Number.NaN }), topic({ id: 'topic-2', name: 'الهندسة', masteryRate: 75 })]);
+    expect(data.labels).toEqual(['الجبر', 'الهندسة']);
+    expect(data.datasets[0].data).toEqual([0, 75]);
+    expect(JSON.stringify(data)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it('uses topic ids for question-type breakdown and keeps Skills isolated', () => {
+    expect(overviewTemplate).toContain("@if (activeTab() === 'skills')");
+    expect(overviewTemplate).toContain("@if (activeTab() === 'topics')");
+    expect(overviewTemplate).toContain('selectedTopicQuestionTypes()');
   });
 });

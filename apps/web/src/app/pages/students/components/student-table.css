@@ -11,3 +11,15 @@
   --on-primary: var(--danger);
   --color-danger-900: var(--danger-container);
 }
+
+#student-table-section > div:first-child h2 { color: var(--on-surface); font-size: var(--font-md); font-weight: var(--font-bold); }
+#student-table-scroll-container .core-table tbody td:nth-child(2) .text-slate-800 { color: var(--on-surface); }
+#student-table-scroll-container .core-table tbody td:nth-child(2) .text-slate-400 { color: var(--on-surface-variant); }
+#student-table-scroll-container ui-table-actions > button:first-child {
+  width: var(--space-8);
+  min-height: var(--space-8);
+  justify-content: center;
+  padding-inline: 0;
+  color: var(--on-surface-variant);
+}
+#student-table-scroll-container ui-table-actions > button:first-child:hover { background: var(--surface-container-low); color: var(--on-surface); }

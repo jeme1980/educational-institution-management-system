@@ -1,4 +1,4 @@
-<div class="flex flex-col overflow-hidden rounded-md border border-surface-border bg-surface" id="student-table-section" dir="rtl">
+<div class="flex flex-col overflow-hidden rounded-2xl border border-surface-border bg-surface-container-lowest" id="student-table-section" dir="rtl">
   <!-- Table Section Header & Search Bar -->
   <div class="flex flex-col items-start justify-between gap-4 border-b border-surface-border bg-surface p-4 md:flex-row md:items-center">
     <div class="flex items-center gap-2">
@@ -54,6 +54,7 @@
         }
       </div>
     </div>
+    <span class="rounded-full bg-secondary-container px-3 py-1 text-xs font-bold text-on-secondary">{{ totalCount() }}</span>
   </div>
 
   <!-- Advanced Interactive Filters Section -->
@@ -120,7 +121,7 @@
 
   <!-- Active Applied Filter Tags/Chips -->
   @if (hasActiveFilters()) {
-    <div class="px-5 py-2 bg-slate-100/50 border-b border-slate-100 flex flex-wrap items-center gap-2 text-xs" id="active-filters-chips">
+    <div class="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-container-low px-5 py-2 text-xs" id="active-filters-chips">
       <span class="text-slate-500 font-bold">التصفيات النشطة:</span>
       
       @if (searchTerm()) {
@@ -175,16 +176,16 @@
       <span class="font-bold text-slate-600">جاري تحميل وتحديث سجلات الطلاب...</span>
     </div>
   } @else if (loadError()) {
-    <div class="p-16 text-center text-rose-700 space-y-3" id="student-table-error" role="alert">
+    <div class="space-y-3 p-16 text-center text-danger" id="student-table-error" role="alert">
       <mat-icon class="text-5xl">error_outline</mat-icon>
       <div class="text-base font-bold">{{ loadError() }}</div>
       <button type="button" (click)="clearFilters()" class="rounded-lg border border-primary px-4 py-2 text-xs font-bold text-primary">إعادة المحاولة</button>
     </div>
   } @else if (students().length === 0) {
-    <div class="p-16 text-center text-slate-400 space-y-3" id="student-table-empty">
-      <mat-icon class="text-6xl text-slate-300">person_off</mat-icon>
+    <div class="space-y-3 p-16 text-center text-on-surface-variant" id="student-table-empty">
+      <mat-icon class="text-6xl text-outline">person_off</mat-icon>
       <div class="text-base font-bold text-slate-700">لم يتم العثور على أي طالب متطابق مع الاختيارات</div>
-      <div class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+      <div class="mx-auto max-w-sm text-xs leading-relaxed text-on-surface-variant">
         قم بتعديل حقول البحث والتصفية بالأعلى أو انقر فوق "إضافة طالب جديد" لتسجيل طالب جديد بالمنظومة بالكامل.
       </div>
     </div>
@@ -195,13 +196,13 @@
           <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant">
             <tr>
               <th class="w-12 py-3 px-2 text-center">#</th>
-              <th (click)="toggleSort('nameAr')" class="w-[30%] py-3 px-4 text-right cursor-pointer hover:bg-slate-100/70 transition-colors">
+              <th (click)="toggleSort('nameAr')" class="w-[30%] cursor-pointer px-4 py-3 text-right transition-colors hover:bg-surface-container-high">
                 <div class="flex items-center gap-1">
                   <span>الطالب</span>
                   @if (sortBy() === 'nameAr') {
                     <mat-icon class="text-sm text-primary font-black">{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
                   } @else {
-                    <mat-icon class="text-sm text-slate-300">swap_vert</mat-icon>
+                    <mat-icon class="text-sm text-outline">swap_vert</mat-icon>
                   }
                 </div>
               </th>
@@ -221,7 +222,7 @@
                     @if (student.photoUrl) {
                       <img [src]="student.photoUrl" alt="" class="h-9 w-9 shrink-0 rounded-full border border-surface-border object-cover" referrerpolicy="no-referrer" />
                     } @else {
-                      <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female' ? 'h-9 w-9 shrink-0 rounded-full bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center' : 'h-9 w-9 shrink-0 rounded-full bg-blue-50 text-primary border border-blue-100 flex items-center justify-center'">
+                      <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female' ? 'h-9 w-9 shrink-0 rounded-full bg-danger-container text-danger border border-danger-container flex items-center justify-center' : 'h-9 w-9 shrink-0 rounded-full bg-primary-container text-primary border border-primary-container flex items-center justify-center'">
                         <mat-icon class="text-base">{{ getGenderIcon(student.genderId) }}</mat-icon>
                       </div>
                     }
@@ -240,9 +241,9 @@
                     {{ getGenderLabel(student.genderId) }}
                   </span>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-on-surface">{{ getContactPhone(student) }}</td>
+                <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-on-surface-variant">{{ getContactPhone(student) }}</td>
                 <td class="px-4 py-3">
-                  <span [class]="getStatusClass(student.studentStatusId) + ' text-[10px] leading-none py-0.5 inline-block text-center min-w-21.25'">
+                  <span [class]="getStatusClass(student.studentStatusId) + ' inline-block py-0.5 text-center text-[10px] leading-none'">
                     {{ student.isActive ? 'نشط' : 'غير نشط' }}
                   </span>
                 </td>
@@ -396,17 +397,17 @@
         </table>
       </div>
     } @else {
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4 bg-slate-50/40" id="student-cards-view">
+      <div class="grid grid-cols-1 gap-4 bg-surface-container-low p-4 xl:grid-cols-2" id="student-cards-view">
         @for (student of students(); track student.id) {
-          <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col gap-3">
+          <div class="flex flex-col gap-3 rounded-xl border border-surface-border bg-surface-container-lowest p-4">
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
-                @if (student.photoUrl) {
-                  <img [src]="student.photoUrl" alt="Photo" class="w-12 h-12 rounded-full object-cover border border-slate-200" referrerpolicy="no-referrer" />
+                    @if (student.photoUrl) {
+                      <img [src]="student.photoUrl" alt="Photo" class="h-12 w-12 rounded-full border border-surface-border object-cover" referrerpolicy="no-referrer" />
                 } @else {
                   <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female'
-                    ? 'w-12 h-12 rounded-full bg-rose-50 text-rose-700 border border-rose-100 flex items-center justify-center font-bold'
-                    : 'w-12 h-12 rounded-full bg-blue-50 text-primary border border-blue-100 flex items-center justify-center font-bold'">
+                    ? 'flex h-12 w-12 items-center justify-center rounded-full border border-danger-container bg-danger-container font-bold text-danger'
+                    : 'flex h-12 w-12 items-center justify-center rounded-full border border-primary-container bg-primary-container font-bold text-primary'">
                     <mat-icon class="text-lg leading-none block">{{ getGenderIcon(student.genderId) }}</mat-icon>
                   </div>
                 }
@@ -422,29 +423,29 @@
               </span>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-600">
-              <div class="rounded-lg bg-slate-50 px-3 py-2">
+            <div class="grid grid-cols-1 gap-2 text-[11px] text-on-surface-variant sm:grid-cols-2">
+              <div class="rounded-md bg-surface-container-low px-3 py-2">
                 <div class="text-[10px] text-slate-400 mb-1">رقم الهوية</div>
                 <div class="font-bold text-slate-700 font-mono">{{ student.nationalId ? student.nationalId : '—' }}</div>
               </div>
-              <div class="rounded-lg bg-slate-50 px-3 py-2">
+              <div class="rounded-md bg-surface-container-low px-3 py-2">
                 <div class="text-[10px] text-slate-400 mb-1">الشعبة</div>
                 <div class="font-bold text-slate-700">{{ getClassName(student.classId) }}</div>
               </div>
-              <div class="rounded-lg bg-slate-50 px-3 py-2">
+              <div class="rounded-md bg-surface-container-low px-3 py-2">
                 <div class="text-[10px] text-slate-400 mb-1">الهاتف</div>
                 <div class="font-bold text-slate-700 font-mono">{{ student.phoneNumber || 'لا يوجد هاتف' }}</div>
               </div>
-              <div class="rounded-lg bg-slate-50 px-3 py-2">
+              <div class="rounded-md bg-surface-container-low px-3 py-2">
                 <div class="text-[10px] text-slate-400 mb-1">البريد</div>
                 <div class="font-bold text-slate-700 font-mono truncate">{{ student.email || '—' }}</div>
               </div>
             </div>
 
-            <div class="flex items-center justify-between border-t border-slate-100 pt-3 text-[11px] text-slate-500">
+            <div class="flex items-center justify-between border-t border-surface-border pt-3 text-[11px] text-on-surface-variant">
               <div>
-                <div class="font-bold text-slate-700">{{ getInstitutionName(student.institutionId) }}</div>
-                <div class="text-[10px] text-slate-400">{{ formatDate(student.birthDate) }}</div>
+                <div class="font-bold text-on-surface">{{ getInstitutionName(student.institutionId) }}</div>
+                <div class="text-[10px] text-on-surface-variant">{{ formatDate(student.birthDate) }}</div>
               </div>
               <div class="flex items-center gap-1">
                 <button

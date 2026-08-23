@@ -100,8 +100,8 @@ export async function ensureRolesAndPermissionsSeeded(instId: string) {
       {
         institutionId: instId,
         code: 'ADMIN',
-        nameAr: '…״¯״± ״§„†״¸״§… ״§„ƒ״§…„',
-        nameHe: '׳׳ ׳”׳ ׳׳¢׳¨׳›׳× ׳¨׳׳©׳™',
+        nameAr: 'مدير النظام الرئيسي',
+        nameHe: 'מנהל מערכת ראשי',
         descriptionAr: '…״×„ƒ ƒ״§…„ ״§„״µ„״§״­״§״× „״¥״¯״§״±״© ״§„״­״³״§״¨״§״×״ ״§„״¥״¹״¯״§״¯״§״×״ ˆ״§„״¨״§†״§״× ״§„״­ˆ״© ״¨״§„…״¯״±״³״©',
         descriptionHe: '׳‘׳¢׳ ׳”׳¨׳©׳׳•׳× ׳׳׳׳•׳× ׳׳ ׳™׳”׳•׳ ׳׳©׳×׳׳©׳™׳ ׳•׳”׳’׳“׳¨׳•׳×',
         isSystem: true,
@@ -110,8 +110,8 @@ export async function ensureRolesAndPermissionsSeeded(instId: string) {
       {
         institutionId: instId,
         code: 'TEACHER',
-        nameAr: '…״¹„… ˆ…״±״¨ ״µ',
-        nameHe: '׳׳•׳¨׳” ׳•׳׳—׳ ׳ ׳›׳™׳×׳”',
+        nameAr: 'معلم ومربي صف',
+        nameHe: 'מורה ומחנך כיתה',
         descriptionAr: '״µ„״§״­״§״× ״±״µ״¯ ״¹„״§…״§״× ״§„״·„״§״¨״ ״¥״¯״§״±״© …״¬…ˆ״¹״§״× ״§„״¯״±״§״³״© ˆ״§„״§…״×״­״§†״§״×',
         descriptionHe: '׳”׳¨׳©׳׳” ׳׳”׳–׳ ׳× ׳¦׳™׳•׳ ׳™׳ ׳•׳ ׳™׳”׳•׳ ׳§׳‘׳•׳¦׳•׳× ׳׳™׳׳•׳“ ׳•׳׳‘׳—׳ ׳™׳',
         isSystem: false,

@@ -194,8 +194,8 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
   const gradeLevelIds: string[] = [];
   const [types, topics, skills] = await Promise.all([
     prisma.questionType.findMany({ where: { id: { in: normalizedQuestions.map(q => q.questionTypeId!).filter(Boolean) }, institutionId, isActive: true }, select: { id: true } }),
-    prisma.topic.findMany({ where: { id: { in: normalizedQuestions.flatMap(q => q.topicId ? [q.topicId] : []) }, institutionId, subjectId: relations.subject.id, isActive: true, archivedAt: null }, select: { id: true } }),
-    prisma.skill.findMany({ where: { id: { in: normalizedQuestions.flatMap(q => q.skillId ? [q.skillId] : []) }, institutionId, subjectId: relations.subject.id, isActive: true, archivedAt: null }, select: { id: true } }),
+    prisma.topic.findMany({ where: { id: { in: normalizedQuestions.flatMap(q => q.topicId ? [q.topicId] : []) }, institutionId, academicYearId, subjectId: relations.subject.id, isActive: true, archivedAt: null }, select: { id: true } }),
+    prisma.skill.findMany({ where: { id: { in: normalizedQuestions.flatMap(q => q.skillId ? [q.skillId] : []) }, institutionId, academicYearId, subjectId: relations.subject.id, isActive: true, archivedAt: null }, select: { id: true } }),
   ]);
   if (types.length !== new Set(normalizedQuestions.map(q => q.questionTypeId)).size || topics.length !== new Set(normalizedQuestions.flatMap(q => q.topicId ? [q.topicId] : [])).size || skills.length !== new Set(normalizedQuestions.flatMap(q => q.skillId ? [q.skillId] : [])).size) return res.status(400).json({ error: 'ˆ״¬״¯ †ˆ״¹ ״³״₪״§„ ״£ˆ …ˆ״¶ˆ״¹ ״£ˆ …‡״§״±״© ״÷״± …״±״×״¨״· ״¨״§„…״§״¯״© ״£ˆ ״§„…״₪״³״³״©.' });
   const saved = await prisma.$transaction(async tx => {
@@ -206,10 +206,11 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
     await tx.examQuestion.createMany({ data: normalizedQuestions.map(question => ({ institutionId, examId: exam.id, ...question, questionTypeId: question.questionTypeId! })) });
     return updated;
   });
+  await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'QUESTIONS_SAVED', entityType: 'Exam', entityId: exam.id, metadata: { questionCount: normalizedQuestions.length, groupCount: groupIds.length } });
   return res.json(saved);
 }
-export async function getExamsByIdStudyGroups(req: ContextRequest, res: Response): Promise<any> { const { institutionId } = context(req); return res.json(await prisma.examStudyGroup.findMany({ where: { examId: String(req.params.id), institutionId }, include: { studyGroup: { include: { classRoom: { select: { id: true, nameAr: true, gradeLevelId: true, gradeLevel: { select: { id: true, nameAr: true } } } } } } } })); }
-export async function createExamsByIdStudyGroups(req: AuthRequest, res: Response): Promise<any> { const { institutionId } = context(req); const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, archivedAt: null } }); if (!exam) return res.status(404).json({ error: 'Exam not found.' }); const ids: string[] = Array.from(new Set<string>(((req.body?.studyGroupIds as unknown[]) || []).map(id => uuid(id)).filter((id): id is string => Boolean(id)))); const groups = await prisma.studyGroup.findMany({ where: { id: { in: ids }, institutionId, academicYearId: exam.academicYearId, subjectId: exam.subjectId, isActive: true, archivedAt: null }, select: { id: true } }); if (groups.length !== ids.length) return res.status(400).json({ error: 'Study groups must match the exam subject and academic year.' }); await prisma.$transaction(async tx => { await tx.examStudyGroup.deleteMany({ where: { examId: exam.id, institutionId } }); if (ids.length) await tx.examStudyGroup.createMany({ data: ids.map(studyGroupId => ({ institutionId, examId: exam.id, studyGroupId })) }); }); return res.json({ success: true }); }
+export async function getExamsByIdStudyGroups(req: ContextRequest, res: Response): Promise<any> { const { institutionId, academicYearId } = context(req); const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true } }); if (!exam) return res.status(404).json({ error: 'Exam not found.' }); return res.json(await prisma.examStudyGroup.findMany({ where: { examId: exam.id, institutionId }, include: { studyGroup: { include: { classRoom: { select: { id: true, nameAr: true, gradeLevelId: true, gradeLevel: { select: { id: true, nameAr: true } } } } } } } })); }
+export async function createExamsByIdStudyGroups(req: AuthRequest, res: Response): Promise<any> { const { institutionId, academicYearId } = context(req); const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null } }); if (!exam) return res.status(404).json({ error: 'Exam not found.' }); const ids: string[] = Array.from(new Set<string>(((req.body?.studyGroupIds as unknown[]) || []).map(id => uuid(id)).filter((id): id is string => Boolean(id)))); const groups = await prisma.studyGroup.findMany({ where: { id: { in: ids }, institutionId, academicYearId: exam.academicYearId, subjectId: exam.subjectId, isActive: true, archivedAt: null }, select: { id: true } }); if (groups.length !== ids.length) return res.status(400).json({ error: 'Study groups must match the exam subject and academic year.' }); await prisma.$transaction(async tx => { await tx.examStudyGroup.deleteMany({ where: { examId: exam.id, institutionId } }); if (ids.length) await tx.examStudyGroup.createMany({ data: ids.map(studyGroupId => ({ institutionId, examId: exam.id, studyGroupId })) }); }); return res.json({ success: true }); }
 export async function getExamsByIdStudyGroupsBySgIdResults(req: ContextRequest, res: Response): Promise<any> {
   const { institutionId } = context(req);
   const link = await prisma.examStudyGroup.findFirst({ where: { examId: String(req.params.id), studyGroupId: String(req.params.sgId), institutionId } });
@@ -246,7 +247,7 @@ export async function getQuestionTypes(req: ContextRequest, res: Response): Prom
 export async function getExamsByIdQuestions(req: ContextRequest, res: Response): Promise<any> { const { institutionId, academicYearId } = context(req); const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true } }); if (!exam) return res.status(404).json({ error: 'Exam not found.' }); return res.json(await prisma.examQuestion.findMany({ where: { examId: exam.id, institutionId }, include: { questionType: true, topic: true, skill: true }, orderBy: { questionNumber: 'asc' } })); }
 export async function getExamsByIdQuestionContext(req: ContextRequest, res: Response): Promise<any> {
   const { institutionId, academicYearId } = context(req);
-  const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, archivedAt: null }, select: { id: true, subjectId: true, academicYearId: true } });
+  const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true, subjectId: true, academicYearId: true } });
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });
   const links = await prisma.examStudyGroup.findMany({ where: { examId: exam.id, institutionId }, select: { studyGroup: { select: { subjectId: true, academicYearId: true, classRoom: { select: { gradeLevelId: true, gradeLevel: { select: { id: true, nameAr: true } } } } } } } });
   const gradeLevelMap = new Map<string, { id: string; nameAr: string }>();
@@ -259,8 +260,8 @@ export async function getExamsByIdQuestionContext(req: ContextRequest, res: Resp
   const gradeLevelIds = [...gradeLevelMap.keys()];
   const relationFilter = gradeLevelIds.length ? { gradeLevelId: { in: gradeLevelIds } } : {};
   const [topics, skills] = await Promise.all([
-    prisma.topic.findMany({ where: { institutionId, subjectId: exam.subjectId, isActive: true, archivedAt: null, ...relationFilter }, include: { gradeLevel: { select: { id: true, nameAr: true } } }, orderBy: [{ gradeLevelId: 'asc' }, { nameAr: 'asc' }] }),
-    prisma.skill.findMany({ where: { institutionId, subjectId: exam.subjectId, isActive: true, archivedAt: null, ...relationFilter }, include: { gradeLevel: { select: { id: true, nameAr: true } } }, orderBy: [{ gradeLevelId: 'asc' }, { nameAr: 'asc' }] }),
+    prisma.topic.findMany({ where: { institutionId, academicYearId, subjectId: exam.subjectId, isActive: true, archivedAt: null, ...relationFilter }, include: { gradeLevel: { select: { id: true, nameAr: true } } }, orderBy: [{ gradeLevelId: 'asc' }, { nameAr: 'asc' }] }),
+    prisma.skill.findMany({ where: { institutionId, academicYearId, subjectId: exam.subjectId, isActive: true, archivedAt: null, ...relationFilter }, include: { gradeLevel: { select: { id: true, nameAr: true } } }, orderBy: [{ gradeLevelId: 'asc' }, { nameAr: 'asc' }] }),
   ]);
   const includeGradeLevelName = gradeLevelIds.length > 1;
   const addGradeLevelName = (item: any) => includeGradeLevelName ? { ...item, gradeLevelName: item.gradeLevel?.nameAr || null } : item;
@@ -281,8 +282,8 @@ export async function createExamsByIdQuestions(req: AuthRequest, res: Response):
   if (questions.length && !gradeLevelIds.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0631\u0628\u0637 \u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u0628\u0645\u062c\u0645\u0648\u0639\u0629 \u062a\u062d\u062f\u062f \u0627\u0644\u0637\u0628\u0642\u0629 \u0627\u0644\u062f\u0631\u0627\u0633\u064a\u0629.' });
   const [types, topics, skills] = await Promise.all([
     prisma.questionType.findMany({ where: { id: { in: typeIds }, institutionId, isActive: true }, select: { id: true } }),
-    prisma.topic.findMany({ where: { id: { in: topicIds }, institutionId, subjectId: exam.subjectId, gradeLevelId: { in: gradeLevelIds }, isActive: true, archivedAt: null }, select: { id: true } }),
-    prisma.skill.findMany({ where: { id: { in: skillIds }, institutionId, subjectId: exam.subjectId, gradeLevelId: { in: gradeLevelIds }, isActive: true, archivedAt: null }, select: { id: true } }),
+    prisma.topic.findMany({ where: { id: { in: topicIds }, institutionId, academicYearId, subjectId: exam.subjectId, gradeLevelId: { in: gradeLevelIds }, isActive: true, archivedAt: null }, select: { id: true } }),
+    prisma.skill.findMany({ where: { id: { in: skillIds }, institutionId, academicYearId, subjectId: exam.subjectId, gradeLevelId: { in: gradeLevelIds }, isActive: true, archivedAt: null }, select: { id: true } }),
   ]);
   if (typeIds.length !== types.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0646\u0648\u0639 \u0633\u0624\u0627\u0644 \u0635\u062d\u064a\u062d.' });
   if (topicIds.length !== topics.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0648\u0636\u0648\u0639 \u0645\u0631\u062a\u0628\u0637 \u0628\u0645\u0627\u062f\u0629 \u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u0648\u0627\u0644\u0637\u0628\u0642\u0629.' });
@@ -291,5 +292,6 @@ export async function createExamsByIdQuestions(req: AuthRequest, res: Response):
     await tx.examQuestion.deleteMany({ where: { examId: exam.id, institutionId } });
     if (questions.length) await tx.examQuestion.createMany({ data: questions.map((q: any, index: number) => ({ institutionId, examId: exam.id, questionTypeId: uuid(q.questionTypeId)!, topicId: uuid(q.topicId), skillId: uuid(q.skillId), questionNumber: Number(q.questionNumber || index + 1), maxScore: Number(q.maxScore ?? q.points ?? 0), contentAr: q.contentAr ? String(q.contentAr) : null, contentHe: q.contentHe ? String(q.contentHe) : null })) });
   });
+  await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'QUESTIONS_SAVED', entityType: 'Exam', entityId: exam.id, metadata: { questionCount: questions.length } });
   return res.json({ success: true });
 }

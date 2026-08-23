@@ -10,6 +10,7 @@ import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { PerformanceBarChartComponent } from '../components/performance-bar-chart.component';
 import { PerformanceDonutChartComponent } from '../components/performance-donut-chart.component';
+import { QuestionSuccessChartComponent } from '../components/question-success-chart.component';
 import {
   AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
@@ -24,6 +25,38 @@ export interface InterventionGroupView {
   students: StudentAnalysis[];
   duration: string;
   activity: string;
+}
+
+export type QuestionSortKey = 'question' | 'topic' | 'skill' | 'average' | 'successRate';
+export type QuestionSortDirection = 'asc' | 'desc';
+
+export function questionDetailUnavailable(questions: QuestionAnalysis[], attendedCount: number, hasMatchingQuestionScore: boolean): boolean {
+  return questions.length > 0 && attendedCount > 0 && !hasMatchingQuestionScore && questions.every(question => question.unansweredRate === 100);
+}
+
+export function filterAndSortQuestions(questions: QuestionAnalysis[], search: string, sort: QuestionSortKey, direction: QuestionSortDirection): QuestionAnalysis[] {
+  const term = search.trim().toLocaleLowerCase();
+  const filtered = questions.filter(question => !term || [
+    `س${question.questionNumber}`,
+    String(question.questionNumber),
+    question.text || '',
+    question.topicName || '',
+    question.skillName || '',
+  ].some(value => value.trim().toLocaleLowerCase().includes(term)));
+  const value = (question: QuestionAnalysis): string | number | null => {
+    if (sort === 'question') return question.questionNumber;
+    if (sort === 'average') return Number.isFinite(question.average) ? question.average : null;
+    if (sort === 'successRate') return Number.isFinite(question.successRate) ? question.successRate : null;
+    return sort === 'topic' ? question.topicName : question.skillName;
+  };
+  const compare = (left: QuestionAnalysis, right: QuestionAnalysis) => {
+    const a = value(left); const b = value(right);
+    if (a === null || a === undefined || a === '') return b === null || b === undefined || b === '' ? left.questionNumber - right.questionNumber : 1;
+    if (b === null || b === undefined || b === '') return -1;
+    const result = typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'ar');
+    return result || left.questionNumber - right.questionNumber;
+  };
+  return [...filtered].sort((left, right) => (direction === 'asc' ? 1 : -1) * compare(left, right));
 }
 
 const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
@@ -48,7 +81,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,6 +109,9 @@ export class ExamAnalysisComponent implements OnInit {
   mediumThreshold = signal(50);
   selectedQuestion = signal<QuestionAnalysis | null>(null);
   selectedStudent = signal<StudentAnalysis | null>(null);
+  questionSearch = signal('');
+  questionSort = signal<QuestionSortKey>('question');
+  questionSortDirection = signal<QuestionSortDirection>('asc');
   readonly hasStudentRows = computed(() => (this.dataset()?.students.length ?? 0) > 0);
   readonly availableExams = computed(() => {
     const yearId = this.api.selectedAcademicYearId();
@@ -156,9 +192,10 @@ export class ExamAnalysisComponent implements OnInit {
     const skills = this.skills();
     const topics = this.topics();
     const students = this.students();
-    const hardestQuestion = [...questions].sort((a, b) => a.successRate - b.successRate)[0];
-    const weakestSkill = [...skills].sort((a, b) => a.masteryRate - b.masteryRate)[0];
-    const weakestTopic = [...topics].sort((a, b) => a.masteryRate - b.masteryRate)[0];
+    const detailUnavailable = this.allQuestionsUnansweredDueToMissingDetailData();
+    const hardestQuestion = detailUnavailable ? null : [...questions].filter(question => question.correctCount + question.wrongCount > 0).sort((a, b) => a.successRate - b.successRate)[0];
+    const weakestSkill = detailUnavailable ? null : [...skills].sort((a, b) => a.masteryRate - b.masteryRate)[0];
+    const weakestTopic = detailUnavailable ? null : [...topics].sort((a, b) => a.masteryRate - b.masteryRate)[0];
     const interventionCount = students.filter(student => !student.isAbsent && student.normalizedScore < 55).length;
     return [
       hardestQuestion ? { icon: 'quiz', label: 'أصعب سؤال', value: `س${hardestQuestion.questionNumber} · ${this.format(hardestQuestion.successRate)}%`, detail: 'نسبة النجاح في السؤال', tab: 'questions' as AnalysisTab } : null,
@@ -171,6 +208,26 @@ export class ExamAnalysisComponent implements OnInit {
   questions = computed(() => {
     const data = this.dataset();
     return data ? this.calculator.questions(data.questions, this.filteredBaseStudents(), this.levels(), this.easyThreshold(), this.mediumThreshold()) : [];
+  });
+  hasMatchingQuestionScore = computed(() => {
+    const data = this.dataset();
+    if (!data) return false;
+    const questionIds = new Set(data.questions.map(question => question.id));
+    return data.students.some(student => !student.isAbsent && student.totalScore !== null && student.questionScores.some(score => questionIds.has(score.questionId)));
+  });
+  allQuestionsUnansweredDueToMissingDetailData = computed(() => questionDetailUnavailable(this.questions(), this.students().filter(student => !student.isAbsent && student.totalScore !== null).length, this.hasMatchingQuestionScore()));
+  visibleQuestions = computed(() => filterAndSortQuestions(this.questions(), this.questionSearch(), this.questionSort(), this.questionSortDirection()));
+  questionsInsightText = computed(() => {
+    const questions = this.questions();
+    if (this.allQuestionsUnansweredDueToMissingDetailData()) return 'لا تتوفر درجات تفصيلية على مستوى الأسئلة لهذا الامتحان، لذلك لا يمكن استنتاج أصعب الأسئلة أو مستوى الأداء عليها بدقة.';
+    if (!questions.length) return 'لا توجد أسئلة مرتبطة بهذا الامتحان.';
+    const withDetail = questions.filter(question => Number.isFinite(question.successRate) && question.correctCount + question.wrongCount > 0);
+    if (!withDetail.length) return 'لا تتوفر بيانات تفصيلية كافية لاستخراج مؤشرات الأسئلة.';
+    const hardest = [...withDetail].sort((a, b) => a.successRate - b.successRate)[0];
+    const hardCount = withDetail.filter(question => question.difficulty === 'صعب').length;
+    const averageUnanswered = withDetail.reduce((sum, question) => sum + question.unansweredRate, 0) / withDetail.length;
+    const unansweredNote = averageUnanswered > 30 ? ` متوسط عدم الإجابة ${this.format(averageUnanswered)}%.` : '';
+    return `أدنى نسبة نجاح في السؤال س${hardest.questionNumber} (${this.format(hardest.successRate)}%)، وعدد الأسئلة المصنفة صعبة ${hardCount}.${unansweredNote}`;
   });
   skills = computed(() => {
     const data = this.dataset();
@@ -202,9 +259,10 @@ export class ExamAnalysisComponent implements OnInit {
     });
   });
   recommendations = computed(() => {
+    if (this.allQuestionsUnansweredDueToMissingDetailData()) return [];
     const weakSkills = this.skills().filter(item => item.masteryRate < 55);
     const weakTopics = this.topics().filter(item => item.masteryRate < 55);
-    const hardQuestions = this.questions().filter(item => item.difficulty === 'صعب');
+    const hardQuestions = this.questions().filter(item => !this.allQuestionsUnansweredDueToMissingDetailData() && item.difficulty === 'صعب' && item.correctCount + item.wrongCount > 0);
     const interventionStudents = this.students().filter(item => !item.isAbsent && item.normalizedScore < 55);
     return [
       ...weakSkills.map(item => ({ icon: 'psychology', title: `إعادة تدريس مهارة: ${item.name}`, detail: `نسبة الإتقان ${this.format(item.masteryRate)}%، ويحتاج ${item.supportStudents} طالب إلى تعزيز.`, })),
@@ -283,6 +341,17 @@ export class ExamAnalysisComponent implements OnInit {
   }
 
   format(value: number) { return Number(value || 0).toFixed(1); }
+  setQuestionSort(sort: QuestionSortKey) {
+    if (this.questionSort() === sort) {
+      this.questionSortDirection.update(direction => direction === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+    this.questionSort.set(sort);
+    this.questionSortDirection.set('asc');
+  }
+  questionSortAria(sort: QuestionSortKey): 'ascending' | 'descending' | 'none' {
+    return this.questionSort() === sort ? (this.questionSortDirection() === 'asc' ? 'ascending' : 'descending') : 'none';
+  }
   levelPercent(count: number) { const total = this.summary().attended; return total ? count / total * 100 : 0; }
   groupComparisons() {
     const data = this.dataset();

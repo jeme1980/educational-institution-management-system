@@ -2,11 +2,12 @@ import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent } from '../models/exam-analysis.model';
+import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups } from './exam-analysis.component';
+import { buildInterventionGroups, filterAndSortQuestions, questionDetailUnavailable } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
+import { questionSuccessBarData } from '../components/question-success-chart.component';
 
 const overviewTemplate = readFileSync(new URL('./exam-analysis.component.html', import.meta.url), 'utf8');
 
@@ -82,5 +83,40 @@ describe('ExamAnalysis overview visuals', () => {
       { id: 'one', name: 'One', summary: { average: 80, passRate: 75 } },
       { id: 'two', name: 'Two', summary: { average: 60, passRate: 50 } },
     ]).labels).toHaveLength(2);
+  });
+});
+
+describe('ExamAnalysis question integrity', () => {
+  const level = { id: 'low', name: 'منخفض', min: 0, max: 100, color: '#dc2626' };
+  const question = (overrides: Partial<QuestionAnalysis> = {}): QuestionAnalysis => ({
+    id: 'q-1', questionNumber: 1, points: 10, topicId: 'topic-1', topicName: 'الجبر', skillId: 'skill-1', skillName: 'الحساب', typeId: 'type-1', typeName: 'اختيار من متعدد', text: 'نص السؤال',
+    average: 0, successRate: 0, errorRate: 0, unansweredRate: 100, correctCount: 0, wrongCount: 0, unansweredCount: 2, difficulty: 'صعب', level, ...overrides,
+  });
+
+  it('does not show the all-unanswered state when there are no questions', () => {
+    expect(questionDetailUnavailable([], 2, false)).toBe(false);
+  });
+
+  it('shows the all-unanswered state only when detail is missing', () => {
+    expect(questionDetailUnavailable([question()], 2, false)).toBe(true);
+    expect(questionDetailUnavailable([question({ unansweredRate: 50, correctCount: 1 })], 2, false)).toBe(false);
+    expect(questionDetailUnavailable([question()], 2, true)).toBe(false);
+  });
+
+  it('searches question number, text, topic, and skill and sorts stably', () => {
+    const questions = [question({ id: 'q-2', questionNumber: 2, topicName: 'الهندسة', skillName: 'القياس', successRate: 80, unansweredRate: 0, correctCount: 2, difficulty: 'سهل' }), question({ successRate: 20 })];
+    expect(filterAndSortQuestions(questions, 'الهندسة', 'question', 'asc').map(item => item.id)).toEqual(['q-2']);
+    expect(filterAndSortQuestions(questions, '', 'successRate', 'asc').map(item => item.id)).toEqual(['q-1', 'q-2']);
+  });
+
+  it('keeps question chart values finite and aligned with visible questions', () => {
+    const data = questionSuccessBarData([question({ successRate: Number.NaN }), question({ id: 'q-2', questionNumber: 2, successRate: 75, unansweredRate: 0, correctCount: 2 })]);
+    expect(data.labels).toEqual(['س1', 'س2']);
+    expect(data.datasets[0].data).toEqual([0, 75]);
+    expect(JSON.stringify(data)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it('does not expose subtopic behavior when the model has no subtopic field', () => {
+    expect('subTopicId' in question()).toBe(false);
   });
 });

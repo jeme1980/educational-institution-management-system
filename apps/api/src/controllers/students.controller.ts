@@ -293,7 +293,9 @@ export async function deleteStudentGuardian(req: ContextRequest, res: Response):
   const linkId = req.params['linkId'] as string;
   const link = await prisma.studentGuardian.findFirst({ where: { id: linkId, institutionId } });
   if (!link) return res.status(404).json({ error: 'Guardian relation not found' });
+  if (!await ensureActiveStudentInInstitution(institutionId, link.studentId)) return res.status(404).json({ error: 'Student is archived or inactive.' });
   await prisma.studentGuardian.delete({ where: { id: linkId } });
+  await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'STUDENT_GUARDIAN_UNLINKED', entityType: 'StudentGuardian', entityId: linkId, metadata: { studentId: link.studentId, guardianId: link.guardianId } });
   return res.json({ success: true });
 }
 
@@ -308,21 +310,19 @@ export async function getStudentMedicalProfile(req: ContextRequest, res: Respons
 export async function upsertStudentMedicalProfile(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context!.institutionId;
   const studentId = req.params['id'] as string;
-  if (!await ensureStudentInInstitution(institutionId, studentId)) return res.status(404).json({ error: 'Student not found' });
+  if (!await ensureActiveStudentInInstitution(institutionId, studentId)) return res.status(404).json({ error: 'Student is archived or inactive.' });
   const input = req.body;
-  const data = {
-    bloodType: input.bloodType?.trim() || null,
-    allergiesDescription: input.allergiesDescription?.trim() || null,
-    chronicConditions: input.chronicConditions?.trim() || null,
-    emergencyInstructions: input.emergencyInstructions?.trim() || null,
-    hasSpecialNeeds: Boolean(input.hasSpecialNeeds),
-    specialNeedsNotes: input.specialNeedsNotes?.trim() || null,
-  };
+  const data: Record<string, unknown> = {};
+  for (const field of ['bloodType', 'allergiesDescription', 'chronicConditions', 'emergencyInstructions', 'specialNeedsNotes']) {
+    if (Object.prototype.hasOwnProperty.call(input, field)) data[field] = input[field]?.trim() || null;
+  }
+  if (Object.prototype.hasOwnProperty.call(input, 'hasSpecialNeeds')) data.hasSpecialNeeds = Boolean(input.hasSpecialNeeds);
   const profile = await prisma.studentMedicalProfile.upsert({
     where: { institutionId_studentId: { institutionId, studentId } },
-    create: { institutionId, studentId, ...data },
+    create: { institutionId, studentId, bloodType: null, allergiesDescription: null, chronicConditions: null, emergencyInstructions: null, hasSpecialNeeds: false, specialNeedsNotes: null, ...data },
     update: data,
   });
+  await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'STUDENT_MEDICAL_UPDATED', entityType: 'StudentMedicalProfile', entityId: profile.id, metadata: { studentId, fields: Object.keys(data) } });
   return res.json(profile);
 }
 
@@ -331,6 +331,7 @@ export async function deleteStudentMedicalProfile(req: ContextRequest, res: Resp
   const studentId = req.params['id'] as string;
   const profile = await prisma.studentMedicalProfile.findUnique({ where: { institutionId_studentId: { institutionId, studentId } } });
   if (!profile) return res.status(404).json({ error: 'Medical profile not found' });
+  if (!await ensureActiveStudentInInstitution(institutionId, studentId)) return res.status(404).json({ error: 'Student is archived or inactive.' });
   await prisma.studentMedicalProfile.delete({ where: { id: profile.id } });
   return res.json({ success: true });
 }

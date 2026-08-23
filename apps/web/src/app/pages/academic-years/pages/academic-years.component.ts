@@ -4,11 +4,15 @@ import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, Validatio
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService, AcademicYear, AcademicPeriod } from '../../../core/services/api.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-academic-years',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
+  styles: ['#academic-years-container > div:has(h1), #academic-years-container > div:has(.bg-emerald-50) { display: none; }'],
   templateUrl: './academic-years.component.html',
   styleUrl: './academic-years.component.css'
 })

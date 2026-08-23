@@ -271,12 +271,6 @@
                     <ui-button size="sm" variant="ghost" [iconOnly]="true" [ariaLabel]="'عرض الطالب ' + student.firstNameAr" title="عرض الطالب" (activated)="viewDetails.emit(student)">
                       <mat-icon aria-hidden="true">visibility</mat-icon>
                     </ui-button>
-                    <button type="button" (click)="viewDetails.emit(student)" class="inline-flex items-center gap-1 rounded-md border-0 bg-transparent px-2 py-1.5 text-primary transition-colors hover:bg-primary-container" title="عرض التفاصيل">
-                      <mat-icon class="text-base">visibility</mat-icon>
-                    </button>
-                    <button type="button" (click)="toggleActionMenu(student.id)" [attr.aria-expanded]="actionMenuId() === student.id" aria-haspopup="menu" class="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer border-0 bg-transparent" title="المزيد">
-                      <mat-icon class="text-base">more_vert</mat-icon>
-                    </button>
                     @if (canEdit()) {
                       <ui-button size="sm" variant="ghost" [iconOnly]="true" [ariaLabel]="'تعديل الطالب ' + student.firstNameAr" title="تعديل الطالب" (activated)="edit.emit(student)">
                         <mat-icon aria-hidden="true">edit</mat-icon>
@@ -288,7 +282,7 @@
                       </ui-button>
                     }
                   </ui-table-actions>
-                  @if (actionMenuId() === student.id) {
+                  @if (false) {
                     <div class="absolute left-2 top-12 z-30 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-right shadow-xl" role="menu">
                       @if (canEdit()) { <button type="button" (click)="edit.emit(student); closeActionMenu()" class="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50" role="menuitem">
                         <mat-icon class="text-base text-amber-700">edit</mat-icon>

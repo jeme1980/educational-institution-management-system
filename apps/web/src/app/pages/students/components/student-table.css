@@ -1,12 +1,6 @@
 :host { display: block; }
 
-/* Direct row actions replace the former overflow menu in the primary table. */
-#student-table-section button[aria-haspopup='menu'],
-#student-table-section [role='menu'] { display: none; }
-
-#student-table-section ui-table-actions > button > span { display: none; }
 #student-table-section ui-table-actions { flex-wrap: nowrap; gap: var(--space-1); vertical-align: middle; }
-#student-table-scroll-container ui-table-actions > button { display: none; }
 
 #student-table-section ui-button[variant='danger'] {
   --danger: transparent;
@@ -18,12 +12,3 @@
 #student-table-section > div:first-child .relative.w-full { display: none; }
 #student-table-scroll-container .core-table tbody td:nth-child(2) .text-slate-800 { color: var(--on-surface); }
 #student-table-scroll-container .core-table tbody td:nth-child(2) .text-slate-400 { color: var(--on-surface-variant); }
-#student-table-scroll-container ui-table-actions > button:first-child {
-  width: var(--space-8);
-  min-height: var(--space-8);
-  justify-content: center;
-  padding-inline: 0;
-  color: var(--on-surface-variant);
-}
-#student-table-scroll-container ui-table-actions > button:first-child:hover { background: var(--surface-container-low); color: var(--on-surface); }
-#student-table-scroll-container ui-table-actions > button:first-child:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: var(--focus-ring-offset); }

@@ -1,9 +1,12 @@
 import '@angular/compiler';
 import { computed, signal } from '@angular/core';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups } from './exam-analysis.component';
+import { buildInterventionGroups, buildOverviewChartSegments, buildOverviewGroupBars } from './exam-analysis.component';
+
+const overviewTemplate = readFileSync(new URL('./exam-analysis.component.html', import.meta.url), 'utf8');
 
 describe('ExamAnalysis intervention reactivity', () => {
   it('moves a student between level groups when levels change without reload', () => {
@@ -40,5 +43,48 @@ describe('ExamAnalysis intervention reactivity', () => {
     expect(groups[0]).toMatchObject({ name: 'New level', color: '#64748b', students: [] });
     expect(groups[0].duration).toBeTruthy();
     expect(groups[0].activity).toBeTruthy();
+  });
+});
+
+describe('ExamAnalysis overview visuals', () => {
+  const levels = DEFAULT_PERFORMANCE_LEVELS.map((level, index) => ({ ...level, count: index + 1 }));
+
+  it('uses shared stat-card tones for the primary KPI row', () => {
+    expect(overviewTemplate).toContain('overview-kpi-row--primary');
+    expect(overviewTemplate).toContain('tone="primary"');
+    expect(overviewTemplate).toContain('tone="success"');
+  });
+
+  it('keeps donut percentages finite and sums them to 100 when data exists', () => {
+    const segments = buildOverviewChartSegments(levels, 10);
+    expect(segments.reduce((sum, segment) => sum + segment.percentage, 0)).toBeCloseTo(100, 6);
+    expect(segments.every(segment => Number.isFinite(segment.percentage))).toBe(true);
+  });
+
+  it('returns zero-safe donut geometry for empty data', () => {
+    const segments = buildOverviewChartSegments(levels.map(level => ({ ...level, count: 0 })), 0);
+    expect(segments.every(segment => segment.percentage === 0 && !Number.isNaN(segment.dashoffset))).toBe(true);
+    expect(JSON.stringify(segments)).not.toMatch(/NaN|Infinity/);
+  });
+
+  it('tracks dynamic level counts by stable level id', () => {
+    const segments = buildOverviewChartSegments([{ ...levels[0], id: 'custom-level', count: 4 }], 4);
+    expect(segments).toMatchObject([{ id: 'custom-level', count: 4, percentage: 100 }]);
+  });
+
+  it('shows the group comparison only when more than one group is available', () => {
+    expect(buildOverviewGroupBars([])).toHaveLength(0);
+    expect(buildOverviewGroupBars([{ id: 'one', name: 'One', summary: { average: 80, passRate: 75 } }])).toHaveLength(1);
+    expect(buildOverviewGroupBars([
+      { id: 'one', name: 'One', summary: { average: 80, passRate: 75 } },
+      { id: 'two', name: 'Two', summary: { average: 60, passRate: 50 } },
+    ])).toHaveLength(2);
+  });
+
+  it('exposes accessible SVG labels and native titles for chart data', () => {
+    expect(overviewTemplate).toContain('role="img" aria-label="توزيع مستويات الأداء حسب عدد الطلاب والنسبة"');
+    expect(overviewTemplate).toContain('role="img" aria-label="مقارنة الشعب حسب متوسط الأداء ونسبة النجاح"');
+    expect(overviewTemplate).toContain('<title>{{ segment.name }} — {{ segment.count }} طالب — {{ format(segment.percentage) }}%</title>');
+    expect(overviewTemplate).toContain('<title>{{ bar.name }} — متوسط الأداء {{ format(bar.average) }}% — نسبة النجاح {{ format(bar.passRate) }}%</title>');
   });
 });

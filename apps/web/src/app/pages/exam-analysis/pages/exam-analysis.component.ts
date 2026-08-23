@@ -24,6 +24,52 @@ export interface InterventionGroupView {
   activity: string;
 }
 
+export interface OverviewChartSegment {
+  id: string;
+  name: string;
+  color: string;
+  count: number;
+  percentage: number;
+  dasharray: string;
+  dashoffset: number;
+}
+
+export interface OverviewGroupBar {
+  id: string;
+  name: string;
+  average: number;
+  passRate: number;
+  height: number;
+}
+
+export function buildOverviewChartSegments(levels: (PerformanceLevel & { count: number })[], total: number): OverviewChartSegment[] {
+  let offset = 0;
+  return levels.map(level => {
+    const percentage = total > 0 ? level.count / total * 100 : 0;
+    const segment = {
+      id: level.id,
+      name: level.name,
+      color: level.color,
+      count: level.count,
+      percentage,
+      dasharray: `${percentage} ${Math.max(0, 100 - percentage)}`,
+      dashoffset: -offset,
+    };
+    offset += percentage;
+    return segment;
+  });
+}
+
+export function buildOverviewGroupBars(groups: { id: string; name: string; summary: { average: number; passRate: number } }[]): OverviewGroupBar[] {
+  return groups.map(group => ({
+    id: group.id,
+    name: group.name,
+    average: Number.isFinite(group.summary.average) ? Math.max(0, Math.min(100, group.summary.average)) : 0,
+    passRate: Number.isFinite(group.summary.passRate) ? Math.max(0, Math.min(100, group.summary.passRate)) : 0,
+    height: Number.isFinite(group.summary.average) ? Math.max(0, Math.min(100, group.summary.average)) : 0,
+  }));
+}
+
 const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
   high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
   'upper-mid': { name: 'مجموعة الإتقان', color: '#2563eb', duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
@@ -186,6 +232,8 @@ export class ExamAnalysisComponent implements OnInit {
     ...level,
     count: this.students().filter(student => !student.isAbsent && student.level.id === level.id).length,
   })));
+  overviewChartSegments = computed(() => buildOverviewChartSegments(this.levelCounts(), this.summary().attended));
+  overviewGroupBars = computed(() => buildOverviewGroupBars(this.groupComparisons()));
   visibleStudents = computed(() => {
     const term = this.studentSearch().trim().toLocaleLowerCase();
     const filter = this.levelFilter();
@@ -281,6 +329,7 @@ export class ExamAnalysisComponent implements OnInit {
   }
 
   format(value: number) { return Number(value || 0).toFixed(1); }
+  chartBarLabelY(height: number) { return Math.max(16, 212 - height * 1.8); }
   levelPercent(count: number) { const total = this.summary().attended; return total ? count / total * 100 : 0; }
   donutGradient() {
     let cursor = 0;

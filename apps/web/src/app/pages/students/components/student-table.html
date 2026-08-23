@@ -268,9 +268,11 @@
                 </td>
                 <td class="relative px-2 py-3">
                   <ui-table-actions>
+                    <ui-button size="sm" variant="ghost" [iconOnly]="true" [ariaLabel]="'عرض الطالب ' + student.firstNameAr" title="عرض الطالب" (activated)="viewDetails.emit(student)">
+                      <mat-icon aria-hidden="true">visibility</mat-icon>
+                    </ui-button>
                     <button type="button" (click)="viewDetails.emit(student)" class="inline-flex items-center gap-1 rounded-md border-0 bg-transparent px-2 py-1.5 text-primary transition-colors hover:bg-primary-container" title="عرض التفاصيل">
                       <mat-icon class="text-base">visibility</mat-icon>
-                      <span class="hidden lg:inline">عرض</span>
                     </button>
                     <button type="button" (click)="toggleActionMenu(student.id)" [attr.aria-expanded]="actionMenuId() === student.id" aria-haspopup="menu" class="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all cursor-pointer border-0 bg-transparent" title="المزيد">
                       <mat-icon class="text-base">more_vert</mat-icon>

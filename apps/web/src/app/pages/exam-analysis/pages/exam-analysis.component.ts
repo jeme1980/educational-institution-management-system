@@ -8,6 +8,8 @@ import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-pan
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiSectionCardComponent } from '../../../shared/components/ui-section-card/ui-section-card.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { PerformanceBarChartComponent } from '../components/performance-bar-chart.component';
 import { PerformanceDonutChartComponent } from '../components/performance-donut-chart.component';
 import { QuestionSuccessChartComponent } from '../components/question-success-chart.component';
@@ -81,7 +83,7 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

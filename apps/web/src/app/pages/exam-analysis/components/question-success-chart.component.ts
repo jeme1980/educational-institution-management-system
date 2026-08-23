@@ -31,7 +31,7 @@ export function questionSuccessBarData(questions: QuestionAnalysis[]): ChartData
   `,
   styles: [`
     :host { display: block; min-width: 0; }
-    .question-success-chart { width: 100%; height: 18rem; }
+    .question-success-chart { width: 100%; height: clamp(13.75rem, 30vw, 20rem); }
     canvas { display: block; width: 100% !important; height: 100% !important; }
     .question-success-chart__summary { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
     @media (prefers-reduced-motion: reduce) { canvas { transition: none !important; } }

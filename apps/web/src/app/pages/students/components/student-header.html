@@ -1,45 +1,27 @@
-<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8" id="student-header-area">
-  <div>
-    <h1 class="font-headline-lg text-headline-lg font-bold text-on-surface">إدارة الطلاب والسجلات</h1>
-    <p class="font-body-md text-body-md text-on-surface-variant mt-1">عرض وحفظ وإدارة كافة بيانات وحقول سجل الطالب وشعبه المعتمدة.</p>
-  </div>
-  <div class="flex items-center flex-wrap gap-3">
-    <button
-      id="btn-export-students"
-      type="button"
-      (click)="exportStudents.emit()"
-      class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors font-semibold text-xs active:scale-95 focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-    >
-      <mat-icon class="text-[18px]">download</mat-icon>
-      <span>تصدير الطلاب</span>
-    </button>
-
-    <button
-      id="btn-export-template"
-      (click)="exportTemplate.emit()"
-      class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-surface-border bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors font-medium text-xs active:scale-95 cursor-pointer"
-    >
-      <mat-icon class="text-[18px]">download</mat-icon>
-      <span class="hidden sm:inline">تصدير قالب البيانات</span>
-    </button>
-    
-    <button
-      id="btn-import-excel"
-      (click)="fileInput.click()"
-      class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-surface-border bg-surface text-on-surface-variant hover:bg-surface-container-low transition-colors font-medium text-xs active:scale-95 cursor-pointer"
-    >
-      <mat-icon class="text-[18px]">upload</mat-icon>
-      <span class="hidden sm:inline">استيراد من إكسل</span>
-    </button>
+<ui-page-header
+  title="إدارة الطلاب والسجلات"
+  description="عرض وحفظ وإدارة كافة بيانات وقبول سجل الطلاب وشعبهم المعتمدة."
+  eyebrow="إدارة المدرسة"
+>
+  <div ui-page-actions class="flex flex-wrap items-center gap-2">
+    <ui-button size="sm" variant="secondary" title="تصدير الطلاب" ariaLabel="تصدير الطلاب" (activated)="exportStudents.emit()">
+      <mat-icon aria-hidden="true">download</mat-icon>
+      <span class="hidden sm:inline">تصدير الطلاب</span>
+    </ui-button>
+    <ui-button size="sm" variant="ghost" title="تصدير قالب البيانات" ariaLabel="تصدير قالب البيانات" (activated)="exportTemplate.emit()">
+      <mat-icon aria-hidden="true">download</mat-icon>
+      <span class="hidden sm:inline">تصدير القالب</span>
+    </ui-button>
+    <ui-button size="sm" variant="ghost" title="استيراد من إكسل" ariaLabel="استيراد من إكسل" (activated)="fileInput.click()">
+      <mat-icon aria-hidden="true">upload</mat-icon>
+      <span class="hidden sm:inline">استيراد</span>
+    </ui-button>
+    @if (canCreate) {
+      <ui-button size="sm" variant="primary" title="إضافة طالب جديد" ariaLabel="إضافة طالب جديد" (activated)="addStudent.emit()">
+        <mat-icon aria-hidden="true">person_add</mat-icon>
+        <span>إضافة طالب</span>
+      </ui-button>
+    }
     <input type="file" #fileInput class="hidden" accept=".xlsx, .xls, .csv" (change)="onFileChange($event)" id="excel-file-input" />
-
-    @if (canCreate) { <button
-      id="btn-add-new-student"
-      (click)="addStudent.emit()"
-      class="flex items-center gap-2 bg-primary text-on-primary px-4 py-2.5 rounded-lg hover:bg-primary-container transition-colors active:scale-95 focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-    >
-      <mat-icon class="text-[18px]">person_add</mat-icon>
-      <span class="font-label-md text-label-md font-semibold">إضافة طالب جديد</span>
-    </button> }
   </div>
-</div>
+</ui-page-header>

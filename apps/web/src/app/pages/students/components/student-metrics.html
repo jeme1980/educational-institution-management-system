@@ -1,49 +1,6 @@
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5" id="student-metrics-grid">
-  <div class="bg-surface border border-surface-border rounded-xl p-4 min-h-[104px] flex flex-row items-center gap-3 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow" id="metric-total-students">
-    <div class="shrink-0">
-      <div class="p-2 bg-secondary-container text-primary-container rounded-lg">
-        <mat-icon class="text-[22px]">groups</mat-icon>
-      </div>
-    </div>
-    <div>
-      <h3 class="font-headline-lg text-headline-lg text-2xl leading-tight font-semibold text-on-surface">{{ totalCount() }}</h3>
-      <p class="font-label-md text-label-md text-on-surface-variant">إجمالي الطلاب بالسجل</p>
-    </div>
-  </div>
-
-  <div class="bg-surface border border-surface-border rounded-xl p-4 min-h-[104px] flex flex-row items-center gap-3 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow" id="metric-active-students">
-    <div class="shrink-0">
-      <div class="p-2 bg-emerald-100 text-success-emerald rounded-lg">
-        <mat-icon class="text-[22px]">verified_user</mat-icon>
-      </div>
-    </div>
-    <div>
-      <h3 class="font-headline-lg text-headline-lg text-2xl leading-tight font-semibold text-on-surface">{{ activeCount() }}</h3>
-      <p class="font-label-md text-label-md text-on-surface-variant">طلاب نشطون حالياً</p>
-    </div>
-  </div>
-
-  <div class="bg-surface border border-surface-border rounded-xl p-4 min-h-[104px] flex flex-row items-center gap-3 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow" id="metric-filtered-students">
-    <div class="shrink-0">
-      <div class="p-2 bg-blue-100 text-primary rounded-lg">
-        <mat-icon class="text-[22px]">filter_alt</mat-icon>
-      </div>
-    </div>
-    <div>
-      <h3 class="font-headline-lg text-headline-lg text-2xl leading-tight font-semibold text-on-surface">{{ filteredCount() }}</h3>
-      <p class="font-label-md text-label-md text-on-surface-variant">نتائج التصفية الحالية</p>
-    </div>
-  </div>
-
-  <div class="bg-surface border border-surface-border rounded-xl p-4 min-h-[104px] flex flex-row items-center gap-3 hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow" id="metric-students-guardians">
-    <div class="shrink-0">
-      <div class="p-2 bg-amber-100 text-warning-amber rounded-lg">
-        <mat-icon class="text-[22px]">family_restroom</mat-icon>
-      </div>
-    </div>
-    <div>
-      <h3 class="font-headline-lg text-headline-lg text-2xl leading-tight font-semibold text-on-surface">{{ guardiansCount() }}</h3>
-      <p class="font-label-md text-label-md text-on-surface-variant">سجلات بأوصياء مسجلين</p>
-    </div>
-  </div>
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" id="student-metrics-grid">
+  <ui-stat-card id="metric-total-students" label="إجمالي الطلاب بالسجل" [value]="totalCount()" icon="groups" tone="primary" />
+  <ui-stat-card id="metric-active-students" label="طلاب نشطون حاليًا" [value]="activeCount()" icon="verified_user" tone="success" />
+  <ui-stat-card id="metric-filtered-students" label="نتائج التصفية الحالية" [value]="filteredCount()" icon="filter_alt" tone="primary" />
+  <ui-stat-card id="metric-students-guardians" label="سجلات بأوصياء مسجلين" [value]="guardiansCount()" icon="family_restroom" tone="warning" />
 </div>

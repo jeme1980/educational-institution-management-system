@@ -3,6 +3,7 @@ import type { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
 import { parseBooleanCell, parseExamResultsWorkbook, parseNumberCell, SpreadsheetValidationError } from '../security/spreadsheet-security';
+import { getEligibleExamStudents } from '../services/exam-eligibility.service';
 
 type ImportError = { row: number; column: string; code: string };
 const uuid = (value: unknown): string | null => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')) ? String(value) : null;
@@ -20,7 +21,7 @@ export async function importExamResults(req: AuthRequest, res: Response): Promis
   if (!examId || !institutionId) return res.status(404).json({ error: 'Exam not found.' });
   if (!Buffer.isBuffer(req.body)) return validationResponse(res, [{ row: 0, column: '', code: 'RAW_XLSX_REQUIRED' }]);
 
-  const exam = await prisma.exam.findFirst({ where: { id: examId, institutionId, academicYearId, archivedAt: null }, select: { id: true, maxScore: true } });
+  const exam = await prisma.exam.findFirst({ where: { id: examId, institutionId, academicYearId, archivedAt: null }, select: { id: true, maxScore: true, subjectId: true } });
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });
 
   let rows: Array<Record<string, string>>;
@@ -33,11 +34,7 @@ export async function importExamResults(req: AuthRequest, res: Response): Promis
   const questions = await prisma.examQuestion.findMany({ where: { examId: exam.id, institutionId }, select: { id: true, questionNumber: true, maxScore: true } });
   const questionByNumber = new Map(questions.map(question => [String(question.questionNumber), question]));
   const questionById = new Map(questions.map(question => [question.id.replace(/-/g, '').toLowerCase(), question]));
-  const memberships = await prisma.examStudyGroup.findMany({
-    where: { examId: exam.id, institutionId },
-    select: { studyGroup: { select: { students: { select: { studentEnrollment: { select: { studentId: true } } } } } } },
-  });
-  const eligibleStudentIds = new Set(memberships.flatMap(link => link.studyGroup.students.map(item => item.studentEnrollment.studentId)));
+  const eligibleStudentIds = new Set((await getEligibleExamStudents({ ...exam, institutionId, academicYearId })).map(item => item.studentId));
   const students = await prisma.student.findMany({ where: { institutionId, id: { in: [...eligibleStudentIds] } }, select: { id: true, nationalId: true } });
   const studentByNationalId = new Map(students.map(student => [String(student.nationalId || '').replace(/[\s-]+/g, ''), student]));
   const errors: ImportError[] = [];

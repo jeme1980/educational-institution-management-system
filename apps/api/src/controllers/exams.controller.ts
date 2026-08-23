@@ -3,6 +3,7 @@ import { ContextRequest } from '../middleware/context';
 import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
+import { eligibleStudentIds, getEligibleExamStudents } from '../services/exam-eligibility.service';
 
 const uuid = (value: unknown): string | null => { const text = String(value || ''); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null; };
 const context = (req: ContextRequest) => ({ institutionId: req.context?.institutionId || '', academicYearId: req.context?.academicYearId || '' });
@@ -56,10 +57,11 @@ export async function getExamsByIdResultsEnhanced(req: ContextRequest, res: Resp
   const { institutionId, academicYearId } = context(req);
   const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, include: { subject: true } });
   if (!exam) return res.status(404).json({ error: '״§„״§…״×״­״§† ״÷״± …ˆ״¬ˆ״¯.' });
-  const links = await prisma.examStudyGroup.findMany({ where: { examId: exam.id, institutionId }, include: { studyGroup: { include: { students: { include: { studentEnrollment: { include: { student: { select: { id: true, firstNameAr: true, lastNameAr: true, nationalId: true } }, classRoom: { select: { id: true, nameAr: true } } } } } } } } } });
+  const eligibleIds = eligibleStudentIds(await getEligibleExamStudents(exam));
+  const links = await prisma.examStudyGroup.findMany({ where: { examId: exam.id, institutionId, studyGroup: { academicYearId, subjectId: exam.subjectId, isActive: true, archivedAt: null } }, include: { studyGroup: { include: { students: { where: { studentEnrollment: { institutionId, academicYearId, isActive: true, isDeleted: false, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { institutionId, isActive: true } } }, include: { studentEnrollment: { include: { student: { select: { id: true, firstNameAr: true, lastNameAr: true, nationalId: true } }, classRoom: { select: { id: true, nameAr: true } } } } } } } } } });
   if (!links.length) return res.json({ exam, questions: [], results: [], warning: '„… ״×… ״±״¨״· ״£ …״¬…ˆ״¹״© ״×״¹„…״© ״¨‡״°״§ ״§„״§…״×״­״§† ״¨״¹״¯״ ״±״¬‰ ״±״¨״· …״¬…ˆ״¹״© ״£ˆ„‹״§ ‚״¨„ ״±״µ״¯ ״§„†״×״§״¦״¬.' });
   const students = new Map<string, any>();
-  for (const link of links) for (const membership of link.studyGroup.students) { const enrollment = membership.studentEnrollment; const current = students.get(enrollment.studentId); students.set(enrollment.studentId, { ...(current || { studentId: enrollment.studentId, studentName: `${enrollment.student.firstNameAr} ${enrollment.student.lastNameAr}`, nationalId: enrollment.student.nationalId, classNameAr: enrollment.classRoom?.nameAr || '', enrollmentId: enrollment.id }), groupIds: [...new Set([...(current?.groupIds || []), link.studyGroupId])] }); }
+  for (const link of links) for (const membership of link.studyGroup.students) { const enrollment = membership.studentEnrollment; if (!eligibleIds.has(enrollment.studentId)) continue; const current = students.get(enrollment.studentId); students.set(enrollment.studentId, { ...(current || { studentId: enrollment.studentId, studentName: `${enrollment.student.firstNameAr} ${enrollment.student.lastNameAr}`, nationalId: enrollment.student.nationalId, classNameAr: enrollment.classRoom?.nameAr || '', enrollmentId: enrollment.id }), groupIds: [...new Set([...(current?.groupIds || []), link.studyGroupId])] }); }
   const questions = await prisma.examQuestion.findMany({ where: { examId: exam.id, institutionId }, select: { id: true, questionNumber: true, maxScore: true, contentAr: true, contentHe: true, questionType: { select: { nameAr: true } } }, orderBy: { questionNumber: 'asc' } });
   const results = await prisma.studentExamResult.findMany({ where: { examId: exam.id, institutionId } });
   const scores = await prisma.studentQuestionScore.findMany({ where: { institutionId, examQuestionId: { in: questions.map(question => question.id) }, studentId: { in: Array.from(students.keys()) } }, select: { studentId: true, examQuestionId: true, score: true, notes: true } });
@@ -75,8 +77,7 @@ export async function createExamsByIdResultsEnhanced(req: AuthRequest, res: Resp
   if (!Array.isArray(req.body?.results)) return res.status(400).json({ error: '״¨״§†״§״× ״§„†״×״§״¦״¬ ״÷״± ״µ״§„״­״©.' });
   const questions = await prisma.examQuestion.findMany({ where: { examId: exam.id, institutionId }, select: { id: true, maxScore: true } });
   const questionMap = new Map(questions.map(question => [question.id, Number(question.maxScore)]));
-  const examMemberships = await prisma.examStudyGroup.findMany({ where: { examId: exam.id, institutionId }, select: { studyGroup: { select: { students: { select: { studentEnrollment: { select: { studentId: true } } } } } } } });
-  const allowedStudentIds = new Set(examMemberships.flatMap(link => link.studyGroup.students.map(item => item.studentEnrollment.studentId)));
+  const allowedStudentIds = eligibleStudentIds(await getEligibleExamStudents(exam));
   try {
     await prisma.$transaction(async tx => {
       const seenStudentIds = new Set<string>();
@@ -107,7 +108,19 @@ export async function getExamStudentResult(req: ContextRequest, res: Response): 
   if (!studentId) return res.status(400).json({ error: 'معرف الطالب غير صالح.' });
   const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null } });
   if (!exam) return res.status(404).json({ error: 'الامتحان غير موجود.' });
-  const membership = await prisma.examStudyGroup.findFirst({ where: { examId: exam.id, institutionId, studyGroup: { students: { some: { studentEnrollment: { studentId } } } } } });
+  const membership = await prisma.examStudyGroup.findFirst({
+    where: {
+      examId: exam.id,
+      institutionId,
+      studyGroup: {
+        academicYearId,
+        subjectId: exam.subjectId,
+        isActive: true,
+        archivedAt: null,
+        students: { some: { studentEnrollment: { institutionId, academicYearId, studentId, isActive: true, isDeleted: false, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { institutionId, isActive: true } } } },
+      },
+    },
+  });
   if (!membership) return res.status(404).json({ error: 'الطالب غير مرتبط بمجموعات هذا الامتحان.' });
   const [student, questions, result] = await Promise.all([
     prisma.student.findFirst({ where: { id: studentId, institutionId }, select: { id: true, firstNameAr: true, lastNameAr: true, nationalId: true } }),
@@ -159,6 +172,7 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
   const exam = await prisma.exam.findFirst({ where: { id, institutionId, academicYearId, archivedAt: null } });
   if (!exam) return res.status(404).json({ error: '״§„״§…״×״­״§† ״÷״± …ˆ״¬ˆ״¯.' });
 
+  if (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) return res.status(409).json({ error: 'Questions cannot be replaced after results have been recorded.' });
   const relations = await examRelations(req, { ...exam, ...body });
   const titleAr = String(body.titleAr ?? exam.titleAr).trim();
   const examDate = body.examDate ? new Date(body.examDate) : exam.examDate;
@@ -229,7 +243,7 @@ export async function getExamTypes(req: ContextRequest, res: Response): Promise<
 export async function getExamStatuses(_req: ContextRequest, res: Response): Promise<any> { return res.json([{ id: 'DRAFT', nameAr: '…״³ˆ״¯״©' }, { id: 'PUBLISHED', nameAr: '…†״´ˆ״±' }]); }
 export async function getQuestionTypes(req: ContextRequest, res: Response): Promise<any> { return res.json(await prisma.questionType.findMany({ where: { institutionId: context(req).institutionId, isActive: true }, orderBy: { sortOrder: 'asc' } })); }
 
-export async function getExamsByIdQuestions(req: ContextRequest, res: Response): Promise<any> { const { institutionId } = context(req); return res.json(await prisma.examQuestion.findMany({ where: { examId: String(req.params.id), institutionId }, include: { questionType: true, topic: true, skill: true }, orderBy: { questionNumber: 'asc' } })); }
+export async function getExamsByIdQuestions(req: ContextRequest, res: Response): Promise<any> { const { institutionId, academicYearId } = context(req); const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true } }); if (!exam) return res.status(404).json({ error: 'Exam not found.' }); return res.json(await prisma.examQuestion.findMany({ where: { examId: exam.id, institutionId }, include: { questionType: true, topic: true, skill: true }, orderBy: { questionNumber: 'asc' } })); }
 export async function getExamsByIdQuestionContext(req: ContextRequest, res: Response): Promise<any> {
   const { institutionId, academicYearId } = context(req);
   const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, archivedAt: null }, select: { id: true, subjectId: true, academicYearId: true } });
@@ -254,9 +268,10 @@ export async function getExamsByIdQuestionContext(req: ContextRequest, res: Resp
   return res.json({ topics: topics.map(addGradeLevelName), skills: skills.map(addGradeLevelName), gradeLevels: [...gradeLevelMap.values()], warning });
 }
 export async function createExamsByIdQuestions(req: AuthRequest, res: Response): Promise<any> {
-  const { institutionId } = context(req);
-  const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, archivedAt: null } });
+  const { institutionId, academicYearId } = context(req);
+  const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null } });
   if (!exam) return res.status(404).json({ error: '\u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.' });
+  if (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) return res.status(409).json({ error: 'Questions cannot be replaced after results have been recorded.' });
   const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
   const typeIds: string[] = Array.from(new Set(questions.map((q: any) => uuid(q.questionTypeId)).filter((id: string | null): id is string => Boolean(id))));
   const topicIds: string[] = Array.from(new Set(questions.map((q: any) => uuid(q.topicId)).filter((id: string | null): id is string => Boolean(id))));

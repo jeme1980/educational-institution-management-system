@@ -152,7 +152,10 @@ export async function createStudyGroupsByIdMembers(req: AuthRequest, res: Respon
 }
 
 export async function deleteStudyGroupsByIdMembersByMemberId(req: AuthRequest, res: Response): Promise<any> {
-  const existing = await prisma.studyGroupStudent.findFirst({ where: { id: String(req.params.memberId), institutionId: context(req).institutionId } });
+  const { institutionId, academicYearId } = context(req);
+  const group = await prisma.studyGroup.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null }, select: { id: true } });
+  if (!group) return res.status(404).json({ error: 'عضوية المجموعة غير متاحة في السياق الحالي.' });
+  const existing = await prisma.studyGroupStudent.findFirst({ where: { id: String(req.params.memberId), institutionId, studyGroupId: group.id } });
   if (!existing) return res.status(404).json({ error: 'عضوية الطالب غير موجودة.' });
   await prisma.studyGroupStudent.delete({ where: { id: existing.id } });
   return res.json({ success: true });

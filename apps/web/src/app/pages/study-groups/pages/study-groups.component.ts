@@ -7,6 +7,7 @@ import { StudyGroupItem } from '../models/study-group.model';
 import { StudyGroupsStateService } from '../services/study-groups-state.service';
 import { StudyGroupMembersDialogComponent } from '../components/study-group-members-dialog';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +19,7 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 export class StudyGroupsComponent implements OnInit {
   readonly apiService = inject(ApiService);
   readonly confirmDialog = inject(ConfirmDialogService);
+  readonly authService = inject(AuthService);
   private readonly groupsState = inject(StudyGroupsStateService);
   private readonly fb = inject(FormBuilder);
   readonly searchTerm = signal('');
@@ -38,6 +40,10 @@ export class StudyGroupsComponent implements OnInit {
   readonly isMembersLoading = signal(false);
   readonly isDeleting = signal<string | null>(null);
   readonly toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
+  readonly pageError = signal('');
+  readonly canCreate = computed(() => this.authService.hasPermission('settings:create'));
+  readonly canUpdate = computed(() => this.authService.hasPermission('settings:create'));
+  readonly canDelete = computed(() => this.authService.hasPermission('settings:create'));
 
   readonly groupForm = this.fb.nonNullable.group({
     nameAr: ['', [Validators.required, Validators.maxLength(150)]],
@@ -78,6 +84,7 @@ export class StudyGroupsComponent implements OnInit {
 
   async refresh(): Promise<void> {
     this.isLoading.set(true);
+    this.pageError.set('');
     // Old local data used placeholders such as "ay-2025-2026". Prisma stores
     // both context values as UUIDs, so never send a placeholder header.
     if (!this.isUuid(this.apiService.selectedInstitutionId())) this.apiService.setSelectedInstitutionId(null);
@@ -88,6 +95,7 @@ export class StudyGroupsComponent implements OnInit {
     if (institutionId) this.apiService.setSelectedInstitutionId(institutionId);
     if (academicYearId) this.apiService.setSelectedAcademicYearId(academicYearId);
     await Promise.all([this.groupsState.loadStudyGroups(this.showArchived()), this.apiService.loadSubjects(), this.apiService.loadClasses(), this.apiService.loadStaffAssignments(), this.apiService.loadEnrollments()]);
+    if (this.apiService.classesApi.studyGroupError()) this.pageError.set(this.apiService.classesApi.studyGroupError());
     this.isLoading.set(false);
   }
 
@@ -106,6 +114,7 @@ export class StudyGroupsComponent implements OnInit {
   viewDetails(group: StudyGroupItem): void { this.selectedGroup.set(group); this.showDetailsModal.set(true); }
 
   async saveGroup(): Promise<void> {
+    if (this.editingGroup() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.groupForm.invalid || this.isSaving()) { this.groupForm.markAllAsTouched(); return; }
     this.isSaving.set(true);
     const editing = !!this.editingGroup();
@@ -117,6 +126,7 @@ export class StudyGroupsComponent implements OnInit {
   }
 
   async deleteGroup(group: StudyGroupItem): Promise<void> {
+    if (!this.canDelete()) return;
     if (this.isDeleting()) return;
     if (group.archivedAt) { await this.restoreGroup(group); return; }
     const examWarning = (group._count?.examGroups || 0) > 0 ? '\nهذه المجموعة مرتبطة بامتحانات، أرشفتها ستُخفيها من قوائم الربط المستقبلية.' : '';
@@ -129,6 +139,7 @@ export class StudyGroupsComponent implements OnInit {
   }
 
   async restoreGroup(group: StudyGroupItem): Promise<void> {
+    if (!this.canUpdate()) return;
     if (this.isDeleting()) return;
     this.isDeleting.set(group.id);
     const ok = await this.groupsState.restoreStudyGroup(group.id);

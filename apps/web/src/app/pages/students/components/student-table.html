@@ -11,6 +11,7 @@
         <button
           type="button"
           (click)="setViewMode('table')"
+          [attr.aria-pressed]="viewMode() === 'table'"
           [class]="viewMode() === 'table' ? 'inline-flex min-h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-on-primary shadow-sm' : 'inline-flex min-h-8 items-center rounded-md px-3 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high'"
         >
           <span class="flex items-center gap-1.5">
@@ -21,6 +22,7 @@
         <button
           type="button"
           (click)="setViewMode('cards')"
+          [attr.aria-pressed]="viewMode() === 'cards'"
           [class]="viewMode() === 'cards' ? 'inline-flex min-h-8 items-center rounded-md bg-primary px-3 text-xs font-semibold text-on-primary shadow-sm' : 'inline-flex min-h-8 items-center rounded-md px-3 text-xs font-semibold text-on-surface-variant hover:bg-surface-container-high'"
         >
           <span class="flex items-center gap-1.5">
@@ -58,7 +60,7 @@
   <div class="grid grid-cols-1 gap-3 border-b border-surface-border bg-surface-container-low p-4 sm:grid-cols-2 lg:grid-cols-4">
     <!-- Class Selector -->
     <div class="relative">
-      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">school</mat-icon>
+      <mat-icon class="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">school</mat-icon>
       <select
         [value]="classFilter()"
         (change)="classFilterChange.emit($any($event.target).value)"
@@ -69,12 +71,11 @@
           <option [value]="c.id">{{ c.nameAr }} (الصف {{ c.gradeLevel }})</option>
         }
       </select>
-      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
     </div>
 
     <!-- Status Selector -->
     <div class="relative">
-      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">check_circle_outline</mat-icon>
+      <mat-icon class="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">check_circle_outline</mat-icon>
       <select
         [value]="statusFilter()"
         (change)="statusFilterChange.emit($any($event.target).value)"
@@ -86,12 +87,11 @@
         <option value="SUSPENDED">موقوف</option>
         <option value="INACTIVE">منقطع</option>
       </select>
-      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
     </div>
 
     <!-- Gender Selector -->
     <div class="relative">
-      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">people_outline</mat-icon>
+      <mat-icon class="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">people_outline</mat-icon>
       <select
         [value]="genderFilter()"
         (change)="genderFilterChange.emit($any($event.target).value)"
@@ -101,12 +101,11 @@
         <option value="gnd-male">ذكر</option>
         <option value="gnd-female">أنثى</option>
       </select>
-      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
     </div>
 
     <!-- Sort selector -->
     <div class="relative">
-      <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">sort_by_alpha</mat-icon>
+      <mat-icon class="absolute end-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">sort_by_alpha</mat-icon>
       <select
         [value]="sortBy()"
         (change)="sortByChange.emit($any($event.target).value)"
@@ -116,7 +115,6 @@
         <option value="birthDate">ترتيب حسب تاريخ الميلاد</option>
         <option value="nationalId">ترتيب حسب رقم الهوية</option>
       </select>
-      <mat-icon class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">keyboard_arrow_down</mat-icon>
     </div>
   </div>
 
@@ -451,26 +449,26 @@
               <div class="flex items-center gap-1">
                 <button
                   (click)="viewDetails.emit(student)"
-                  class="p-1.5 rounded-lg hover:bg-blue-50 text-primaryransition-all cursor-pointer border-0 bg-transparent"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   title="عرض التفاصيل"
                 >
-                  <mat-icon class="text-base block">visibility</mat-icon>
+                  <mat-icon aria-hidden="true" class="text-base">visibility</mat-icon>
                 </button>
                 <button
                   [hidden]="!canEdit()"
                   (click)="edit.emit(student)"
-                  class="p-1.5 rounded-lg hover:bg-amber-50 text-amber-700 transition-all cursor-pointer border-0 bg-transparent"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                   title="تعديل"
                 >
-                  <mat-icon class="text-base block">edit</mat-icon>
+                  <mat-icon aria-hidden="true" class="text-base">edit</mat-icon>
                 </button>
                 <button
                   [hidden]="!canDelete()"
                   (click)="delete.emit(student.id)"
-                  class="p-1.5 rounded-lg text-slate-400 hover:text-rose-700 hover:bg-rose-50 transition-all cursor-pointer border-0 bg-transparent"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-danger transition-colors hover:bg-danger-container focus-visible:outline focus-visible:outline-2 focus-visible:outline-danger"
                   title="حذف"
                 >
-                  <mat-icon class="text-base block">delete</mat-icon>
+                  <mat-icon aria-hidden="true" class="text-base">delete</mat-icon>
                 </button>
               </div>
             </div>

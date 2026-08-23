@@ -3,3 +3,11 @@
 /* Direct row actions replace the former overflow menu in the primary table. */
 #student-table-section button[aria-haspopup='menu'],
 #student-table-section [role='menu'] { display: none; }
+
+#student-table-section ui-table-actions > button > span { display: none; }
+
+#student-table-section ui-button[variant='danger'] {
+  --danger: transparent;
+  --on-primary: var(--danger);
+  --color-danger-900: var(--danger-container);
+}

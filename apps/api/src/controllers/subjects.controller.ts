@@ -12,6 +12,18 @@ const uuid = (value: unknown): string | null => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null;
 };
 
+const subjectName = (value: unknown) => String(value || '').trim();
+
+async function validAcademicYear(institutionId: string, academicYearId: string) {
+  return uuid(institutionId) && uuid(academicYearId)
+    ? prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId, archivedAt: null } })
+    : null;
+}
+
+async function validGradeLevel(gradeLevelId: string) {
+  return uuid(gradeLevelId) ? prisma.gradeLevel.findFirst({ where: { id: gradeLevelId, isActive: true } }) : null;
+}
+
 async function topicResponse(institutionId: string, academicYearId: string) {
   return prisma.topic.findMany({
     where: { institutionId, ...(academicYearId ? { academicYearId } : {}) },
@@ -38,43 +50,33 @@ export async function getSubjects(req: ContextRequest, res: Response) {
 
 export async function createSubjects(req: AuthRequest, res: Response) {
   const institutionId = institutionIdFrom(req);
-  const { nameAr, nameHe, isActive, archivedAt } = req.body;
+  const { nameHe, isActive, archivedAt } = req.body;
+  const nameAr = subjectName(req.body?.nameAr);
   const resolvedAcademicYearId = req.context?.academicYearId || '';
-  if (!resolvedAcademicYearId || !nameAr) return res.status(400).json({ error: 'academicYearId and nameAr are required' });
-  const inserted = await prisma.subject.create({
-    data: {
-      institutionId,
-      academicYearId: String(resolvedAcademicYearId),
-      nameAr,
-      nameHe: nameHe || null,
-      isActive: isActive !== undefined ? Boolean(isActive) : true,
-      archivedAt: nullableDate(archivedAt),
-      createdBy: uuid(req.user?.uid),
-    },
-  });
-  return res.status(201).json(inserted);
+  if (!uuid(institutionId) || !nameAr || !resolvedAcademicYearId) return res.status(400).json({ error: 'السنة والاسم العربي للمادة مطلوبان.' });
+  if (!(await validAcademicYear(institutionId, resolvedAcademicYearId))) return res.status(400).json({ error: 'السنة الدراسية غير صالحة للمؤسسة الحالية.' });
+  const duplicate = await prisma.subject.findFirst({ where: { institutionId, academicYearId: resolvedAcademicYearId, nameAr, archivedAt: null }, select: { id: true } });
+  if (duplicate) return res.status(409).json({ error: 'اسم المادة مستخدم مسبقًا في السنة الدراسية الحالية.' });
+  try {
+    const inserted = await prisma.subject.create({ data: { institutionId, academicYearId: resolvedAcademicYearId, nameAr, nameHe: subjectName(nameHe) || null, isActive: isActive !== undefined ? Boolean(isActive) : true, archivedAt: nullableDate(archivedAt), createdBy: uuid(req.user?.uid) } });
+    return res.status(201).json(inserted);
+  } catch (error) {
+    return res.status(500).json({ error: 'تعذر حفظ المادة الدراسية.' });
+  }
 }
 
 export async function updateSubjectsById(req: AuthRequest, res: Response) {
   const id = String(req.params['id']);
   const institutionId = institutionIdFrom(req);
-  const existing = await prisma.subject.findFirst({ where: { id, institutionId } });
+  const academicYearId = academicYearIdFrom(req);
+  const existing = await prisma.subject.findFirst({ where: { id, institutionId, ...(academicYearId ? { academicYearId } : {}) } });
   if (!existing) return res.status(404).json({ error: 'Subject not found' });
-  const { academicYearId, nameAr, nameHe, isActive, archivedAt } = req.body;
-  const year = await prisma.academicYear.findFirst({ where: { id: String(academicYearId || existing.academicYearId), institutionId } });
-  if (!year) return res.status(400).json({ error: 'السنة الدراسية لا تنتمي إلى المؤسسة الحالية.' });
-  const updated = await prisma.subject.update({
-    where: { id },
-    data: {
-      academicYearId: year.id,
-      nameAr,
-      nameHe: nameHe || null,
-      isActive: isActive !== undefined ? Boolean(isActive) : existing.isActive,
-      archivedAt: nullableDate(archivedAt),
-      updatedAt: new Date(),
-      updatedBy: uuid(req.user?.uid),
-    },
-  });
+  const { nameHe, isActive, archivedAt } = req.body;
+  const nameAr = subjectName(req.body?.nameAr);
+  if (!nameAr || !(await validAcademicYear(institutionId, existing.academicYearId))) return res.status(400).json({ error: 'بيانات المادة أو السنة غير صالحة.' });
+  const duplicate = await prisma.subject.findFirst({ where: { institutionId, academicYearId: existing.academicYearId, nameAr, archivedAt: null, id: { not: id } }, select: { id: true } });
+  if (duplicate) return res.status(409).json({ error: 'اسم المادة مستخدم مسبقًا في السنة الدراسية الحالية.' });
+  const updated = await prisma.subject.update({ where: { id }, data: { nameAr, nameHe: subjectName(nameHe) || null, isActive: isActive !== undefined ? Boolean(isActive) : existing.isActive, archivedAt: nullableDate(archivedAt), updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } });
   return res.json(updated);
 }
 
@@ -82,8 +84,8 @@ export async function deleteSubjectsById(req: AuthRequest, res: Response) {
   const id = String(req.params['id']);
   const existing = await prisma.subject.findFirst({ where: { id, institutionId: institutionIdFrom(req) } });
   if (!existing) return res.status(404).json({ error: 'Subject not found' });
-  await prisma.subject.delete({ where: { id } });
-  return res.json({ message: 'Subject deleted successfully', id });
+  const archived = await prisma.subject.update({ where: { id }, data: { isActive: false, archivedAt: new Date(), updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } });
+  return res.json({ message: 'Subject archived successfully', archived: true, id, subject: archived });
 }
 
 export async function getTopics(req: ContextRequest, res: Response) {
@@ -94,8 +96,8 @@ export async function createTopics(req: AuthRequest, res: Response) {
   const institutionId = institutionIdFrom(req);
   const { academicYearId, subjectId, gradeLevelId, nameAr, nameHe, isActive, archivedAt } = req.body;
   if (!academicYearId || !subjectId || !gradeLevelId || !nameAr) return res.status(400).json({ error: 'academicYearId, subjectId, gradeLevelId and nameAr are required' });
-  const subject = await prisma.subject.findFirst({ where: { id: subjectId, institutionId } });
-  if (!subject) return res.status(400).json({ error: 'Subject not found for this institution' });
+  const [subject, year, gradeLevel] = await Promise.all([prisma.subject.findFirst({ where: { id: subjectId, institutionId, academicYearId } }), validAcademicYear(institutionId, academicYearId), validGradeLevel(gradeLevelId)]);
+  if (!subject || !year || !gradeLevel) return res.status(400).json({ error: 'المادة أو السنة أو الصف المحدد غير صالح للسياق الحالي.' });
   const inserted = await prisma.topic.create({
     data: { institutionId, academicYearId, subjectId, gradeLevelId, nameAr, nameHe: nameHe || null, isActive: isActive !== undefined ? Boolean(isActive) : true, archivedAt: nullableDate(archivedAt), createdBy: uuid(req.user?.uid) },
   });
@@ -134,8 +136,8 @@ export async function createSkills(req: AuthRequest, res: Response) {
   const institutionId = institutionIdFrom(req);
   const { academicYearId, subjectId, gradeLevelId, nameAr, nameHe, isActive, archivedAt } = req.body;
   if (!academicYearId || !subjectId || !gradeLevelId || !nameAr) return res.status(400).json({ error: 'academicYearId, subjectId, gradeLevelId and nameAr are required' });
-  const subject = await prisma.subject.findFirst({ where: { id: subjectId, institutionId } });
-  if (!subject) return res.status(400).json({ error: 'Subject not found for this institution' });
+  const [subject, year, gradeLevel] = await Promise.all([prisma.subject.findFirst({ where: { id: subjectId, institutionId, academicYearId } }), validAcademicYear(institutionId, academicYearId), validGradeLevel(gradeLevelId)]);
+  if (!subject || !year || !gradeLevel) return res.status(400).json({ error: 'المادة أو السنة أو الصف المحدد غير صالح للسياق الحالي.' });
   const inserted = await prisma.skill.create({
     data: { institutionId, academicYearId, subjectId, gradeLevelId, nameAr, nameHe: nameHe || null, isActive: isActive !== undefined ? Boolean(isActive) : true, archivedAt: nullableDate(archivedAt), createdBy: uuid(req.user?.uid) },
   });

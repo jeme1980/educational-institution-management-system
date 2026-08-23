@@ -9,6 +9,7 @@ export class SubjectsApiService extends BaseApiService {
   public subjects = signal<SubjectItem[]>([]);
   public topics = signal<TopicItem[]>([]);
   public skills = signal<SkillItem[]>([]);
+  public error = signal('');
 
   private lookupItems<T>(data: any): T[] {
     if (Array.isArray(data)) return data as T[];
@@ -18,18 +19,21 @@ export class SubjectsApiService extends BaseApiService {
   }
 
   async loadSubjects() {
+    this.error.set('');
     try {
       const res = await this.apiFetch('/api/subjects', { headers: this.headers });
       if (res.ok) {
         const data = await res.json();
         this.subjects.set(this.lookupItems<SubjectItem>(data));
-      }
+      } else this.error.set(await this.readApiError(res));
     } catch (e) {
       console.error('Failed to load subjects', e);
+      this.error.set('تعذر تحميل المواد الدراسية.');
     }
   }
 
   async createSubject(subjectData: any) {
+    this.error.set('');
     try {
       const res = await this.apiFetch('/api/subjects', {
         method: 'POST',
@@ -40,13 +44,16 @@ export class SubjectsApiService extends BaseApiService {
         await this.loadSubjects();
         return true;
       }
+      this.error.set(await this.readApiError(res));
     } catch (e) {
       console.error('Failed to create subject', e);
+      this.error.set('تعذر حفظ المادة الدراسية.');
     }
     return false;
   }
 
   async updateSubject(id: string, subjectData: any) {
+    this.error.set('');
     try {
       const res = await this.apiFetch(`/api/subjects/${id}`, {
         method: 'PUT',
@@ -57,13 +64,16 @@ export class SubjectsApiService extends BaseApiService {
         await this.loadSubjects();
         return true;
       }
+      this.error.set(await this.readApiError(res));
     } catch (e) {
       console.error('Failed to update subject', e);
+      this.error.set('تعذر تحديث المادة الدراسية.');
     }
     return false;
   }
 
   async deleteSubject(id: string) {
+    this.error.set('');
     try {
       const res = await this.apiFetch(`/api/subjects/${id}`, {
         method: 'DELETE',
@@ -73,10 +83,17 @@ export class SubjectsApiService extends BaseApiService {
         await this.loadSubjects();
         return true;
       }
+      this.error.set(await this.readApiError(res));
     } catch (e) {
       console.error('Failed to delete subject', e);
+      this.error.set('تعذر أرشفة المادة الدراسية.');
     }
     return false;
+  }
+
+  private async readApiError(res: Response): Promise<string> {
+    const body = await res.json().catch(() => ({}));
+    return typeof body?.error === 'string' ? body.error : `تعذر تنفيذ العملية (HTTP ${res.status}).`;
   }
 
   async loadTopics() {

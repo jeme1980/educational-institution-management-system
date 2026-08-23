@@ -8,6 +8,7 @@ import { UiInputComponent } from '../../../shared/components/input/ui-input.comp
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiFormFieldComponent } from '../../../shared/components/form-field/ui-form-field.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,6 +20,11 @@ import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.c
 export class SubjectsComponent implements OnInit {
   apiService = inject(ApiService);
   fb = inject(FormBuilder);
+  authService = inject(AuthService);
+  pageError = signal('');
+  canCreate = computed(() => this.authService.hasPermission('settings:create'));
+  canUpdate = computed(() => this.authService.hasPermission('settings:create'));
+  canDelete = computed(() => this.authService.hasPermission('settings:create'));
 
   // State Signals
   selectedSubjectId = signal<string | null>(null);
@@ -87,6 +93,7 @@ export class SubjectsComponent implements OnInit {
     } finally {
       this.isProcessing.set(false);
     }
+    if (this.apiService.subjectsApi.error()) this.pageError.set(this.apiService.subjectsApi.error());
   }
 
   // Toast System Helper
@@ -239,6 +246,7 @@ export class SubjectsComponent implements OnInit {
 
   // Modal Handlers: Subjects
   openCreateSubjectModal() {
+    if (!this.canCreate()) return;
     this.subjectForm.reset({
       academicYearId: this.currentAcademicYearId(),
       nameAr: '',
@@ -252,6 +260,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   openEditSubjectModal(subject: SubjectItem) {
+    if (!this.canUpdate()) return;
     this.subjectForm.patchValue({
       academicYearId: subject.academicYearId,
       nameAr: subject.nameAr,
@@ -269,6 +278,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   async saveSubject() {
+    if (this.isEditingSubject() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.subjectForm.invalid) {
       this.subjectForm.markAllAsTouched();
       return;
@@ -302,6 +312,7 @@ export class SubjectsComponent implements OnInit {
 
   // Modal Handlers: Topics
   openCreateTopicModal() {
+    if (!this.canCreate()) return;
     this.topicForm.reset({
       academicYearId: this.currentAcademicYearId(),
       subjectId: this.selectedSubject()?.id || '',
@@ -317,6 +328,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   openEditTopicModal(topic: TopicItem) {
+    if (!this.canUpdate()) return;
     this.topicForm.patchValue({
       academicYearId: topic.academicYearId,
       subjectId: topic.subjectId,
@@ -336,6 +348,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   async saveTopic() {
+    if (this.isEditingTopic() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.topicForm.invalid) {
       this.topicForm.markAllAsTouched();
       return;
@@ -378,6 +391,7 @@ export class SubjectsComponent implements OnInit {
 
   // Modal Handlers: Skills
   openCreateSkillModal() {
+    if (!this.canCreate()) return;
     this.skillForm.reset({
       academicYearId: this.currentAcademicYearId(),
       subjectId: this.selectedSubject()?.id || '',
@@ -393,6 +407,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   openEditSkillModal(skill: SkillItem) {
+    if (!this.canUpdate()) return;
     this.skillForm.patchValue({
       academicYearId: skill.academicYearId,
       subjectId: skill.subjectId,
@@ -412,6 +427,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   async saveSkill() {
+    if (this.isEditingSkill() ? !this.canUpdate() : !this.canCreate()) return;
     if (this.skillForm.invalid) {
       this.skillForm.markAllAsTouched();
       return;
@@ -458,6 +474,7 @@ export class SubjectsComponent implements OnInit {
   }
 
   async executeDelete() {
+    if (!this.canDelete()) return;
     const target = this.confirmDeleteTarget();
     if (!target) return;
 

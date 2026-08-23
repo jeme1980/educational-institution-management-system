@@ -9,13 +9,16 @@ import { QuestionRow } from '../models/exam.model';
 import { ExamTableComponent } from '../components/exam-table';
 import { ExamResultsDialogComponent } from '../components/exam-results-dialog';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 
 type QuestionContext = { topics: any[]; skills: any[]; gradeLevels: any[]; warning: string | null };
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-exams',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, ExamTableComponent, ExamResultsDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, ExamTableComponent, ExamResultsDialogComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './exams.component.html',
   styleUrl: './exams.component.css',
 })

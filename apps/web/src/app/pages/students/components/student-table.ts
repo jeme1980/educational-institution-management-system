@@ -3,12 +3,15 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService, Student } from '../../../core/services/api.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-student-table',
-  imports: [CommonModule, MatIconModule, PaginationComponent],
+  imports: [CommonModule, MatIconModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent],
   templateUrl: './student-table.html',
+  styleUrl: './student-table.css',
 })
 export class StudentTable {
   apiService = inject(ApiService);
@@ -215,21 +218,21 @@ export class StudentTable {
     const lookupStatus = this.apiService.lookups()?.studentStatuses?.find((status: any) => status.id === statusId);
     if (lookupStatus) {
       return lookupStatus.isActive === false
-        ? 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200'
-        : 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#00236f] border border-emerald-200';
+        ? 'rounded-full bg-danger-container px-2.5 py-1 text-xs font-bold text-danger border border-danger-container'
+        : 'rounded-full bg-success-container px-2.5 py-1 text-xs font-bold text-success border border-success-container';
     }
 
     switch (statusId) {
       case 'ACTIVE':
-        return 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#00236f] border border-emerald-200';
+        return 'rounded-full bg-success-container px-2.5 py-1 text-xs font-bold text-success border border-success-container';
       case 'GRADUATED':
-        return 'px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200';
+        return 'rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-primary border border-primary-container';
       case 'SUSPENDED':
-        return 'px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200';
+        return 'rounded-full bg-warning-container px-2.5 py-1 text-xs font-bold text-warning border border-warning-container';
       case 'INACTIVE':
-        return 'px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
+        return 'rounded-full bg-danger-container px-2.5 py-1 text-xs font-bold text-danger border border-danger-container';
       default:
-        return 'px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-[#00236f] border border-emerald-200';
+        return 'rounded-full bg-success-container px-2.5 py-1 text-xs font-bold text-success border border-success-container';
     }
   }
 }

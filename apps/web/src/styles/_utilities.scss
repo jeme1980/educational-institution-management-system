@@ -6,6 +6,21 @@
 
 /* Main navigation follows the user's natural work sequence. */
 .nav-sequence { display: flex; flex-direction: column; }
+
+/* Shared active navigation state for the School shell and routed Settings navigation. */
+.semantic-nav-link--active,
+.semantic-nav-link--active:hover {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.semantic-nav-link--active mat-icon {
+  color: currentColor;
+}
+
+.semantic-nav-link--active:focus-visible {
+  outline-color: var(--on-primary);
+}
 .nav-sequence a:nth-child(1) { order: 1; }  /* Dashboard */
 .nav-sequence a:nth-child(2) { order: 7; }  /* Students */
 .nav-sequence a:nth-child(3) { order: 8; }  /* Enrollments */

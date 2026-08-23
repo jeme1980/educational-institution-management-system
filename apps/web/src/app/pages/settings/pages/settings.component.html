@@ -10,9 +10,9 @@
     @for (item of visibleSettingsNavItems(); track item.path) {
       <a
         [routerLink]="item.path"
-        routerLinkActive="bg-primary text-on-primary font-bold"
+        routerLinkActive="semantic-nav-link--active bg-primary text-on-primary font-bold"
         [routerLinkActiveOptions]="{ exact: item.path === '/settings' }"
-        class="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        class="semantic-nav-link inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <mat-icon class="text-base text-current">{{ item.icon }}</mat-icon>
         <span>{{ item.label }}</span>

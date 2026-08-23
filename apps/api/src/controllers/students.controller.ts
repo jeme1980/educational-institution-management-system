@@ -687,7 +687,7 @@ function parseAttendanceDate(value: string): Date {
 
 async function resolveCurrentEnrollment(institutionId: string, academicYearId: string, studentId: string) {
   return prisma.studentEnrollment.findFirst({
-    where: { institutionId, academicYearId, studentId, isDeleted: false, isActive: true },
+    where: { institutionId, academicYearId, studentId, isDeleted: false, isActive: true, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { isActive: true } },
     orderBy: { createdAt: 'desc' },
     select: { id: true },
   });
@@ -734,7 +734,7 @@ export async function updateStudentAttendance(req: ContextRequest, res: Response
   const id = req.params['id'] as string;
   const input = req.body as AttendanceInput;
   const existing = await prisma.attendance.findFirst({
-    where: { id, institutionId },
+    where: { id, institutionId, studentEnrollment: { academicYearId: req.context!.academicYearId, isDeleted: false, isActive: true, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { isActive: true } } },
     include: { studentEnrollment: { select: { studentId: true } } },
   });
   if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
@@ -758,7 +758,7 @@ export async function updateStudentAttendance(req: ContextRequest, res: Response
 export async function deleteStudentAttendance(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context!.institutionId;
   const id = req.params['id'] as string;
-  const existing = await prisma.attendance.findFirst({ where: { id, institutionId }, select: { id: true } });
+  const existing = await prisma.attendance.findFirst({ where: { id, institutionId, studentEnrollment: { academicYearId: req.context!.academicYearId, isDeleted: false, isActive: true, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { isActive: true } } }, select: { id: true } });
   if (!existing) return res.status(404).json({ error: 'Attendance record not found' });
   await prisma.attendance.delete({ where: { id } });
   return res.json({ success: true });

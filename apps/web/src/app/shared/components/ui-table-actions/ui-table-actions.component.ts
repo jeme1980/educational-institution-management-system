@@ -5,6 +5,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: '<div class="ui-table-actions"><ng-content /></div>',
-  styles: [`.ui-table-actions { display: inline-flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-1); }`],
+  styles: [`:host { display: inline-flex; align-items: center; vertical-align: middle; }
+    .ui-table-actions { display: inline-flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: var(--space-1); white-space: nowrap; }`],
 })
 export class UiTableActionsComponent {}

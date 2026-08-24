@@ -200,7 +200,9 @@ export class SubjectsComponent implements OnInit {
   // Sophisticated search/filter logic matching topics/skills too!
   filteredSubjects = computed(() => {
     const academicYearId = this.currentAcademicYearId();
-    const list = (this.apiService.subjects() || []).filter(subject => !academicYearId || subject.academicYearId === academicYearId);
+    const list = (this.apiService.subjects() || []).filter(subject =>
+      !subject.archivedAt && (!academicYearId || subject.academicYearId === academicYearId)
+    );
     const term = this.searchQuery().trim().toLowerCase();
     const status = this.statusFilter();
     const allTopics = (this.apiService.topics() || []).filter(topic => !academicYearId || topic.academicYearId === academicYearId);

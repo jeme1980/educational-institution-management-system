@@ -206,11 +206,11 @@
                 <button
                   type="button"
                   (click)="$event.stopPropagation(); confirmDelete('subject', subject.id, subject.nameAr)"
-                  aria-label="حذف المادة {{ subject.nameAr }}"
-                  title="حذف المادة"
+                  aria-label="أرشفة المادة {{ subject.nameAr }}"
+                  title="أرشفة المادة"
                   class="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
                 >
-                  <mat-icon class="text-base block">delete_outline</mat-icon>
+                  <mat-icon class="text-base block">archive</mat-icon>
                 </button>
               </div>
             </div>
@@ -670,13 +670,13 @@
             <mat-icon class="text-2xl">warning_amber</mat-icon>
           </div>
           <div>
-            <h3 class="text-sm font-black text-slate-800">تأكيد عملية الحذف النهائية</h3>
+            <h3 class="text-sm font-black text-slate-800">{{ target.type === 'subject' ? 'أرشفة المادة' : 'تأكيد عملية الحذف النهائية' }}</h3>
             <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-              هل أنت متأكد من رغبتك في حذف 
+              {{ target.type === 'subject' ? 'هل أنت متأكد من رغبتك في أرشفة' : 'هل أنت متأكد من رغبتك في حذف' }}
               <span class="text-rose-600 font-black">"{{ target.name }}"</span>؟
               @if (target.type === 'subject') {
                 <span class="block text-[10px] text-rose-500 font-bold mt-1 bg-rose-50 p-2 rounded-lg border border-rose-100">
-                  تنبيه: سيتم حذف جميع المواضيع والمهارات المرتبطة بهذه المادة الدراسية تلقائياً!
+                  ستبقى المواضيع والمهارات والتاريخ المرتبط محفوظة، وستُخفى المادة من القائمة النشطة.
                 </span>
               } @else {
                 <span class="block text-[10px] text-slate-400 mt-1">لا يمكن التراجع عن هذا الإجراء لاحقاً.</span>
@@ -697,7 +697,7 @@
             (click)="executeDelete()"
             class="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs transition-all shadow-md font-bold cursor-pointer"
           >
-            تأكيد الحذف النهائي
+            {{ target.type === 'subject' ? 'تأكيد الأرشفة' : 'تأكيد الحذف النهائي' }}
           </button>
         </div>
       </div>

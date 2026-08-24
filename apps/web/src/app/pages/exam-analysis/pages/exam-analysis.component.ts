@@ -16,7 +16,7 @@ import { QuestionSuccessChartComponent } from '../components/question-success-ch
 import { TopicOverviewChartComponent } from '../components/topic-overview-chart.component';
 import { SkillOverviewChartComponent } from '../components/skill-overview-chart.component';
 import {
-  AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
+  AnalysisQuestion, AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
 } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
@@ -24,11 +24,16 @@ import { sanitizeWorkbookTextCells } from '../../../core/utils/spreadsheet-secur
 import { ExamAnalysisDataService } from '../services/exam-analysis-data.service';
 
 export interface InterventionGroupView {
+  levelId: string;
+  levelMin: number;
+  levelMax: number;
   name: string;
   color: string;
   students: StudentAnalysis[];
+  targetedSkills: DimensionAnalysis[];
   duration: string;
   activity: string;
+  successCriterion: string;
 }
 
 export type RecommendationType = 'skill' | 'topic' | 'question' | 'individual';
@@ -124,7 +129,8 @@ export function filterAndSortSkills(skills: DimensionAnalysis[], search: string,
   return filterAndSortTopics(skills, search, sort);
 }
 
-const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>> = {
+type InterventionPlan = Pick<InterventionGroupView, 'name' | 'color' | 'duration' | 'activity'>;
+const INTERVENTION_PLANS: Record<string, InterventionPlan> = {
   high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
   'upper-mid': { name: 'مجموعة الإتقان', color: '#2563eb', duration: 'أسبوعان', activity: 'مهام تطبيق وممارسة موجهة' },
   'lower-mid': { name: 'مجموعة التعزيز', color: '#f59e0b', duration: '3 أسابيع', activity: 'أوراق عمل علاجية وتغذية راجعة' },
@@ -132,16 +138,37 @@ const INTERVENTION_PLANS: Record<string, Omit<InterventionGroupView, 'students'>
 };
 
 export function buildInterventionGroups(levels: PerformanceLevel[], students: StudentAnalysis[]): InterventionGroupView[] {
-  return levels.map((level) => {
+  return [...levels].sort((left, right) => left.min - right.min).map((level) => {
     const plan = INTERVENTION_PLANS[level.id];
     return {
+      levelId: level.id,
+      levelMin: level.min,
+      levelMax: level.max,
       name: plan?.name || level.name,
       color: level.color,
       students: students.filter(student => !student.isAbsent && student.level.id === level.id),
+      targetedSkills: [],
       duration: plan?.duration || 'حسب الحاجة',
       activity: plan?.activity || 'تدريب تدريجي مناسب للدرجة',
+      successCriterion: '',
     };
   });
+}
+
+export function interventionSuccessCriterion(level: PerformanceLevel, levels: PerformanceLevel[]): string {
+  const nextLevel = [...levels].filter(candidate => candidate.min > level.min).sort((left, right) => left.min - right.min)[0];
+  return nextLevel ? `الوصول إلى مستوى ${nextLevel.name} أو أعلى` : `الحفاظ على مستوى ${level.name} مع توسيع مهام التحدي`;
+}
+
+export function groupTargetedSkills(
+  calculator: ExamAnalysisCalculatorService,
+  questions: AnalysisQuestion[],
+  students: StudentAnalysis[],
+  levels: PerformanceLevel[],
+): DimensionAnalysis[] {
+  return calculator.dimensions('skill', questions, students, levels)
+    .filter(skill => skill.name !== 'غير مصنف')
+    .sort((left, right) => left.masteryRate - right.masteryRate || left.name.localeCompare(right.name, 'ar'));
 }
 
 @Component({
@@ -389,7 +416,24 @@ export class ExamAnalysisComponent implements OnInit {
   });
   groupedRecommendations = computed(() => groupRecommendations(this.recommendations()));
   hasRecommendations = computed(() => this.groupedRecommendations().some(group => group.items.length > 0));
-  interventionGroups = computed(() => buildInterventionGroups(this.levels(), this.students()));
+  interventionGroups = computed(() => {
+    const data = this.dataset();
+    const levels = this.levels();
+    return buildInterventionGroups(levels, this.students()).map(group => {
+      const level = levels.find(candidate => candidate.id === group.levelId);
+      const targetedSkills = data && group.students.length ? groupTargetedSkills(this.calculator, data.questions, group.students, levels) : [];
+      return {
+        ...group,
+        targetedSkills,
+        successCriterion: level ? interventionSuccessCriterion(level, levels) : 'تحسن قابل للقياس في التقويم اللاحق',
+      };
+    });
+  });
+  topInterventionLevelId = computed(() => [...this.levels()].sort((left, right) => right.min - left.min)[0]?.id || '');
+  followUpStudentCount = computed(() => this.interventionGroups()
+    .filter(group => group.levelId !== this.topInterventionLevelId())
+    .reduce((total, group) => total + group.students.length, 0));
+  interventionGroupCount = computed(() => this.interventionGroups().filter(group => group.students.length > 0).length);
 
   async ngOnInit() {
     try {
@@ -490,7 +534,6 @@ export class ExamAnalysisComponent implements OnInit {
       return { id: groupId, name: names.get(groupId) || analyzed[0]?.groupName || 'الشعبة', summary: this.calculator.summary(analyzed) };
     });
   }
-  weakestSkillNames() { return this.skills().slice(-2).map(skill => skill.name).join('، ') || 'حسب التخصص الفردي'; }
   printReport() { window.print(); }
   async exportResults() {
     const { Workbook } = await import('exceljs');

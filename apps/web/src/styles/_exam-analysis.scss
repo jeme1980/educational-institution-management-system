@@ -509,6 +509,52 @@
 .recommendations-empty mat-icon { color: var(--success); }
 .recommendations-empty p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
 
+.intervention-plan { display: grid; gap: var(--space-5); }
+.intervention-plan__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.intervention-plan__heading p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
+.intervention-plan__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.intervention-data-quality { display: flex; align-items: flex-start; gap: var(--space-2); border: 1px solid var(--warning-container); border-radius: var(--radius-md); background: var(--warning-container); color: var(--on-surface); padding: var(--space-3) var(--space-4); font-size: var(--font-sm); }
+.intervention-data-quality mat-icon { color: var(--warning); }
+.intervention-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.intervention-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.intervention-group-card { border-inline-start: var(--space-1) solid var(--group-accent) !important; }
+.intervention-group-card .ui-section-card__content { display: grid; gap: var(--space-4); padding: var(--space-4) var(--space-5); }
+.intervention-group__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.intervention-group__level { color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.intervention-group__section { display: grid; gap: var(--space-2); }
+.intervention-group__section h3 { color: var(--on-surface); font-size: var(--font-sm); font-weight: var(--font-bold); }
+.intervention-student-list, .intervention-skill-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.intervention-student-list ui-button { border: 1px solid var(--outline-variant); border-radius: var(--radius-full); }
+.intervention-skill-chip { display: inline-flex; min-width: 8rem; flex-direction: column; gap: var(--space-1); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); background: var(--surface-container-low); padding: var(--space-2) var(--space-3); }
+.intervention-skill-chip strong { color: var(--on-surface); font-size: var(--font-xs); }
+.intervention-skill-chip small, .intervention-muted { color: var(--on-surface-variant); font-size: var(--font-xs); line-height: 1.6; }
+.intervention-group__details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); border-top: 1px solid var(--outline-variant); padding-top: var(--space-3); }
+.intervention-group__details div { display: grid; gap: var(--space-1); }
+.intervention-group__details dt { color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.intervention-group__details dd { margin: 0; color: var(--on-surface); font-size: var(--font-sm); line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .intervention-groups { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  .intervention-plan__heading { flex-direction: column; }
+  .intervention-summary { grid-template-columns: 1fr; }
+  .intervention-group__details { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .analysis-page--intervention > :not(.intervention-printable):not(.intervention-print-header):not(.intervention-print-context) { display: none !important; }
+  .analysis-page--intervention .intervention-print-header,
+  .analysis-page--intervention .intervention-print-context { display: block !important; }
+  .analysis-page--intervention .intervention-printable { display: block !important; }
+  .analysis-page--intervention .intervention-printable .print-hidden { display: none !important; }
+  .analysis-page--intervention .intervention-plan { gap: var(--space-3); }
+  .analysis-page--intervention .intervention-groups { grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+  .analysis-page--intervention .intervention-group-card { break-inside: avoid; box-shadow: none !important; }
+  .analysis-page--intervention .intervention-group-card .ui-section-card__content { padding: var(--space-3); }
+}
+
 @media (max-width: 767px) {
   .questions-summary .ui-section-card__content,
   .questions-details .ui-section-card__content { padding: var(--space-4); }

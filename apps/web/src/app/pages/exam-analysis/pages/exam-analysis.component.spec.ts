@@ -2,9 +2,9 @@ import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
+import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, groupRecommendations, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
+import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
@@ -47,6 +47,33 @@ describe('ExamAnalysis intervention reactivity', () => {
     expect(groups[0]).toMatchObject({ name: 'New level', color: '#64748b', students: [] });
     expect(groups[0].duration).toBeTruthy();
     expect(groups[0].activity).toBeTruthy();
+  });
+
+  it('orders groups from intensive support to enrichment without changing membership', () => {
+    const groups = buildInterventionGroups(DEFAULT_PERFORMANCE_LEVELS, []);
+    expect(groups.map(group => group.levelId)).toEqual(['low', 'lower-mid', 'upper-mid', 'high']);
+    expect(groups.every(group => group.targetedSkills.length === 0)).toBe(true);
+  });
+
+  it('derives targeted skills from each group student subset and excludes unclassified skills', () => {
+    const calculator = new ExamAnalysisCalculatorService();
+    const questions: AnalysisQuestion[] = [
+      { id: 'q-x', questionNumber: 1, points: 10, topicId: 'topic', topicName: 'Topic', skillId: 'skill-x', skillName: 'Skill X', typeId: 'type', typeName: 'Type' },
+      { id: 'q-y', questionNumber: 2, points: 10, topicId: 'topic', topicName: 'Topic', skillId: 'skill-y', skillName: 'Skill Y', typeId: 'type', typeName: 'Type' },
+      { id: 'q-u', questionNumber: 3, points: 10, topicId: 'topic', topicName: 'Topic', skillId: '', skillName: 'غير مصنف', typeId: 'type', typeName: 'Type' },
+    ];
+    const students = calculator.students([{
+      studentId: 'group-a-student', studentName: 'A', groupId: 'group-a', totalScore: 10, isAbsent: false,
+      questionScores: [{ questionId: 'q-x', achievedScore: 0 }, { questionId: 'q-y', achievedScore: 10 }, { questionId: 'q-u', achievedScore: 0 }],
+    }], questions, 30, DEFAULT_PERFORMANCE_LEVELS);
+    const skills = groupTargetedSkills(calculator, questions, students, DEFAULT_PERFORMANCE_LEVELS);
+    expect(skills.map(skill => skill.name)).toEqual(['Skill X', 'Skill Y']);
+    expect(skills[0].masteryRate).toBeLessThan(skills[1].masteryRate);
+  });
+
+  it('derives success criteria from the next configured level and maintains the top level', () => {
+    expect(interventionSuccessCriterion(DEFAULT_PERFORMANCE_LEVELS[3], DEFAULT_PERFORMANCE_LEVELS)).toContain(DEFAULT_PERFORMANCE_LEVELS[2].name);
+    expect(interventionSuccessCriterion(DEFAULT_PERFORMANCE_LEVELS[0], DEFAULT_PERFORMANCE_LEVELS)).toContain('الحفاظ');
   });
 });
 
@@ -224,5 +251,23 @@ describe('ExamAnalysis recommendations', () => {
       ['question', 'questions', 'question-1'],
       ['individual', 'intervention', null],
     ]);
+  });
+});
+
+describe('ExamAnalysis intervention plan presentation', () => {
+  it('uses the existing intervention tab and shared presentation components', () => {
+    expect(overviewTemplate).toContain("activeTab() === 'intervention'");
+    expect(overviewTemplate).toContain('interventionGroups()');
+    expect(overviewTemplate).toContain('group.targetedSkills');
+    expect(overviewTemplate).toContain('followUpStudentCount()');
+    expect(overviewTemplate).toContain("activeTab.set('recommendations')");
+    expect(overviewTemplate).toContain('printReport()');
+    expect(overviewTemplate).toContain('<ui-section-card');
+    expect(overviewTemplate).toContain('<ui-stat-card');
+  });
+
+  it('keeps the execution-status feature deferred', () => {
+    expect(overviewTemplate).not.toContain('executionStatus');
+    expect(overviewTemplate).not.toContain('completedAt');
   });
 });

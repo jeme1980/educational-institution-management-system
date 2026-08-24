@@ -9,12 +9,13 @@ import { UiInputComponent } from '../../../shared/components/input/ui-input.comp
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-classes',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiStatCardComponent, UiTableActionsComponent],
   templateUrl: './classes.component.html',
   styleUrl: './classes.component.css',
 })

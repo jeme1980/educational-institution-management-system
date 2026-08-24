@@ -78,14 +78,7 @@
 }
 
 .analysis-filter-group__grid--exam {
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(20rem, 1.8fr);
-}
-
-.analysis-filter-metadata {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
 }
 
 .analysis-filter-card .section-title,
@@ -788,8 +781,7 @@
   }
 
   .analysis-filter-group__grid--context,
-  .analysis-filter-group__grid--exam,
-  .analysis-filter-metadata {
+  .analysis-filter-group__grid--exam {
     grid-template-columns: 1fr;
   }
 

@@ -33,8 +33,6 @@
         <div class="analysis-filter-group__grid analysis-filter-group__grid--exam">
           <div class="filter-field filter-field--readonly"><span>المادة</span><output>{{ examSubjectLabel() }}</output></div>
           <label class="filter-field filter-field--select filter-field--exam"><span>اسم الامتحان</span><ui-select ariaLabel="اختيار الامتحان" [ngModel]="selectedExamId()" (ngModelChange)="onExamSelectionChange($event)"><option value="">اختر الامتحان</option>@for (exam of availableExams(); track exam.id) {<option [value]="exam.id">{{ exam.titleAr }}</option>}</ui-select></label>
-        </div>
-        <div class="analysis-filter-metadata">
           <div class="filter-field filter-field--readonly"><span>تاريخ الامتحان</span><output>{{ dataset()?.exam?.examDate ? (dataset()?.exam?.examDate | date:'yyyy-MM-dd') : 'غير محدد' }}</output></div>
           <div class="filter-field filter-field--readonly"><span>المعلم</span><output>{{ dataset()?.exam?.teacherName || 'غير متوفر في بيانات الامتحان' }}</output></div>
         </div>

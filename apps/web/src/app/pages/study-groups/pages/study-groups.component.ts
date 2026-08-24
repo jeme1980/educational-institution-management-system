@@ -8,11 +8,13 @@ import { StudyGroupsStateService } from '../services/study-groups-state.service'
 import { StudyGroupMembersDialogComponent } from '../components/study-group-members-dialog';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-study-groups',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StudyGroupMembersDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StudyGroupMembersDialogComponent, UiButtonComponent, UiTableActionsComponent],
   templateUrl: './study-groups.component.html',
   styleUrl: './study-groups.component.css',
 })

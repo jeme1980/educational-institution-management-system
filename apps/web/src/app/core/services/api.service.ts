@@ -183,6 +183,7 @@ export class ApiService extends BaseApiService {
   loadExamAnalysis(examId: string) { return this.examsApi.loadExamAnalysis(examId); }
   loadProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string }) { return this.examsApi.loadProgressTracking(params); }
   loadProgressTrackingStudyGroups(params: { academicYearId: string; subjectId: string }) { return this.examsApi.loadProgressTrackingStudyGroups(params); }
+  loadProgressTrackingDimensions(params: { academicYearId: string; subjectId: string; studyGroupId: string; dimension: 'skill' | 'topic'; dimensionId?: string }) { return this.examsApi.loadProgressTrackingDimensions(params); }
   loadStudentProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string; studentId: string }) { return this.examsApi.loadStudentProgressTracking(params); }
   saveExamResults(examId: string, results: any[]) { return this.examsApi.saveExamResults(examId, results); }
   importExamResults(examId: string, file: File) { return this.examsApi.importExamResults(examId, file); }

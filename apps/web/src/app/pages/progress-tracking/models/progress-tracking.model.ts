@@ -39,3 +39,34 @@ export interface StudentProgressResponse {
   summary: { examsCount: number; completedCount: number; firstPercentage: number | null; latestPercentage: number | null; change: number | null; currentGroupGap: number | null };
   points: StudentProgressPoint[];
 }
+
+export type DimensionType = 'skill' | 'topic';
+export type DimensionProgressStatus = 'measured' | 'notMeasured' | 'detailUnavailable';
+
+export interface DimensionProgressPoint {
+  examId: string;
+  examName: string;
+  examDate: string;
+  status: DimensionProgressStatus;
+  masteryRate: number | null;
+  questionCount: number;
+  maxPoints: number;
+  participantCount: number;
+  unansweredRate: number | null;
+}
+
+export interface AvailableDimension {
+  id: string;
+  name: string;
+  measuredExamCount: number;
+  totalExamCount: number;
+  latestMastery: number | null;
+}
+
+export interface DimensionProgressResponse {
+  context: ProgressTrackingResponse['context'];
+  dimensionType: DimensionType;
+  availableDimensions: AvailableDimension[];
+  selectedDimension: (AvailableDimension & { firstMastery: number | null; latestMastery: number | null; change: number | null }) | null;
+  points: DimensionProgressPoint[];
+}

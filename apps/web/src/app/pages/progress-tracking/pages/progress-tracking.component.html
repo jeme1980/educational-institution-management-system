@@ -3,6 +3,7 @@
   <nav class="progress-mode-switch" aria-label="وضع مسار التقدم" role="tablist">
     <button type="button" role="tab" [attr.aria-selected]="mode() === 'class'" [class.progress-mode-active]="mode() === 'class'" (click)="onModeChange('class')">مسار الشعبة</button>
     <button type="button" role="tab" [attr.aria-selected]="mode() === 'student'" [class.progress-mode-active]="mode() === 'student'" (click)="onModeChange('student')">مسار الطالب</button>
+    <button type="button" role="tab" [attr.aria-selected]="mode() === 'dimensions'" [class.progress-mode-active]="mode() === 'dimensions'" (click)="onModeChange('dimensions')">مسار المهارات والموضوعات</button>
   </nav>
   <ui-filter-panel title="اختيار سياق المقارنة" icon="filter_alt">
     <div class="progress-filters" [class.progress-filters-student]="mode() === 'student'">
@@ -12,8 +13,41 @@
       @if (mode() === 'student') {<label>الطالب<ui-select ariaLabel="اختيار الطالب" [ngModel]="selectedStudentId()" (ngModelChange)="onStudentChange($event)" [disabled]="!selectedStudyGroupId()"><option value="">اختر الطالب</option>@for (member of studentsForGroup(); track member.studentId) {<option [value]="member.studentId">{{ member.firstNameAr }} {{ member.lastNameAr }}</option>}</ui-select></label>}
     </div>
   </ui-filter-panel>
+  @if (mode() === 'dimensions') {
+    <nav class="progress-dimension-switch" aria-label="نوع التحليل" role="tablist">
+      <button type="button" role="tab" [attr.aria-selected]="dimensionType() === 'skill'" [class.progress-mode-active]="dimensionType() === 'skill'" (click)="onDimensionTypeChange('skill')">المهارات</button>
+      <button type="button" role="tab" [attr.aria-selected]="dimensionType() === 'topic'" [class.progress-mode-active]="dimensionType() === 'topic'" (click)="onDimensionTypeChange('topic')">الموضوعات</button>
+    </nav>
+    @if (dimensionResponse()) {
+      <label class="dimension-selector">{{ dimensionType() === 'skill' ? 'المهارة' : 'الموضوع' }}
+        <ui-select [ngModel]="selectedDimension()?.id || ''" (ngModelChange)="onDimensionChange($event)" [disabled]="!dimensionsForSelection().length">
+          <option value="">اختر {{ dimensionType() === 'skill' ? 'المهارة' : 'الموضوع' }}</option>
+          @for (dimension of dimensionsForSelection(); track dimension.id) { <option [value]="dimension.id">{{ dimension.name }} — {{ dimensionCoverage(dimension.measuredExamCount, dimension.totalExamCount) }}</option> }
+        </ui-select>
+      </label>
+    }
+  }
   @if (error()) { <div class="progress-error" role="alert">{{ error() }}</div> }
   @if (loading()) { <ui-empty-state icon="progress_activity" title="جارٍ تحميل مسار التقدم" description="نجهز النتائج للسياق المختار." /> }
+  @else if (mode() === 'dimensions') {
+    @if (!dimensionResponse()) { <ui-empty-state icon="insights" title="ابدأ باختيار سياق التحليل" description="اختر السنة والمادة والشعبة لعرض مسار المهارات والموضوعات." /> }
+    @else if (!selectedDimension()) { <ui-empty-state icon="search_off" title="لا توجد أبعاد مرتبطة" description="لا توجد مهارات أو موضوعات مرتبطة بالامتحانات في هذا السياق." /> }
+    @else {
+      <section class="progress-kpis dimension-kpis" aria-label="ملخص مسار البعد">
+        <ui-stat-card label="الامتحانات المقاسة" [value]="selectedDimension()!.measuredExamCount" helper="امتحانات تتوفر لها أسئلة مرتبطة" icon="fact_check" tone="neutral" />
+        <ui-stat-card label="أول إتقان" [value]="formatNullable(selectedDimension()!.firstMastery)" helper="أول قياس متاح" icon="start" tone="primary" />
+        <ui-stat-card label="آخر إتقان" [value]="formatNullable(selectedDimension()!.latestMastery)" helper="آخر قياس متاح" icon="flag" tone="primary" />
+        <ui-stat-card label="التغير" [value]="selectedDimension()!.change == null ? 'غير متاح' : (selectedDimension()!.change! >= 0 ? '+' : '') + selectedDimension()!.change!.toFixed(1) + ' نقطة'" helper="بين أول وآخر قياس" icon="trending_up" tone="success" />
+      </section>
+      <ui-section-card title="مسار الإتقان عبر الامتحانات" description="يُعرض الاتجاه من القياسات المتاحة فقط، ولا تُستبدل البيانات المفقودة بصفر.">
+        @if (dimensionCanShowTrend()) { <app-dimension-progress-trend-chart [points]="dimensionPoints()" [dimensionName]="selectedDimension()!.name" /> }
+        @else { <ui-empty-state [compact]="true" icon="timeline" title="لا تكفي البيانات لعرض الاتجاه" description="يحتاج عرض الاتجاه إلى قياس هذا البعد في امتحانين على الأقل." /> }
+      </ui-section-card>
+      <ui-section-card title="سجل القياسات" description="حالة القياس وتفاصيله لكل امتحان ضمن السياق المحدد.">
+        <div class="progress-table-wrap"><table class="core-table"><thead><tr><th>التاريخ</th><th>الامتحان</th><th>الحالة</th><th>الإتقان</th><th>الأسئلة</th><th>الحد الأقصى</th><th>غير المجاب</th><th>الإجراء</th></tr></thead><tbody>@for (point of dimensionPoints(); track point.examId) {<tr><td dir="ltr">{{ point.examDate }}</td><td>{{ point.examName }}</td><td><span class="progress-status" [class.progress-status-missing]="point.status !== 'measured'">{{ dimensionStatus(point.status) }}</span></td><td>{{ formatNullable(point.masteryRate) }}</td><td>{{ point.questionCount }}</td><td>{{ point.maxPoints }}</td><td>{{ point.unansweredRate == null ? 'غير متاح' : point.unansweredRate + '%' }}</td><td><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" ariaLabel="فتح تحليل الامتحان" (activated)="openExam(point.examId)"><mat-icon aria-hidden="true">open_in_new</mat-icon></ui-button></ui-table-actions></td></tr>} @empty {<tr><td colspan="8" class="empty-cell">لا توجد قياسات.</td></tr>}</tbody></table></div>
+      </ui-section-card>
+    }
+  }
   @else if (mode() === 'class') {
     @if (!response()) { <ui-empty-state icon="timeline" title="ابدأ باختيار السياق" description="اختر السنة والمادة والشعبة لعرض مسار التقدم." /> }
     @else {

@@ -3,6 +3,10 @@
 .progress-mode-switch button { min-height: 2.5rem; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-surface-variant); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
 .progress-mode-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .progress-mode-active { background: var(--primary) !important; color: var(--on-primary) !important; }
+.progress-dimension-switch { display: inline-flex; justify-self: start; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--outline); border-radius: var(--radius-md); background: var(--surface-container-low); }
+.progress-dimension-switch button { min-height: 2.5rem; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-surface-variant); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
+.progress-dimension-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.dimension-selector { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .progress-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .progress-filters-student { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .progress-filters label { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }

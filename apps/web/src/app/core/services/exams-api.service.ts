@@ -183,6 +183,15 @@ export class ExamsApiService extends BaseApiService {
     return [];
   }
 
+  async loadProgressTrackingDimensions(params: { academicYearId: string; subjectId: string; studyGroupId: string; dimension: 'skill' | 'topic'; dimensionId?: string }) {
+    try {
+      const query = new URLSearchParams(params as Record<string, string>).toString();
+      const res = await this.apiFetch(`/api/progress-tracking/dimensions?${query}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load dimension progress tracking', e); }
+    return null;
+  }
+
   async loadStudentProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string; studentId: string }) {
     try {
       const query = new URLSearchParams(params).toString();

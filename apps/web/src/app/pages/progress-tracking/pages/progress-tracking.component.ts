@@ -14,7 +14,8 @@ import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { ProgressTrendChartComponent } from '../components/progress-trend-chart.component';
 import { StudentProgressTrendChartComponent } from '../components/student-progress-trend-chart.component';
-import { ProgressTrackingResponse, StudentParticipationStatus, StudentProgressResponse } from '../models/progress-tracking.model';
+import { DimensionProgressResponse, DimensionProgressStatus, DimensionType, ProgressTrackingResponse, StudentParticipationStatus, StudentProgressResponse } from '../models/progress-tracking.model';
+import { DimensionProgressTrendChartComponent } from '../components/dimension-progress-trend-chart.component';
 
 export function usableProgressPoints(points: ProgressTrackingResponse['points']) {
   return points.filter((point) => !point.noData && point.averagePercentage !== null);
@@ -48,11 +49,18 @@ export function studentParticipationLabel(value: StudentParticipationStatus): st
   return value === 'completed' ? 'مكتمل' : value === 'absent' ? 'غائب' : 'لا توجد نتيجة';
 }
 
+export function dimensionStatusLabel(value: DimensionProgressStatus): string {
+  return value === 'measured' ? 'مقاس' : value === 'notMeasured' ? 'غير مقاس' : 'تفاصيل القياس غير متاحة';
+}
+
+export function dimensionCoverageText(measured: number, total: number): string { return `${measured} / ${total} امتحان مقاس`; }
+export function dimensionCanShowTrend(measured: number): boolean { return measured >= 2; }
+
 @Component({
   selector: 'app-progress-tracking',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiEmptyStateComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent, ProgressTrendChartComponent, StudentProgressTrendChartComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiEmptyStateComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent, ProgressTrendChartComponent, StudentProgressTrendChartComponent, DimensionProgressTrendChartComponent],
   templateUrl: './progress-tracking.component.html',
   styleUrl: './progress-tracking.component.css',
 })
@@ -63,7 +71,8 @@ export class ProgressTrackingComponent {
   readonly selectedSubjectId = signal('');
   readonly selectedStudyGroupId = signal('');
   readonly selectedStudentId = signal('');
-  readonly mode = signal<'class' | 'student'>('class');
+  readonly mode = signal<'class' | 'student' | 'dimensions'>('class');
+  readonly dimensionType = signal<DimensionType>('skill');
   readonly availableStudyGroups = signal<any[]>([]);
   readonly groupsLoading = signal(false);
   readonly groupMembers = signal<any[]>([]);
@@ -71,6 +80,7 @@ export class ProgressTrackingComponent {
   readonly error = signal('');
   readonly response = signal<ProgressTrackingResponse | null>(null);
   readonly studentResponse = signal<StudentProgressResponse | null>(null);
+  readonly dimensionResponse = signal<DimensionProgressResponse | null>(null);
   private readonly route = inject(ActivatedRoute);
   private requestSequence = 0;
   private groupRequestSequence = 0;
@@ -92,27 +102,36 @@ export class ProgressTrackingComponent {
     const response = this.studentResponse();
     return response ? studentInsightText(response) : '';
   });
+  readonly selectedDimension = computed(() => this.dimensionResponse()?.selectedDimension || null);
+  readonly dimensionPoints = computed(() => this.dimensionResponse()?.points || []);
+  readonly dimensionsForSelection = computed(() => this.dimensionResponse()?.availableDimensions || []);
+  readonly dimensionCanShowTrend = computed(() => dimensionCanShowTrend(this.selectedDimension()?.measuredExamCount || 0));
 
   constructor() {
-    this.mode.set(this.route.snapshot.queryParamMap.get('mode') === 'student' ? 'student' : 'class');
+    const routeMode = this.route.snapshot.queryParamMap.get('mode');
+    this.mode.set(routeMode === 'student' || routeMode === 'dimensions' ? routeMode : 'class');
     const currentYear = this.api.selectedAcademicYearId() || this.api.academicYears().find((year: any) => year.isCurrent)?.id || this.api.academicYears()[0]?.id || '';
     this.selectedYearId.set(currentYear);
   }
 
-  onModeChange(value: 'class' | 'student'): void {
+  onModeChange(value: 'class' | 'student' | 'dimensions'): void {
     this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set('');
     if (value === 'class' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.load();
     if (value === 'student' && this.selectedStudyGroupId()) void this.loadGroupMembers(this.selectedStudyGroupId());
-    void this.router.navigate([], { queryParams: { mode: value === 'student' ? 'student' : null }, queryParamsHandling: 'merge' });
+    if (value === 'dimensions' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.loadDimensions();
+    void this.router.navigate([], { queryParams: { mode: value === 'class' ? null : value }, queryParamsHandling: 'merge' });
   }
-  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); }
-  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); void this.loadStudyGroupsForSelection(); }
+  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); }
+  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); void this.loadStudyGroupsForSelection(); }
   onStudyGroupChange(value: string): void {
-    this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null);
+    this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null);
     if (!value) return;
     if (this.mode() === 'class') void this.load();
-    else void this.loadGroupMembers(value);
+    else if (this.mode() === 'student') void this.loadGroupMembers(value);
+    else void this.loadDimensions();
   }
+  onDimensionTypeChange(value: DimensionType): void { this.dimensionType.set(value); this.dimensionResponse.set(null); if (classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.loadDimensions(); }
+  onDimensionChange(value: string): void { if (value) void this.loadDimensions(value); }
   onStudentChange(value: string): void { this.selectedStudentId.set(value); void this.loadStudent(); }
   async loadGroupMembers(groupId: string): Promise<void> { this.groupMembers.set(await this.api.loadGroupMembers(groupId)); }
   async loadStudyGroupsForSelection(): Promise<void> {
@@ -159,8 +178,23 @@ export class ProgressTrackingComponent {
     } catch { if (sequence === this.requestSequence) { this.studentResponse.set(null); this.error.set('تعذر تحميل مسار الطالب.'); } }
     finally { if (sequence === this.requestSequence) this.loading.set(false); }
   }
+  async loadDimensions(dimensionId = ''): Promise<void> {
+    const academicYearId = this.selectedYearId(); const subjectId = this.selectedSubjectId(); const studyGroupId = this.selectedStudyGroupId();
+    if (this.mode() !== 'dimensions' || !classContextComplete(academicYearId, subjectId, studyGroupId)) { this.dimensionResponse.set(null); return; }
+    const sequence = ++this.requestSequence; this.loading.set(true); this.error.set('');
+    try {
+      const payload = await this.api.loadProgressTrackingDimensions({ academicYearId, subjectId, studyGroupId, dimension: this.dimensionType(), ...(dimensionId ? { dimensionId } : {}) });
+      if (sequence !== this.requestSequence) return;
+      if (!payload) throw new Error('load failed');
+      this.dimensionResponse.set(payload as DimensionProgressResponse);
+    } catch { if (sequence === this.requestSequence) { this.dimensionResponse.set(null); this.error.set('تعذر تحميل مسار المهارات والموضوعات.'); } }
+    finally { if (sequence === this.requestSequence) this.loading.set(false); }
+  }
   openExam(examId: string): void { void this.router.navigate(['/exam-analysis', examId]); }
   format(value: number | null | undefined): string { return value == null || !Number.isFinite(value) ? '—' : `${value.toFixed(1)}%`; }
   formatGap(value: number | null | undefined): string { return value == null || !Number.isFinite(value) ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(1)} نقطة`; }
   participationLabel(value: StudentParticipationStatus): string { return studentParticipationLabel(value); }
+  dimensionStatus(value: DimensionProgressStatus): string { return dimensionStatusLabel(value); }
+  dimensionCoverage(measured: number, total: number): string { return dimensionCoverageText(measured, total); }
+  formatNullable(value: number | null): string { return value == null ? 'غير متاح' : `${value.toFixed(1)}%`; }
 }

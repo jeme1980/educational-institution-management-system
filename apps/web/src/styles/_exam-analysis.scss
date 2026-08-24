@@ -481,6 +481,34 @@
 .skill-breakdown span { border-radius: var(--radius-full); background: var(--surface-container); color: var(--on-surface-variant); padding: var(--space-1) var(--space-2); }
 .skill-breakdown b { color: var(--on-surface); }
 
+.recommendations-layout { display: grid; gap: var(--space-4); }
+.recommendations-heading { display: flex; align-items: flex-start; gap: var(--space-3); }
+.recommendations-heading > mat-icon { color: var(--secondary); font-size: var(--font-xl); }
+.recommendations-heading p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
+.recommendation-groups { display: grid; gap: var(--space-4); }
+.recommendation-group .ui-section-card__content { padding: var(--space-4) var(--space-5); }
+.recommendation-group--critical { border-inline-start: var(--space-1) solid var(--danger) !important; }
+.recommendation-group--high { border-inline-start: var(--space-1) solid var(--warning) !important; }
+.recommendation-group--moderate { border-inline-start: var(--space-1) solid var(--secondary) !important; }
+.recommendation-list { display: grid; gap: var(--space-3); }
+.recommendation-card { display: flex; width: 100%; align-items: flex-start; gap: var(--space-3); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); background: var(--surface-container-lowest); color: var(--on-surface); padding: var(--space-4); text-align: start; cursor: pointer; transition: background-color var(--transition-fast) var(--ease-standard), border-color var(--transition-fast) var(--ease-standard), transform var(--transition-fast) var(--ease-standard); }
+.recommendation-card:hover { border-color: var(--secondary); background: var(--surface-container-low); transform: translateY(-1px); }
+.recommendation-card:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: var(--focus-ring-offset); }
+.recommendation-card__icon { display: grid; width: var(--space-10); height: var(--space-10); flex: 0 0 var(--space-10); place-items: center; border-radius: var(--radius-md); background: var(--surface-container); color: var(--secondary); }
+.recommendation-group--critical .recommendation-card__icon { background: var(--danger-container); color: var(--danger); }
+.recommendation-group--high .recommendation-card__icon { background: var(--warning-container); color: var(--warning); }
+.recommendation-card__body { display: grid; min-width: 0; flex: 1; gap: var(--space-1); }
+.recommendation-card__topline { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.recommendation-card__topline strong { font-size: var(--font-sm); }
+.recommendation-severity { border-radius: var(--radius-full); background: var(--surface-container); color: var(--on-surface-variant); padding-inline: var(--space-2); font-size: var(--font-xs); font-weight: var(--font-semibold); white-space: nowrap; }
+.recommendation-card__detail { color: var(--on-surface-variant); font-size: var(--font-sm); line-height: 1.6; }
+.recommendation-card__metric { color: var(--on-surface); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.recommendation-card__action { display: inline-flex; align-items: center; justify-content: flex-start; gap: var(--space-1); color: var(--secondary); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.recommendation-card__action mat-icon { font-size: var(--font-md); }
+.recommendations-empty { display: flex; align-items: center; gap: var(--space-3); border: 1px solid var(--success-container); border-radius: var(--radius-lg); background: var(--success-container); color: var(--on-surface); padding: var(--space-5); }
+.recommendations-empty mat-icon { color: var(--success); }
+.recommendations-empty p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
+
 @media (max-width: 767px) {
   .questions-summary .ui-section-card__content,
   .questions-details .ui-section-card__content { padding: var(--space-4); }
@@ -499,6 +527,7 @@
   .skills-insight-card .ui-section-card__content { padding: var(--space-4); }
   .skills-data-quality { align-items: flex-start; flex-wrap: wrap; }
   .skills-data-quality small { flex-basis: 100%; margin-inline-start: calc(var(--space-5) + var(--space-2)); }
+  .recommendation-card__topline { align-items: flex-start; flex-direction: column; }
 }
 
 .insight-card {

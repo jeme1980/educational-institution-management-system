@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, questionDetailUnavailable } from './exam-analysis.component';
+import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, groupRecommendations, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
@@ -182,5 +182,47 @@ describe('ExamAnalysis skill presentation', () => {
     expect(overviewTemplate).toContain('<app-skill-overview-chart');
     expect(overviewTemplate).toContain('selectedSkillQuestionTypes()');
     expect(overviewTemplate).toContain("@if (activeTab() === 'topics')");
+  });
+});
+
+describe('ExamAnalysis recommendations', () => {
+  const item = (overrides: any = {}) => ({
+    type: 'question', severity: recommendationSeverity(22.7), priorityValue: 22.7, icon: 'quiz', title: 'مراجعة السؤال 6', detail: 'نسبة النجاح 22.7%', actionHint: 'فتح تفاصيل السؤال', actionTab: 'questions', actionPayload: 'question-6', ...overrides,
+  });
+
+  it('groups recommendations into critical, high, and moderate sections', () => {
+    const groups = groupRecommendations([item(), item({ title: 'مهارة', type: 'skill', severity: recommendationSeverity(42), priorityValue: 42 }), item({ title: 'موضوع', type: 'topic', severity: recommendationSeverity(50), priorityValue: 50 })]);
+    expect(groups.map(group => group.severity)).toEqual(['critical', 'high', 'moderate']);
+    expect(groups[0].items[0].priorityValue).toBe(22.7);
+  });
+
+  it('uses presentation-only severity thresholds without changing metrics', () => {
+    expect(recommendationSeverity(0)).toBe('critical');
+    expect(recommendationSeverity(22.7)).toBe('critical');
+    expect(recommendationSeverity(40)).toBe('high');
+    expect(recommendationSeverity(54.9)).toBe('moderate');
+    expect(recommendationSeverity(null)).toBe('moderate');
+  });
+
+  it('keeps recommendation cards keyboard accessible and action metadata explicit', () => {
+    expect(overviewTemplate).toContain('openRecommendation(item)');
+    expect(overviewTemplate).toContain('recommendation-card');
+    expect(overviewTemplate).toContain('recommendation-card__action');
+    expect(overviewTemplate).toContain('actionPayload');
+  });
+
+  it('keeps skill, topic, question, and individual actions explicit', () => {
+    const actions = groupRecommendations([
+      item({ type: 'skill', actionTab: 'skills', actionPayload: 'skill-1' }),
+      item({ type: 'topic', actionTab: 'topics', actionPayload: 'topic-1' }),
+      item({ type: 'question', actionTab: 'questions', actionPayload: 'question-1' }),
+      item({ type: 'individual', actionTab: 'intervention', actionPayload: null, priorityValue: null, severity: 'moderate' }),
+    ]).flatMap(group => group.items);
+    expect(actions.map(action => [action.type, action.actionTab, action.actionPayload])).toEqual([
+      ['skill', 'skills', 'skill-1'],
+      ['topic', 'topics', 'topic-1'],
+      ['question', 'questions', 'question-1'],
+      ['individual', 'intervention', null],
+    ]);
   });
 });

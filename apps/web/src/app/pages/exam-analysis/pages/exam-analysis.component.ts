@@ -31,6 +31,50 @@ export interface InterventionGroupView {
   activity: string;
 }
 
+export type RecommendationType = 'skill' | 'topic' | 'question' | 'individual';
+export type RecommendationSeverity = 'critical' | 'high' | 'moderate';
+export interface RecommendationItem {
+  type: RecommendationType;
+  severity: RecommendationSeverity;
+  priorityValue: number | null;
+  icon: string;
+  title: string;
+  detail: string;
+  actionHint: string;
+  actionTab: AnalysisTab;
+  actionPayload: string | null;
+}
+
+export interface RecommendationGroup {
+  severity: RecommendationSeverity;
+  label: string;
+  items: RecommendationItem[];
+}
+
+export function recommendationSeverity(priorityValue: number | null): RecommendationSeverity {
+  if (priorityValue !== null && priorityValue < 30) return 'critical';
+  if (priorityValue !== null && priorityValue < 45) return 'high';
+  return 'moderate';
+}
+
+function recommendationPriority(value: number): number | null {
+  return Number.isFinite(value) ? value : null;
+}
+
+export function groupRecommendations(items: RecommendationItem[]): RecommendationGroup[] {
+  const order: RecommendationSeverity[] = ['critical', 'high', 'moderate'];
+  const labels: Record<RecommendationSeverity, string> = { critical: 'حرج', high: 'مرتفع', moderate: 'متوسط' };
+  return order.map(severity => ({
+    severity,
+    label: labels[severity],
+    items: items.filter(item => item.severity === severity).sort((left, right) => {
+      if (left.priorityValue === null && right.priorityValue !== null) return 1;
+      if (left.priorityValue !== null && right.priorityValue === null) return -1;
+      return (left.priorityValue ?? 0) - (right.priorityValue ?? 0) || left.title.localeCompare(right.title, 'ar');
+    }),
+  })).filter(group => group.items.length > 0);
+}
+
 export type QuestionSortKey = 'question' | 'topic' | 'skill' | 'average' | 'successRate';
 export type QuestionSortDirection = 'asc' | 'desc';
 export type TopicSortKey = 'mastery-desc' | 'mastery-asc' | 'questions-desc' | 'name';
@@ -331,17 +375,20 @@ export class ExamAnalysisComponent implements OnInit {
   });
   recommendations = computed(() => {
     if (this.allQuestionsUnansweredDueToMissingDetailData()) return [];
-    const weakSkills = this.skills().filter(item => item.masteryRate < 55);
-    const weakTopics = this.topics().filter(item => item.masteryRate < 55);
+    const weakSkills = this.classifiedSkills().filter(item => item.masteryRate < 55);
+    const weakTopics = this.classifiedTopics().filter(item => item.masteryRate < 55);
     const hardQuestions = this.questions().filter(item => !this.allQuestionsUnansweredDueToMissingDetailData() && item.difficulty === 'صعب' && item.correctCount + item.wrongCount > 0);
     const interventionStudents = this.students().filter(item => !item.isAbsent && item.normalizedScore < 55);
-    return [
-      ...weakSkills.map(item => ({ icon: 'psychology', title: `إعادة تدريس مهارة: ${item.name}`, detail: `نسبة الإتقان ${this.format(item.masteryRate)}%، ويحتاج ${item.supportStudents} طالب إلى تعزيز.`, })),
-      ...weakTopics.map(item => ({ icon: 'menu_book', title: `تعزيز موضوع: ${item.name}`, detail: `متوسط الأداء ${this.format(item.averagePerformance)}%. يُقترح نشاط تطبيقي قصير ثم تقويم تكويني.`, })),
-      ...hardQuestions.map(item => ({ icon: 'quiz', title: `مراجعة السؤال ${item.questionNumber}`, detail: `نسبة النجاح ${this.format(item.successRate)}% ونسبة عدم الإجابة ${this.format(item.unansweredRate)}%.`, })),
-      ...(interventionStudents.length ? [{ icon: 'person_alert', title: 'تدخل فردي', detail: `${interventionStudents.length} طالب دون مستوى 55% ويحتاجون خطة متابعة قصيرة المدى.` }] : []),
+    const items: RecommendationItem[] = [
+      ...weakSkills.map(item => ({ type: 'skill' as const, severity: recommendationSeverity(recommendationPriority(item.masteryRate)), priorityValue: recommendationPriority(item.masteryRate), icon: 'psychology', title: `إعادة تدريس مهارة: ${item.name}`, detail: `نسبة الإتقان ${this.format(item.masteryRate)}%، ويحتاج ${item.supportStudents} طالب إلى تعزيز.`, actionHint: 'مراجعة المهارة في تبويب المهارات', actionTab: 'skills' as AnalysisTab, actionPayload: item.id })),
+      ...weakTopics.map(item => ({ type: 'topic' as const, severity: recommendationSeverity(recommendationPriority(item.masteryRate)), priorityValue: recommendationPriority(item.masteryRate), icon: 'menu_book', title: `تعزيز موضوع: ${item.name}`, detail: `متوسط الأداء ${this.format(item.averagePerformance)}%. يُقترح نشاط تطبيقي قصير ثم تقويم تكويني.`, actionHint: 'مراجعة الموضوع في تبويب الموضوعات', actionTab: 'topics' as AnalysisTab, actionPayload: item.id })),
+      ...hardQuestions.map(item => ({ type: 'question' as const, severity: recommendationSeverity(recommendationPriority(item.successRate)), priorityValue: recommendationPriority(item.successRate), icon: 'quiz', title: `مراجعة السؤال ${item.questionNumber}`, detail: `نسبة النجاح ${this.format(item.successRate)}% ونسبة عدم الإجابة ${this.format(item.unansweredRate)}%.`, actionHint: 'فتح تفاصيل السؤال', actionTab: 'questions' as AnalysisTab, actionPayload: item.id })),
+      ...(interventionStudents.length ? [{ type: 'individual' as const, severity: 'moderate' as const, priorityValue: null, icon: 'person_alert', title: 'تدخل فردي', detail: `${interventionStudents.length} طالب دون مستوى 55% ويحتاجون خطة متابعة قصيرة المدى.`, actionHint: 'مراجعة خطة التدخل', actionTab: 'intervention' as AnalysisTab, actionPayload: null }] : []),
     ];
+    return items;
   });
+  groupedRecommendations = computed(() => groupRecommendations(this.recommendations()));
+  hasRecommendations = computed(() => this.groupedRecommendations().some(group => group.items.length > 0));
   interventionGroups = computed(() => buildInterventionGroups(this.levels(), this.students()));
 
   async ngOnInit() {
@@ -422,6 +469,15 @@ export class ExamAnalysisComponent implements OnInit {
   }
   questionSortAria(sort: QuestionSortKey): 'ascending' | 'descending' | 'none' {
     return this.questionSort() === sort ? (this.questionSortDirection() === 'asc' ? 'ascending' : 'descending') : 'none';
+  }
+  openRecommendation(item: RecommendationItem) {
+    this.activeTab.set(item.actionTab);
+    if (item.type === 'skill' && item.actionPayload) this.selectedSkillId.set(item.actionPayload);
+    if (item.type === 'topic' && item.actionPayload) this.selectedTopicId.set(item.actionPayload);
+    if (item.type === 'question' && item.actionPayload) {
+      const question = this.questions().find(candidate => candidate.id === item.actionPayload);
+      if (question) this.selectedQuestion.set(question);
+    }
   }
   levelPercent(count: number) { const total = this.summary().attended; return total ? count / total * 100 : 0; }
   groupComparisons() {

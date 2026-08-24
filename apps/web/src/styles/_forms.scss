@@ -47,8 +47,15 @@
   transform: translateY(-50%);
   pointer-events: none;
   color: var(--on-surface-variant);
+  direction: inherit;
   font-size: var(--space-5);
   line-height: 1;
+}
+.search-field { position: relative; }
+.search-field > .search-icon { inset-inline-end: var(--space-3); }
+.search-field > input,
+.search-field > ui-input .ui-form-control {
+  padding-inline-end: calc(var(--space-3) + var(--space-5) + var(--space-2));
 }
 .search-icon ~ input,
 .search-icon ~ ui-input .ui-form-control,

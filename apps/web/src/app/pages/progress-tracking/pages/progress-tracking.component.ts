@@ -20,6 +20,14 @@ export function usableProgressPoints(points: ProgressTrackingResponse['points'])
   return points.filter((point) => !point.noData && point.averagePercentage !== null);
 }
 
+export function classContextComplete(yearId: string, subjectId: string, studyGroupId: string): boolean {
+  return Boolean(yearId && subjectId && studyGroupId);
+}
+
+export function studentContextComplete(yearId: string, subjectId: string, studyGroupId: string, studentId: string): boolean {
+  return classContextComplete(yearId, subjectId, studyGroupId) && Boolean(studentId);
+}
+
 export function progressSummaryText(points: ProgressTrackingResponse['points']): string {
   const usable = usableProgressPoints(points);
   if (usable.length < 2) return '';
@@ -91,10 +99,20 @@ export class ProgressTrackingComponent {
     this.selectedYearId.set(currentYear);
   }
 
-  onModeChange(value: 'class' | 'student'): void { this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set(''); void this.router.navigate([], { queryParams: { mode: value === 'student' ? 'student' : null }, queryParamsHandling: 'merge' }); }
+  onModeChange(value: 'class' | 'student'): void {
+    this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set('');
+    if (value === 'class' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.load();
+    if (value === 'student' && this.selectedStudyGroupId()) void this.loadGroupMembers(this.selectedStudyGroupId());
+    void this.router.navigate([], { queryParams: { mode: value === 'student' ? 'student' : null }, queryParamsHandling: 'merge' });
+  }
   onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); }
   onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); void this.loadStudyGroupsForSelection(); }
-  onStudyGroupChange(value: string): void { this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null); if (value) void this.loadGroupMembers(value); }
+  onStudyGroupChange(value: string): void {
+    this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null);
+    if (!value) return;
+    if (this.mode() === 'class') void this.load();
+    else void this.loadGroupMembers(value);
+  }
   onStudentChange(value: string): void { this.selectedStudentId.set(value); void this.loadStudent(); }
   async loadGroupMembers(groupId: string): Promise<void> { this.groupMembers.set(await this.api.loadGroupMembers(groupId)); }
   async loadStudyGroupsForSelection(): Promise<void> {
@@ -114,7 +132,7 @@ export class ProgressTrackingComponent {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();
     const studyGroupId = this.selectedStudyGroupId();
-    if (!academicYearId || !subjectId || !studyGroupId) { this.response.set(null); return; }
+    if (this.mode() !== 'class' || !classContextComplete(academicYearId, subjectId, studyGroupId)) { this.response.set(null); return; }
     const sequence = ++this.requestSequence;
     this.loading.set(true); this.error.set('');
     try {
@@ -130,7 +148,7 @@ export class ProgressTrackingComponent {
     const subjectId = this.selectedSubjectId();
     const studyGroupId = this.selectedStudyGroupId();
     const studentId = this.selectedStudentId();
-    if (!academicYearId || !subjectId || !studyGroupId || !studentId) { this.studentResponse.set(null); return; }
+    if (this.mode() !== 'student' || !studentContextComplete(academicYearId, subjectId, studyGroupId, studentId)) { this.studentResponse.set(null); return; }
     const sequence = ++this.requestSequence;
     this.loading.set(true); this.error.set('');
     try {

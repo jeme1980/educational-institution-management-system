@@ -1,11 +1,18 @@
 import '@angular/compiler';
 import { describe, expect, it } from 'vitest';
-import { progressSummaryText, studentInsightText, studentParticipationLabel, usableProgressPoints } from './progress-tracking.component';
+import { classContextComplete, progressSummaryText, studentContextComplete, studentInsightText, studentParticipationLabel, usableProgressPoints } from './progress-tracking.component';
 import { ProgressTrackingPoint, StudentProgressResponse } from '../models/progress-tracking.model';
 
 const point = (id: string, averagePercentage: number | null, noData = false): ProgressTrackingPoint => ({ examId: id, examName: `Exam ${id}`, examDate: '2026-01-01', examType: null, maxScore: 20, participantCount: averagePercentage === null ? 0 : 1, eligibleCount: 1, averagePercentage, passRate: averagePercentage, noData });
 
 describe('ProgressTracking presentation rules', () => {
+  it('uses mode-specific context contracts for loading', () => {
+    expect(classContextComplete('year', 'subject', 'group')).toBe(true);
+    expect(classContextComplete('year', 'subject', '')).toBe(false);
+    expect(studentContextComplete('year', 'subject', 'group', '')).toBe(false);
+    expect(studentContextComplete('year', 'subject', 'group', 'student')).toBe(true);
+  });
+
   it('does not show a trend until two data-bearing exams exist', () => {
     expect(usableProgressPoints([])).toHaveLength(0);
     expect(usableProgressPoints([point('one', 70)])).toHaveLength(1);

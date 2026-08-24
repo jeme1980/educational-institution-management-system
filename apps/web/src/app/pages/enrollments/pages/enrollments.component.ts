@@ -127,36 +127,6 @@ export class EnrollmentsComponent implements OnInit {
     return this.unenrolledStudents().length;
   });
 
-  averageOccupancyRate = computed(() => {
-    const classes = this.apiService.classes() || [];
-    const yearId = this.selectedYear();
-    const yearClasses = classes.filter(c => c.academicYearId === yearId);
-    if (yearClasses.length === 0) return 0;
-
-    const enrollments = this.apiService.enrollments() || [];
-    const yearClassIds = new Set(yearClasses.map(c => c.id));
-    const yearEnrollmentsCount = enrollments.filter(item => !item.enrollment.isDeleted && item.enrollment.isActive && yearClassIds.has(item.enrollment.classId)).length;
-
-    const totalCapacity = yearClasses.length * 30;
-    return Math.min(100, Math.round((yearEnrollmentsCount / totalCapacity) * 100));
-  });
-
-  fullClassesCount = computed(() => {
-    const classes = this.apiService.classes() || [];
-    const yearId = this.selectedYear();
-    const yearClasses = classes.filter(c => c.academicYearId === yearId);
-    const enrollments = this.apiService.enrollments() || [];
-    
-    let count = 0;
-    for (const c of yearClasses) {
-      const classEnrolled = enrollments.filter(item => !item.enrollment.isDeleted && item.enrollment.isActive && item.enrollment.classId === c.id).length;
-      if (classEnrolled >= 30) {
-        count++;
-      }
-    }
-    return count;
-  });
-
   getInitials(first: string | undefined, last: string | undefined): string {
     const f = first ? first.trim().charAt(0) : '';
     const l = last ? last.trim().charAt(0) : '';

@@ -65,8 +65,6 @@
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <ui-stat-card label="إجمالي الطلاب المسجلين" [value]="totalActiveEnrollments()" helper="نشطون في السنة الدراسية" icon="how_to_reg" tone="success" />
     <ui-stat-card label="طلاب بانتظار التوزيع" [value]="totalUnassignedStudents()" helper="يحتاجون إلى شعبة دراسية" icon="pending_actions" tone="warning" />
-    <ui-stat-card label="متوسط إشغال الشعب" [value]="averageOccupancyRate() + '%'" helper="من الطاقة الاستيعابية" icon="donut_large" tone="primary" />
-    <ui-stat-card label="الشعب المكتملة" [value]="fullClassesCount()" helper="بلغت الحد الأقصى" icon="meeting_room" tone="neutral" />
   </div>
 
   <!-- Quick Metrics Dashboard (Bento Grid) -->
@@ -95,31 +93,6 @@
       </div>
     </div>
 
-    <!-- Metric 3: Avg Occupancy -->
-    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
-      <div class="space-y-1 w-2/3">
-        <span class="text-xs font-bold text-slate-400">معدل الإشغال الإجمالي</span>
-        <div class="text-2xl font-black text-slate-800">{{ averageOccupancyRate() }}%</div>
-        <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-          <div class="bg-sky-500 h-1.5 rounded-full transition-all duration-500" [style.width.%]="averageOccupancyRate()"></div>
-        </div>
-      </div>
-      <div class="h-12 w-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center">
-        <mat-icon class="text-xl">donut_large</mat-icon>
-      </div>
-    </div>
-
-    <!-- Metric 4: Filled Classes -->
-    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
-      <div class="space-y-1">
-        <span class="text-xs font-bold text-slate-400">شُعب مكتملة السعة</span>
-        <div class="text-2xl font-black text-slate-800">{{ fullClassesCount() }}</div>
-        <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-md inline-block">وصلت للحد الأقصى (30 طالب)</span>
-      </div>
-      <div class="h-12 w-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-        <mat-icon class="text-xl">meeting_room</mat-icon>
-      </div>
-    </div>
   </div>
 
   <!-- Global Filters & Selector Header Bar -->
@@ -174,18 +147,6 @@
       </div>
     </div>
 
-    <!-- Active Class Capacity Info Badge -->
-    @if (selectedClassroom()) {
-      <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-2.5 px-4">
-        <div class="text-right">
-          <div class="text-xs font-black text-slate-800">{{ selectedClassroom()?.nameAr }}</div>
-          <div class="text-[10px] font-bold text-slate-400">السعة: {{ currentClassroomCount() }} / 30 طالب</div>
-        </div>
-        <div class="w-10 h-10 rounded-lg bg-[#00236f]/10 text-[#00236f] flex items-center justify-center font-black text-xs">
-          {{ Math.round((currentClassroomCount() / 30) * 100) }}%
-        </div>
-      </div>
-    }
   </div>
 
   <!-- SPLIT SCREEN WORKSPACE (2 PANELS) -->
@@ -351,9 +312,6 @@
             </button>
           }
 
-          <span class="text-xs font-black text-[#00236f] bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-full">
-            {{ currentClassroomCount() }} / 30 طالب
-          </span>
         </div>
       </div>
 

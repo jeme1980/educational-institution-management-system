@@ -1,10 +1,21 @@
 .progress-page { display: grid; gap: var(--space-5); max-width: 90rem; margin-inline: auto; padding: var(--space-4); color: var(--on-surface); }
+.progress-mode-switch { display: inline-flex; justify-self: start; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--outline); border-radius: var(--radius-md); background: var(--surface-container-low); }
+.progress-mode-switch button { min-height: 2.5rem; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-surface-variant); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
+.progress-mode-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.progress-mode-active { background: var(--primary) !important; color: var(--on-primary) !important; }
 .progress-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.progress-filters-student { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .progress-filters label { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .progress-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
 .progress-summary { margin: 0 0 var(--space-4); color: var(--on-surface-variant); font-size: var(--font-sm); }
 .progress-error { padding: var(--space-3) var(--space-4); border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-container); color: var(--on-danger-container); }
+.student-identity { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--outline); border-radius: var(--radius-md); background: var(--surface-container-low); }
+.student-identity strong { color: var(--on-surface); font-size: var(--font-lg); }
+.student-identity span { color: var(--on-surface-variant); font-size: var(--font-sm); }
+.progress-status { display: inline-flex; padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: var(--success-container); color: var(--on-success-container); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.progress-status-absent { background: var(--warning-container); color: var(--on-warning-container); }
+.progress-status-missing { background: var(--surface-container-high); color: var(--on-surface-variant); }
 .progress-table-wrap { overflow-x: auto; }
 .progress-table-wrap .core-table { min-width: 52rem; }
-@media (max-width: 900px) { .progress-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .progress-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .progress-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .progress-filters, .progress-filters-student { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .progress-page { padding: var(--space-3); } .progress-kpis, .progress-filters { grid-template-columns: 1fr; } }

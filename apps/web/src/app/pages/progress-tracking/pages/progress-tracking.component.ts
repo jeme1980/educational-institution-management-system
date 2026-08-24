@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
@@ -13,7 +13,8 @@ import { UiSelectComponent } from '../../../shared/components/select/ui-select.c
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { ProgressTrendChartComponent } from '../components/progress-trend-chart.component';
-import { ProgressTrackingResponse } from '../models/progress-tracking.model';
+import { StudentProgressTrendChartComponent } from '../components/student-progress-trend-chart.component';
+import { ProgressTrackingResponse, StudentParticipationStatus, StudentProgressResponse } from '../models/progress-tracking.model';
 
 export function usableProgressPoints(points: ProgressTrackingResponse['points']) {
   return points.filter((point) => !point.noData && point.averagePercentage !== null);
@@ -27,11 +28,23 @@ export function progressSummaryText(points: ProgressTrackingResponse['points']):
   return `${latest >= first ? 'ارتفع' : 'انخفض'} متوسط الأداء من ${first.toFixed(1)}% إلى ${latest.toFixed(1)}% عبر ${usable.length} امتحانات.`;
 }
 
+export function studentInsightText(response: StudentProgressResponse): string {
+  const completed = response.points.filter((point) => point.participationStatus === 'completed' && point.studentPercentage !== null);
+  if (completed.length < 2) return 'لا تتوفر بيانات مكتملة كافية لقياس اتجاه الطالب.';
+  const change = response.summary.change ?? 0;
+  const gap = response.summary.currentGroupGap;
+  return `${change >= 0 ? 'ارتفع' : 'انخفض'} أداء الطالب بمقدار ${Math.abs(change).toFixed(1)} نقطة مئوية، والفجوة الحالية عن متوسط الشعبة ${gap == null ? 'غير متاحة' : `${gap >= 0 ? '+' : ''}${gap.toFixed(1)} نقطة`}.`;
+}
+
+export function studentParticipationLabel(value: StudentParticipationStatus): string {
+  return value === 'completed' ? 'مكتمل' : value === 'absent' ? 'غائب' : 'لا توجد نتيجة';
+}
+
 @Component({
   selector: 'app-progress-tracking',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiEmptyStateComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent, ProgressTrendChartComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, UiButtonComponent, UiEmptyStateComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent, ProgressTrendChartComponent, StudentProgressTrendChartComponent],
   templateUrl: './progress-tracking.component.html',
   styleUrl: './progress-tracking.component.css',
 })
@@ -41,9 +54,14 @@ export class ProgressTrackingComponent {
   readonly selectedYearId = signal('');
   readonly selectedSubjectId = signal('');
   readonly selectedStudyGroupId = signal('');
+  readonly selectedStudentId = signal('');
+  readonly mode = signal<'class' | 'student'>('class');
+  readonly groupMembers = signal<any[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
   readonly response = signal<ProgressTrackingResponse | null>(null);
+  readonly studentResponse = signal<StudentProgressResponse | null>(null);
+  private readonly route = inject(ActivatedRoute);
   private requestSequence = 0;
 
   readonly subjectsForYear = computed(() => this.api.subjects().filter((subject: any) => subject.academicYearId === this.selectedYearId() && subject.isActive !== false && !subject.archivedAt));
@@ -56,15 +74,26 @@ export class ProgressTrackingComponent {
   readonly summaryText = computed(() => {
     return progressSummaryText(this.points());
   });
+  readonly studentPoints = computed(() => this.studentResponse()?.points || []);
+  readonly studentCompletedPoints = computed(() => this.studentPoints().filter((point) => point.participationStatus === 'completed' && point.studentPercentage !== null));
+  readonly studentsForGroup = computed(() => this.groupMembers());
+  readonly studentInsight = computed(() => {
+    const response = this.studentResponse();
+    return response ? studentInsightText(response) : '';
+  });
 
   constructor() {
+    this.mode.set(this.route.snapshot.queryParamMap.get('mode') === 'student' ? 'student' : 'class');
     const currentYear = this.api.selectedAcademicYearId() || this.api.academicYears().find((year: any) => year.isCurrent)?.id || this.api.academicYears()[0]?.id || '';
     this.selectedYearId.set(currentYear);
   }
 
-  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.response.set(null); }
-  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.response.set(null); }
-  onStudyGroupChange(value: string): void { this.selectedStudyGroupId.set(value); void this.load(); }
+  onModeChange(value: 'class' | 'student'): void { this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set(''); void this.router.navigate([], { queryParams: { mode: value === 'student' ? 'student' : null }, queryParamsHandling: 'merge' }); }
+  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); }
+  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); }
+  onStudyGroupChange(value: string): void { this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null); if (value) void this.loadGroupMembers(value); }
+  onStudentChange(value: string): void { this.selectedStudentId.set(value); void this.loadStudent(); }
+  async loadGroupMembers(groupId: string): Promise<void> { this.groupMembers.set(await this.api.loadGroupMembers(groupId)); }
   async load(): Promise<void> {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();
@@ -80,6 +109,24 @@ export class ProgressTrackingComponent {
     } catch { if (sequence === this.requestSequence) { this.response.set(null); this.error.set('تعذر تحميل مسار التقدم.'); } }
     finally { if (sequence === this.requestSequence) this.loading.set(false); }
   }
+  async loadStudent(): Promise<void> {
+    const academicYearId = this.selectedYearId();
+    const subjectId = this.selectedSubjectId();
+    const studyGroupId = this.selectedStudyGroupId();
+    const studentId = this.selectedStudentId();
+    if (!academicYearId || !subjectId || !studyGroupId || !studentId) { this.studentResponse.set(null); return; }
+    const sequence = ++this.requestSequence;
+    this.loading.set(true); this.error.set('');
+    try {
+      const payload = await this.api.loadStudentProgressTracking({ academicYearId, subjectId, studyGroupId, studentId });
+      if (sequence !== this.requestSequence) return;
+      if (!payload) throw new Error('load failed');
+      this.studentResponse.set(payload as StudentProgressResponse);
+    } catch { if (sequence === this.requestSequence) { this.studentResponse.set(null); this.error.set('تعذر تحميل مسار الطالب.'); } }
+    finally { if (sequence === this.requestSequence) this.loading.set(false); }
+  }
   openExam(examId: string): void { void this.router.navigate(['/exam-analysis', examId]); }
   format(value: number | null | undefined): string { return value == null || !Number.isFinite(value) ? '—' : `${value.toFixed(1)}%`; }
+  formatGap(value: number | null | undefined): string { return value == null || !Number.isFinite(value) ? '—' : `${value >= 0 ? '+' : ''}${value.toFixed(1)} نقطة`; }
+  participationLabel(value: StudentParticipationStatus): string { return studentParticipationLabel(value); }
 }

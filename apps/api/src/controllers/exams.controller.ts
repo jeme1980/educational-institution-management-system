@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
 import { eligibleStudentIds, getEligibleExamStudents } from '../services/exam-eligibility.service';
+import { isPassingPercentage, isPassingScore } from '../services/exam-metrics.service';
 
 const uuid = (value: unknown): string | null => { const text = String(value || ''); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null; };
 const context = (req: ContextRequest) => ({ institutionId: req.context?.institutionId || '', academicYearId: req.context?.academicYearId || '' });
@@ -67,7 +68,7 @@ export async function getExamsByIdResultsEnhanced(req: ContextRequest, res: Resp
   const scores = await prisma.studentQuestionScore.findMany({ where: { institutionId, examQuestionId: { in: questions.map(question => question.id) }, studentId: { in: Array.from(students.keys()) } }, select: { studentId: true, examQuestionId: true, score: true, notes: true } });
   const scoreMap = new Map(scores.map(score => [`${score.studentId}:${score.examQuestionId}`, score]));
   const resultMap = new Map(results.map(item => [item.studentId, item]));
-  return res.json({ exam, questions, results: Array.from(students.values()).map(item => { const result = resultMap.get(item.studentId); const totalScore = result ? Number(result.totalScore) : null; const isAbsence = result?.isAbsence ?? false; const percentage = result && Number(exam.maxScore) > 0 ? Number(((totalScore || 0) / Number(exam.maxScore) * 100).toFixed(2)) : null; return { ...item, resultId: result?.id || null, totalScore, isAbsence, percentage, status: isAbsence ? 'ABSENT' : !result ? 'NOT_ENTERED' : percentage! >= 50 ? 'PASS' : 'FAIL', absenceReason: result?.absenceReason || '', notes: result?.notes || '', questionScores: questions.map(question => { const score = scoreMap.get(`${item.studentId}:${question.id}`); return { questionId: question.id, score: score ? Number(score.score) : null, notes: score?.notes || '' }; }) }; }) });
+  return res.json({ exam, questions, results: Array.from(students.values()).map(item => { const result = resultMap.get(item.studentId); const totalScore = result ? Number(result.totalScore) : null; const isAbsence = result?.isAbsence ?? false; const percentage = result && Number(exam.maxScore) > 0 ? Number(((totalScore || 0) / Number(exam.maxScore) * 100).toFixed(2)) : null; return { ...item, resultId: result?.id || null, totalScore, isAbsence, percentage, status: isAbsence ? 'ABSENT' : !result ? 'NOT_ENTERED' : isPassingPercentage(percentage!) ? 'PASS' : 'FAIL', absenceReason: result?.absenceReason || '', notes: result?.notes || '', questionScores: questions.map(question => { const score = scoreMap.get(`${item.studentId}:${question.id}`); return { questionId: question.id, score: score ? Number(score.score) : null, notes: score?.notes || '' }; }) }; }) });
 }
 
 export async function createExamsByIdResultsEnhanced(req: AuthRequest, res: Response): Promise<any> {
@@ -132,7 +133,7 @@ export async function getExamStudentResult(req: ContextRequest, res: Response): 
   const isAbsence = result?.isAbsence ?? false;
   const percentage = result && Number(exam.maxScore) > 0 ? Number(((totalScore || 0) / Number(exam.maxScore) * 100).toFixed(2)) : null;
   const questionScores = result ? await prisma.studentQuestionScore.findMany({ where: { institutionId, studentId, examQuestionId: { in: questions.map(question => question.id) } } }) : [];
-  return res.json({ exam, student, result: result ? { ...result, totalScore, isAbsence, percentage, status: isAbsence ? 'ABSENT' : percentage! >= 50 ? 'PASS' : 'FAIL', questionScores: questionScores.map(score => ({ ...score, score: Number(score.score) })) } : { totalScore: null, isAbsence: false, percentage: null, status: 'NOT_ENTERED', questionScores: [] }, questions });
+  return res.json({ exam, student, result: result ? { ...result, totalScore, isAbsence, percentage, status: isAbsence ? 'ABSENT' : isPassingPercentage(percentage!) ? 'PASS' : 'FAIL', questionScores: questionScores.map(score => ({ ...score, score: Number(score.score) })) } : { totalScore: null, isAbsence: false, percentage: null, status: 'NOT_ENTERED', questionScores: [] }, questions });
 }
 
 export async function createExams(req: AuthRequest, res: Response): Promise<any> {
@@ -260,7 +261,7 @@ export async function getExamsByIdAnalysis(req: ContextRequest, res: Response): 
     const questionMax = Number(question.maxScore) || 0;
     return { questionId: question.id, questionNumber: question.questionNumber, topicId: question.topicId, skillId: question.skillId, answeredCount: rows.length, successRate: attended.length && questionMax ? achieved / (attended.length * questionMax) * 100 : 0 };
   });
-  return res.json({ source: 'database', scope: { institutionId, academicYearId, examId: exam.id }, summary: { registered: eligible.size, attended: attended.length, absent: results.filter(result => result.isAbsence).length, average, highest: percentages.length ? Math.max(...percentages) : 0, lowest: percentages.length ? Math.min(...percentages) : 0, passRate: attended.length ? attended.filter(result => maxScore && Number(result.totalScore) / maxScore >= 0.5).length / attended.length * 100 : 0 }, questions: questionAnalysis });
+  return res.json({ source: 'database', scope: { institutionId, academicYearId, examId: exam.id }, summary: { registered: eligible.size, attended: attended.length, absent: results.filter(result => result.isAbsence).length, average, highest: percentages.length ? Math.max(...percentages) : 0, lowest: percentages.length ? Math.min(...percentages) : 0, passRate: attended.length ? attended.filter(result => isPassingScore(Number(result.totalScore), maxScore)).length / attended.length * 100 : 0 }, questions: questionAnalysis });
 }
 
 export async function getExamTypes(req: ContextRequest, res: Response): Promise<any> { return res.json(await prisma.examType.findMany({ where: { institutionId: context(req).institutionId, isActive: true }, orderBy: { sortOrder: 'asc' } })); }

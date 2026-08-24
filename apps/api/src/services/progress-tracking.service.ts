@@ -1,3 +1,5 @@
+import { isPassingPercentage } from './exam-metrics.service';
+
 export interface ProgressTrackingExamRow {
   id: string;
   titleAr: string;
@@ -30,7 +32,7 @@ export function buildProgressTrackingPoints(rows: ProgressTrackingExamRow[]): Pr
       const percentages = attended.map((result) => Number((result.totalScore / exam.maxScore * 100).toFixed(2)));
       const participantCount = percentages.length;
       const averagePercentage = participantCount ? Number((percentages.reduce((sum, value) => sum + value, 0) / participantCount).toFixed(2)) : null;
-      const passRate = participantCount ? Number((percentages.filter((value) => value >= 50).length / participantCount * 100).toFixed(2)) : null;
+      const passRate = participantCount ? Number((percentages.filter(isPassingPercentage).length / participantCount * 100).toFixed(2)) : null;
       return {
         examId: exam.id,
         examName: exam.titleAr,

@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
@@ -191,7 +192,7 @@ export function groupTargetedSkills(
 
 @Component({
   selector: 'app-exam-analysis',
-  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, SkillOverviewChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiStatCardComponent, UiTableActionsComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, SkillOverviewChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent],
   templateUrl: './exam-analysis.component.html',
   styleUrl: './exam-analysis.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

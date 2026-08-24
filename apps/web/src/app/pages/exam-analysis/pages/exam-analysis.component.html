@@ -17,15 +17,28 @@
   }
 
   <ui-filter-panel class="analysis-filter-card print:hidden" title="اختيار الامتحان والتصفية" icon="filter_alt">
-    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-      <label class="filter-field"><span>السنة الدراسية</span><select disabled><option>السنة الحالية</option></select></label>
-      <label class="filter-field"><span>الفصل الدراسي</span><select disabled><option>جميع الفصول</option></select></label>
-      <label class="filter-field"><span>الصف</span><select disabled><option>حسب الامتحان</option></select></label>
-      <label class="filter-field"><span>الشعبة</span><select [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event)"><option value="ALL">جميع الشعب</option>@for (group of dataset()?.groups || []; track group.studyGroupId) {<option [value]="group.studyGroupId">{{ group.studyGroupName || group.nameAr || 'الشعبة' }}</option>}</select></label>
-      <label class="filter-field"><span>المادة</span><select disabled><option>{{ dataset()?.exam.subjectNameAr || 'حسب الامتحان' }}</option></select></label>
-      <label class="filter-field xl:col-span-2"><span>اسم الامتحان</span><select [ngModel]="selectedExamId()" (ngModelChange)="onExamSelectionChange($event)"><option value="">اختر الامتحان</option>@for (exam of availableExams(); track exam.id) {<option [value]="exam.id">{{ exam.titleAr }}</option>}</select></label>
-      <label class="filter-field"><span>تاريخ الامتحان</span><input disabled [value]="dataset()?.exam.examDate ? (dataset()?.exam.examDate | date:'yyyy-MM-dd') : ''" /></label>
-      <label class="filter-field"><span>المعلم</span><select disabled><option>{{ dataset()?.exam.teacherName || 'غير متوفر في بيانات الامتحان' }}</option></select></label>
+    <p class="analysis-filter-card__description">حدد السياق الأكاديمي ثم اختر الامتحان المراد تحليله.</p>
+    <div class="analysis-filter-card__groups">
+      <fieldset class="analysis-filter-group">
+        <legend>السياق الأكاديمي</legend>
+        <div class="analysis-filter-group__grid analysis-filter-group__grid--context">
+          <div class="filter-field filter-field--readonly"><span>السنة الدراسية</span><output>{{ selectedYearLabel() }}</output></div>
+          <div class="filter-field filter-field--readonly"><span>الفصل الدراسي</span><output>{{ dataset()?.exam?.academicPeriod?.nameAr || 'حسب الامتحان' }}</output></div>
+          <div class="filter-field filter-field--readonly"><span>الصف</span><output>حسب الامتحان</output></div>
+          <label class="filter-field filter-field--select"><span>الشعبة</span><ui-select ariaLabel="اختيار الشعبة" [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event)"><option value="ALL">جميع الشعب</option>@for (group of dataset()?.groups || []; track group.studyGroupId) {<option [value]="group.studyGroupId">{{ group.studyGroupName || group.nameAr || 'الشعبة' }}</option>}</ui-select></label>
+        </div>
+      </fieldset>
+      <fieldset class="analysis-filter-group">
+        <legend>اختيار الامتحان</legend>
+        <div class="analysis-filter-group__grid analysis-filter-group__grid--exam">
+          <div class="filter-field filter-field--readonly"><span>المادة</span><output>{{ examSubjectLabel() }}</output></div>
+          <label class="filter-field filter-field--select filter-field--exam"><span>اسم الامتحان</span><ui-select ariaLabel="اختيار الامتحان" [ngModel]="selectedExamId()" (ngModelChange)="onExamSelectionChange($event)"><option value="">اختر الامتحان</option>@for (exam of availableExams(); track exam.id) {<option [value]="exam.id">{{ exam.titleAr }}</option>}</ui-select></label>
+        </div>
+        <div class="analysis-filter-metadata">
+          <div class="filter-field filter-field--readonly"><span>تاريخ الامتحان</span><output>{{ dataset()?.exam?.examDate ? (dataset()?.exam?.examDate | date:'yyyy-MM-dd') : 'غير محدد' }}</output></div>
+          <div class="filter-field filter-field--readonly"><span>المعلم</span><output>{{ dataset()?.exam?.teacherName || 'غير متوفر في بيانات الامتحان' }}</output></div>
+        </div>
+      </fieldset>
     </div>
   </ui-filter-panel>
 

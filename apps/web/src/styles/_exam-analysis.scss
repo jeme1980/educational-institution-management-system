@@ -509,6 +509,62 @@
 .recommendations-empty mat-icon { color: var(--success); }
 .recommendations-empty p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
 
+.students-layout { display: grid; gap: var(--space-4); }
+.students-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.students-heading p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
+.students-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+.students-level-summary { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.students-level-summary__item { display: inline-flex; min-height: var(--space-8); align-items: center; gap: var(--space-2); border: 1px solid var(--outline-variant); border-radius: var(--radius-full); background: var(--surface-container-lowest); color: var(--on-surface-variant); padding-inline: var(--space-3); font-size: var(--font-xs); }
+.students-level-summary__item i { width: var(--space-3); height: var(--space-3); flex: 0 0 var(--space-3); border-radius: var(--radius-full); }
+.students-level-summary__item strong { color: var(--on-surface); }
+.students-level-summary__item b { color: var(--primary); }
+.students-filters { display: grid; grid-template-columns: minmax(14rem, 1.5fr) repeat(2, minmax(10rem, 1fr)) auto; align-items: end; gap: var(--space-3); }
+.students-filters label { display: grid; gap: var(--space-1); }
+.students-filters label span { color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.students-filters input, .students-filters select { min-height: var(--control-height); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); background: var(--input-background); color: var(--on-surface); padding-inline: var(--space-3); font: inherit; font-size: var(--font-sm); }
+.students-filters input:focus, .students-filters select:focus { border-color: var(--secondary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--secondary) 16%, transparent); outline: none; }
+.students-table-card .ui-section-card__content { padding: 0; }
+.students-table-wrap { border: 0; border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+.students-table { min-width: 52rem; }
+.students-table th:last-child, .students-table td:last-child { text-align: center; }
+.students-table__name { color: var(--on-surface); }
+.students-table__percentage { color: var(--primary); font-variant-numeric: tabular-nums; }
+.students-table__metric { font-variant-numeric: tabular-nums; font-weight: var(--font-semibold); text-align: center; }
+.students-table__metric--correct { color: var(--success); }
+.students-table__metric--wrong { color: var(--danger); }
+.students-table__metric--unanswered { color: var(--warning); }
+.students-table__row--absent { background: color-mix(in srgb, var(--surface-container-low) 72%, transparent); }
+.level-badge--not-tested { background: var(--surface-container-high) !important; color: var(--on-surface-variant) !important; }
+
+.student-analysis-drawer { display: grid; align-content: start; gap: var(--space-4); }
+.student-analysis-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.student-analysis-drawer__header h2 { margin: var(--space-1) 0; color: var(--on-surface); font-size: var(--text-headline-sm); font-weight: var(--font-bold); }
+.student-analysis-drawer__status { display: inline-flex; border-radius: var(--radius-full); background: var(--surface-container-low); padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.student-analysis-drawer__status--absent { color: var(--on-surface-variant); }
+.student-analysis-score { display: grid; justify-items: center; gap: var(--space-1); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-low); padding: var(--space-5); }
+.student-analysis-score strong { color: var(--primary); font-size: var(--text-display-md); font-weight: var(--font-bold); }
+.student-analysis-score span { color: var(--on-surface-variant); font-size: var(--font-xs); }
+.student-analysis-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.student-analysis-comparison div { display: grid; gap: var(--space-1); border-inline-start: var(--space-1) solid var(--secondary); padding-inline-start: var(--space-3); }
+.student-analysis-comparison span, .student-analysis-metrics span { color: var(--on-surface-variant); font-size: var(--font-xs); }
+.student-analysis-comparison strong, .student-analysis-metrics strong { color: var(--on-surface); font-size: var(--font-md); font-weight: var(--font-bold); }
+.student-analysis-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.student-analysis-metrics div { display: grid; gap: var(--space-1); border-radius: var(--radius-md); background: var(--surface-container-low); padding: var(--space-3); }
+.student-analysis-guidance { margin: 0; color: var(--on-surface-variant); font-size: var(--font-sm); line-height: 1.8; }
+.drawer-backdrop { position: fixed; z-index: 50; inset: 0; background: color-mix(in srgb, var(--on-surface) 32%, transparent); }
+.drawer { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(100%, 36rem); overflow-y: auto; border-inline-start: 1px solid var(--outline-variant); background: var(--surface-container-lowest); box-shadow: var(--shadow-lg); padding: var(--space-6); }
+
+@media (max-width: 1000px) {
+  .students-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .students-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .students-kpis, .students-filters, .student-analysis-comparison { grid-template-columns: 1fr; }
+  .students-table-card .ui-section-card__content { padding: 0; }
+  .drawer { width: 100%; padding: var(--space-4); }
+}
+
 .intervention-plan { display: grid; gap: var(--space-5); }
 .intervention-plan__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
 .intervention-plan__heading p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }

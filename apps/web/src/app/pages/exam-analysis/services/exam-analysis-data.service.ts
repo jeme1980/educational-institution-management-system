@@ -59,7 +59,7 @@ export class ExamAnalysisDataService {
         seen.add(row.studentId);
         students.push({
           studentId: row.studentId,
-          studentNumber: row.studentNumber || row.studentId.slice(0, 8),
+          studentNumber: row.studentNumber || undefined,
           studentName: row.studentName,
           groupId: payload.group.studyGroupId,
           groupIds: row.groupIds || (payload.group.studyGroupId ? [payload.group.studyGroupId] : []),

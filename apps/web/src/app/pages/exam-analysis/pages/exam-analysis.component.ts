@@ -84,6 +84,7 @@ export type QuestionSortKey = 'question' | 'topic' | 'skill' | 'average' | 'succ
 export type QuestionSortDirection = 'asc' | 'desc';
 export type TopicSortKey = 'mastery-desc' | 'mastery-asc' | 'questions-desc' | 'name';
 export type SkillSortKey = TopicSortKey;
+export type StudentSortKey = 'score-desc' | 'score-asc' | 'level';
 
 export function questionDetailUnavailable(questions: QuestionAnalysis[], attendedCount: number, hasMatchingQuestionScore: boolean): boolean {
   return questions.length > 0 && attendedCount > 0 && !hasMatchingQuestionScore && questions.every(question => question.unansweredRate === 100);
@@ -129,6 +130,19 @@ export function filterAndSortSkills(skills: DimensionAnalysis[], search: string,
   return filterAndSortTopics(skills, search, sort);
 }
 
+export function filterAndSortStudents(students: StudentAnalysis[], search: string, levelFilter: string, sort: StudentSortKey): StudentAnalysis[] {
+  const term = search.trim().toLocaleLowerCase();
+  const filtered = students.filter(student =>
+    (!term || student.studentName.toLocaleLowerCase().includes(term)) &&
+    (levelFilter === 'ALL' || student.level.id === levelFilter)
+  );
+  return [...filtered].sort((left, right) => {
+    if (sort === 'score-asc') return left.normalizedScore - right.normalizedScore;
+    if (sort === 'level') return right.level.min - left.level.min;
+    return right.normalizedScore - left.normalizedScore;
+  });
+}
+
 type InterventionPlan = Pick<InterventionGroupView, 'name' | 'color' | 'duration' | 'activity'>;
 const INTERVENTION_PLANS: Record<string, InterventionPlan> = {
   high: { name: 'مجموعة الإثراء', color: '#16a34a', duration: 'أسبوعان', activity: 'مشروع تطبيقي متقدم' },
@@ -153,6 +167,10 @@ export function buildInterventionGroups(levels: PerformanceLevel[], students: St
       successCriterion: '',
     };
   });
+}
+
+export function countFollowUpStudents(groups: InterventionGroupView[], topLevelId: string): number {
+  return groups.filter(group => group.levelId !== topLevelId).reduce((total, group) => total + group.students.length, 0);
 }
 
 export function interventionSuccessCriterion(level: PerformanceLevel, levels: PerformanceLevel[]): string {
@@ -193,7 +211,7 @@ export class ExamAnalysisComponent implements OnInit {
   activeTab = signal<AnalysisTab>('overview');
   studentSearch = signal('');
   levelFilter = signal('ALL');
-  studentSort = signal<'score-desc' | 'score-asc' | 'level'>('score-desc');
+  studentSort = signal<StudentSortKey>('score-desc');
   levels = signal<PerformanceLevel[]>(this.loadSavedLevels());
   levelError = signal('');
   showLevelsEditor = signal(false);
@@ -388,18 +406,9 @@ export class ExamAnalysisComponent implements OnInit {
     count: this.students().filter(student => !student.isAbsent && student.level.id === level.id).length,
   })));
   visibleStudents = computed(() => {
-    const term = this.studentSearch().trim().toLocaleLowerCase();
-    const filter = this.levelFilter();
-    const list = this.students().filter(student =>
-      (!term || student.studentName.toLocaleLowerCase().includes(term) || student.studentNumber?.toLocaleLowerCase().includes(term)) &&
-      (filter === 'ALL' || student.level.id === filter)
-    );
-    return [...list].sort((a, b) => {
-      if (this.studentSort() === 'score-asc') return a.normalizedScore - b.normalizedScore;
-      if (this.studentSort() === 'level') return b.level.min - a.level.min;
-      return b.normalizedScore - a.normalizedScore;
-    });
+    return filterAndSortStudents(this.students(), this.studentSearch(), this.levelFilter(), this.studentSort());
   });
+  notTestedStudentCount = computed(() => this.students().filter(student => student.isAbsent).length);
   recommendations = computed(() => {
     if (this.allQuestionsUnansweredDueToMissingDetailData()) return [];
     const weakSkills = this.classifiedSkills().filter(item => item.masteryRate < 55);
@@ -430,9 +439,7 @@ export class ExamAnalysisComponent implements OnInit {
     });
   });
   topInterventionLevelId = computed(() => [...this.levels()].sort((left, right) => right.min - left.min)[0]?.id || '');
-  followUpStudentCount = computed(() => this.interventionGroups()
-    .filter(group => group.levelId !== this.topInterventionLevelId())
-    .reduce((total, group) => total + group.students.length, 0));
+  followUpStudentCount = computed(() => countFollowUpStudents(this.interventionGroups(), this.topInterventionLevelId()));
   interventionGroupCount = computed(() => this.interventionGroups().filter(group => group.students.length > 0).length);
 
   async ngOnInit() {

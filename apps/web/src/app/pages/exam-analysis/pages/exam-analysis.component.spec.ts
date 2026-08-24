@@ -4,13 +4,14 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, filterAndSortQuestions, filterAndSortSkills, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
+import { buildInterventionGroups, countFollowUpStudents, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
 import { topicOverviewBarData } from '../components/topic-overview-chart.component';
 
 const overviewTemplate = readFileSync(new URL('./exam-analysis.component.html', import.meta.url), 'utf8');
+const analysisDataServiceSource = readFileSync(new URL('../services/exam-analysis-data.service.ts', import.meta.url), 'utf8');
 
 describe('ExamAnalysis intervention reactivity', () => {
   it('moves a student between level groups when levels change without reload', () => {
@@ -111,6 +112,57 @@ describe('ExamAnalysis overview visuals', () => {
       { id: 'one', name: 'One', summary: { average: 80, passRate: 75 } },
       { id: 'two', name: 'Two', summary: { average: 60, passRate: 50 } },
     ]).labels).toHaveLength(2);
+  });
+});
+
+describe('ExamAnalysis students presentation', () => {
+  const low = { id: 'low', name: 'منخفض', min: 0, max: 54.99, color: '#dc2626' };
+  const high = { id: 'high', name: 'مرتفع', min: 85, max: 100, color: '#16a34a' };
+  const student = (overrides: Partial<StudentAnalysis> = {}): StudentAnalysis => ({
+    studentId: 'internal-uuid-1', studentName: 'أحمد علي', totalScore: 12, isAbsent: false, questionScores: [], studentNumber: undefined,
+    normalizedScore: 60, level: low, correct: 2, wrong: 1, unanswered: 0, ...overrides,
+  });
+
+  it('searches by student name only and keeps the existing sort/filter options', () => {
+    const students = [student(), student({ studentId: 'internal-uuid-2', studentName: 'سارة حسن', normalizedScore: 90, level: high })];
+    expect(filterAndSortStudents(students, 'أحمد', 'ALL', 'score-desc').map(item => item.studentId)).toEqual(['internal-uuid-1']);
+    expect(filterAndSortStudents(students, 'internal-uuid-2', 'ALL', 'score-desc')).toEqual([]);
+    expect(filterAndSortStudents(students, '', 'high', 'score-desc').map(item => item.studentId)).toEqual(['internal-uuid-2']);
+    expect(filterAndSortStudents(students, '', 'ALL', 'score-asc').map(item => item.studentId)).toEqual(['internal-uuid-1', 'internal-uuid-2']);
+  });
+
+  it('counts follow-up students from intervention groups while excluding the top level', () => {
+    const groups = buildInterventionGroups([low, high], [student(), student({ studentId: 'internal-uuid-2', level: high, normalizedScore: 90 })]);
+    expect(countFollowUpStudents(groups, 'high')).toBe(1);
+  });
+
+  it('does not expose an internal UUID as a student number', () => {
+    expect(analysisDataServiceSource).not.toContain('studentId.slice(0, 8)');
+    expect(overviewTemplate).not.toContain('student.studentNumber');
+  });
+
+  it('renders student KPIs, a core table, semantic state, and an accessible detail action', () => {
+    expect(overviewTemplate).toContain('summary().registered');
+    expect(overviewTemplate).toContain('summary().attended');
+    expect(overviewTemplate).toContain('notTestedStudentCount()');
+    expect(overviewTemplate).toContain('followUpStudentCount()');
+    expect(overviewTemplate).toContain('class="core-table students-table"');
+    expect(overviewTemplate).toContain('ui-table-actions');
+    expect(overviewTemplate).toContain('ariaLabel="عرض التحليل الفردي للطالب"');
+    expect(overviewTemplate).toContain("selectedStudent.set(student)");
+  });
+
+  it('keeps not-tested presentation and drawer close behavior explicit', () => {
+    expect(overviewTemplate).toContain("student.isAbsent ? 'لم يمتحن'");
+    expect(overviewTemplate).toContain('student-analysis-drawer');
+    expect(overviewTemplate).toContain('إغلاق التحليل الفردي');
+    expect(overviewTemplate).toContain('selectedStudent.set(null)');
+  });
+
+  it('keeps the other analysis tabs present', () => {
+    for (const tab of ['overview', 'questions', 'skills', 'topics', 'comparisons', 'recommendations', 'intervention']) {
+      expect(overviewTemplate).toContain(`activeTab() === '${tab}'`);
+    }
   });
 });
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { getProgressTracking, getProgressTrackingStudyGroups, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
+import { getProgressTracking, getProgressTrackingDimensions, getProgressTrackingStudyGroups, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
 import { testAdminPrisma as prisma } from '../db/test-admin-prisma';
 import { withRlsContext } from '../middleware/rls-request.middleware';
 
@@ -27,6 +27,17 @@ async function studyGroupsResponse(query: Record<string, string>, institutionId:
   return { statusCode, body };
 }
 
+async function dimensionsResponse(query: Record<string, string>, institutionId: string, academicYearId: string) {
+  let statusCode = 200;
+  let body: any;
+  const response = {
+    status(code: number) { statusCode = code; return this; },
+    json(value: unknown) { body = value; return this; },
+  } as any;
+  await withRlsContext(institutionId, () => getProgressTrackingDimensions({ context: { institutionId, academicYearId }, query } as any, response));
+  return { statusCode, body };
+}
+
 async function main() {
   const [type, region, status, language, stage, grade, classType, composition, studentStatus, enrollmentStatus, gender, permission] = await Promise.all([
     prisma.educationType.findFirstOrThrow(),
@@ -43,7 +54,7 @@ async function main() {
     prisma.permission.upsert({ where: { module_action: { module: 'exams', action: 'READ' } }, update: { isActive: true }, create: { module: 'exams', action: 'READ', nameAr: 'Progress fixture read' } }),
   ]);
 
-  const tracked = { exams: [] as string[], results: [] as string[], links: [] as string[], groups: [] as string[], memberships: [] as string[], enrollments: [] as string[], students: [] as string[], periods: [] as string[], subjects: [] as string[], classes: [] as string[], years: [] as string[], institutions: [] as string[] };
+  const tracked = { exams: [] as string[], results: [] as string[], links: [] as string[], groups: [] as string[], memberships: [] as string[], enrollments: [] as string[], students: [] as string[], periods: [] as string[], subjects: [] as string[], classes: [] as string[], years: [] as string[], institutions: [] as string[], questionTypes: [] as string[], questions: [] as string[], questionScores: [] as string[], skills: [] as string[], topics: [] as string[] };
   const institutionA = await prisma.institution.create({ data: { schoolCode: `${String(Date.now()).slice(-10)}`, slug: `${marker}-a`, nameAr: 'Progress Fixture A', typeId: type.id, regionId: region.id, statusId: status.id, defaultLanguageId: language.id } });
   const institutionB = await prisma.institution.create({ data: { schoolCode: `${String(Date.now() + 1).slice(-10)}`, slug: `${marker}-b`, nameAr: 'Progress Fixture B', typeId: type.id, regionId: region.id, statusId: status.id, defaultLanguageId: language.id } });
   tracked.institutions.push(institutionA.id, institutionB.id);
@@ -96,6 +107,31 @@ async function main() {
       }
     }
 
+    const questionType = await prisma.questionType.create({ data: { institutionId: institutionA.id, nameAr: `${marker} question type` } });
+    tracked.questionTypes.push(questionType.id);
+    const skill1 = await prisma.skill.create({ data: { institutionId: institutionA.id, academicYearId: yearA.id, subjectId: subjectA.id, gradeLevelId: grade.id, nameAr: `${marker} same name` } });
+    const skill2 = await prisma.skill.create({ data: { institutionId: institutionA.id, academicYearId: yearA.id, subjectId: subjectA.id, gradeLevelId: grade.id, nameAr: `${marker} same name` } });
+    const topic1 = await prisma.topic.create({ data: { institutionId: institutionA.id, academicYearId: yearA.id, subjectId: subjectA.id, gradeLevelId: grade.id, nameAr: `${marker} topic one` } });
+    const topic2 = await prisma.topic.create({ data: { institutionId: institutionA.id, academicYearId: yearA.id, subjectId: subjectA.id, gradeLevelId: grade.id, nameAr: `${marker} topic two` } });
+    tracked.skills.push(skill1.id, skill2.id); tracked.topics.push(topic1.id, topic2.id);
+    const questionInputs = [
+      [exam1, skill1, topic1], [exam2, skill1, topic2], [exam2, skill2, topic1], [exam3, skill2, topic2],
+    ] as const;
+    const questions = [] as { id: string; examId: string }[];
+    for (const [index, [exam, skill, topic]] of questionInputs.entries()) {
+      const question = await prisma.examQuestion.create({ data: { institutionId: institutionA.id, examId: exam.id, questionTypeId: questionType.id, skillId: skill.id, topicId: topic.id, questionNumber: index + 1, maxScore: 10 } });
+      questions.push(question); tracked.questions.push(question.id);
+    }
+    const scoreInputs = [
+      [questions[0], 8, 6], [questions[1], 9, 7, 5], [questions[2], 8, 6, 4], [questions[3], 9, 7],
+    ] as const;
+    for (const [question, ...studentScores] of scoreInputs) {
+      for (const [index, score] of studentScores.entries()) {
+        const saved = await prisma.studentQuestionScore.create({ data: { institutionId: institutionA.id, examQuestionId: question.id, studentId: students[index].id, score } });
+        tracked.questionScores.push(saved.id);
+      }
+    }
+
     const fixtureContext = await Promise.all([
       prisma.academicYear.findFirst({ where: { id: yearA.id, institutionId: institutionA.id, archivedAt: null } }),
       prisma.subject.findFirst({ where: { id: subjectA.id, institutionId: institutionA.id, academicYearId: yearA.id, archivedAt: null, isActive: true } }),
@@ -128,6 +164,21 @@ async function main() {
     assert.equal(studentProgress.body.student.id, students[2].id);
     assert.equal(studentProgress.body.points.some((point: any) => point.studentId), false);
 
+    const skillProgress = await dimensionsResponse({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupA.id, dimension: 'skill', dimensionId: skill1.id }, institutionA.id, yearA.id);
+    assert.equal(skillProgress.statusCode, 200, JSON.stringify(skillProgress.body));
+    assert.equal(skillProgress.body.availableDimensions.filter((item: any) => item.name === skill1.nameAr).length, 2);
+    assert.equal(skillProgress.body.selectedDimension.id, skill1.id);
+    assert.deepEqual(skillProgress.body.points.map((point: any) => point.status), ['measured', 'measured', 'notMeasured']);
+    assert.equal(skillProgress.body.points[0].masteryRate, 70);
+    assert.equal(skillProgress.body.selectedDimension.measuredExamCount, 2);
+    assert.equal(skillProgress.body.selectedDimension.totalExamCount, 3);
+    assert.equal(skillProgress.body.points.some((point: any) => 'scores' in point || 'studentResults' in point), false);
+    const topicProgress = await dimensionsResponse({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupA.id, dimension: 'topic', dimensionId: topic2.id }, institutionA.id, yearA.id);
+    assert.equal(topicProgress.statusCode, 200, JSON.stringify(topicProgress.body));
+    assert.deepEqual(topicProgress.body.points.map((point: any) => point.status), ['notMeasured', 'measured', 'measured']);
+    const invalidDimension = await dimensionsResponse({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupA.id, dimension: 'skill', dimensionId: '00000000-0000-4000-8000-000000000099' }, institutionA.id, yearA.id);
+    assert.equal(invalidDimension.statusCode, 404);
+
     for (const query of [
       { academicYearId: yearB.id, subjectId: subjectA.id, studyGroupId: groupA.id },
       { academicYearId: yearA.id, subjectId: subjectB.id, studyGroupId: groupA.id },
@@ -143,10 +194,15 @@ async function main() {
     assert.equal(valid.body.points.some((point: any) => point.examName === archived.titleAr), false);
     console.log('Progress tracking isolated integration fixture passed.');
   } finally {
+    await prisma.studentQuestionScore.deleteMany({ where: { id: { in: tracked.questionScores } } });
+    await prisma.examQuestion.deleteMany({ where: { id: { in: tracked.questions } } });
     await prisma.studentExamResult.deleteMany({ where: { id: { in: tracked.results } } });
     await prisma.examStudyGroup.deleteMany({ where: { id: { in: tracked.links } } });
     await prisma.exam.deleteMany({ where: { id: { in: tracked.exams } } });
     await prisma.examType.deleteMany({ where: { institutionId: { in: tracked.institutions }, nameAr: { startsWith: marker } } });
+    await prisma.questionType.deleteMany({ where: { id: { in: tracked.questionTypes } } });
+    await prisma.skill.deleteMany({ where: { id: { in: tracked.skills } } });
+    await prisma.topic.deleteMany({ where: { id: { in: tracked.topics } } });
     await prisma.studyGroupStudent.deleteMany({ where: { id: { in: tracked.memberships } } });
     await prisma.studyGroup.deleteMany({ where: { id: { in: tracked.groups } } });
     await prisma.studentEnrollment.deleteMany({ where: { id: { in: tracked.enrollments } } });

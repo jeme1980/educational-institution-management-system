@@ -1,6 +1,6 @@
 import '@angular/compiler';
 import { describe, expect, it } from 'vitest';
-import { classContextComplete, progressSummaryText, studentContextComplete, studentInsightText, studentParticipationLabel, usableProgressPoints } from './progress-tracking.component';
+import { classContextComplete, dimensionCanShowTrend, dimensionCoverageText, dimensionStatusLabel, progressSummaryText, studentContextComplete, studentInsightText, studentParticipationLabel, usableProgressPoints } from './progress-tracking.component';
 import { ProgressTrackingPoint, StudentProgressResponse } from '../models/progress-tracking.model';
 
 const point = (id: string, averagePercentage: number | null, noData = false): ProgressTrackingPoint => ({ examId: id, examName: `Exam ${id}`, examDate: '2026-01-01', examType: null, maxScore: 20, participantCount: averagePercentage === null ? 0 : 1, eligibleCount: 1, averagePercentage, passRate: averagePercentage, noData });
@@ -35,5 +35,14 @@ describe('ProgressTracking presentation rules', () => {
     expect(studentInsightText(response)).not.toContain('one');
     expect(studentParticipationLabel('absent')).toBe('غائب');
     expect(studentParticipationLabel('missing')).toBe('لا توجد نتيجة');
+  });
+
+  it('keeps dimension status and coverage presentation semantic and ID-free', () => {
+    expect(dimensionStatusLabel('measured')).toBe('مقاس');
+    expect(dimensionStatusLabel('notMeasured')).toBe('غير مقاس');
+    expect(dimensionStatusLabel('detailUnavailable')).toBe('تفاصيل القياس غير متاحة');
+    expect(dimensionCoverageText(2, 5)).toBe('2 / 5 امتحان مقاس');
+    expect(dimensionCanShowTrend(1)).toBe(false);
+    expect(dimensionCanShowTrend(2)).toBe(true);
   });
 });

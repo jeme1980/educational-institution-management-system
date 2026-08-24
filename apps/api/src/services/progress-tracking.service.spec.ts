@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildProgressTrackingPoints, buildStudentProgressPoints } from './progress-tracking.service';
+import { buildDimensionProgressPoint, buildProgressTrackingPoints, buildStudentProgressPoints } from './progress-tracking.service';
 
 const date = (value: string) => new Date(`${value}T00:00:00.000Z`);
 
@@ -40,4 +40,25 @@ test('student progress preserves absent/missing status and calculates group gaps
   assert.equal(student[0].gapFromGroup, 5);
   assert.equal(student[1].studentPercentage, null);
   assert.equal(student[2].studentPercentage, null);
+});
+
+test('dimension progress distinguishes measured, not measured, and unavailable detail', () => {
+  const input = {
+    examId: 'exam', examName: 'Exam', examDate: '2026-01-01', participantIds: ['s1', 's2'],
+    questions: [
+      { id: 'q1', maxPoints: 10, dimensionId: 'skill-1', dimensionName: 'Skill 1' },
+      { id: 'q2', maxPoints: 10, dimensionId: 'skill-1', dimensionName: 'Skill 1' },
+    ],
+    scores: [
+      { studentId: 's1', questionId: 'q1', score: 8 },
+      { studentId: 's1', questionId: 'q2', score: 6 },
+      { studentId: 's2', questionId: 'q1', score: 4 },
+    ],
+  };
+  const measured = buildDimensionProgressPoint(input, 'skill-1');
+  assert.equal(measured.status, 'measured');
+  assert.equal(measured.masteryRate, 45);
+  assert.equal(measured.unansweredRate, 25);
+  assert.equal(buildDimensionProgressPoint(input, 'skill-2').status, 'notMeasured');
+  assert.equal(buildDimensionProgressPoint({ ...input, scores: [] }, 'skill-1').status, 'detailUnavailable');
 });

@@ -6,4 +6,5 @@ import * as controller from '../controllers/progress-tracking.controller';
 
 const router = Router();
 router.get('/progress-tracking', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getProgressTracking));
+router.get('/progress-tracking/student', requireAuth, requirePermission('exams', 'read'), asyncHandler(controller.getStudentProgressTracking));
 export default router;

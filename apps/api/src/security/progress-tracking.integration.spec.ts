@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict';
-import { getProgressTracking } from '../controllers/progress-tracking.controller';
+import { getProgressTracking, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
 import { testAdminPrisma as prisma } from '../db/test-admin-prisma';
 import { withRlsContext } from '../middleware/rls-request.middleware';
 
 const marker = `progress-fixture-${Date.now()}`;
 
-async function responseFor(query: Record<string, string>, institutionId: string, academicYearId: string) {
+async function responseFor(query: Record<string, string>, institutionId: string, academicYearId: string, student = false) {
   let statusCode = 200;
   let body: any;
   const response = {
     status(code: number) { statusCode = code; return this; },
     json(value: unknown) { body = value; return this; },
   } as any;
-  await withRlsContext(institutionId, () => getProgressTracking({ context: { institutionId, academicYearId }, query } as any, response));
+  await withRlsContext(institutionId, () => (student ? getStudentProgressTracking : getProgressTracking)({ context: { institutionId, academicYearId }, query } as any, response));
   return { statusCode, body };
 }
 
@@ -100,6 +100,17 @@ async function main() {
     assert.deepEqual(valid.body.points.map((point: any) => point.passRate), [100, 100, 100]);
     assert.equal(valid.body.summary.examsCount, 3);
 
+    const studentProgress = await responseFor({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupA.id, studentId: students[2].id }, institutionA.id, yearA.id, true);
+    assert.equal(studentProgress.statusCode, 200, JSON.stringify(studentProgress.body));
+    assert.deepEqual(studentProgress.body.points.map((point: any) => point.participationStatus), ['absent', 'completed', 'missing']);
+    assert.equal(studentProgress.body.summary.completedCount, 1);
+    assert.equal(studentProgress.body.points[1].studentPercentage, 50);
+    assert.equal(studentProgress.body.points[1].gapFromGroup, -16.67);
+    assert.equal(studentProgress.body.points[0].studentPercentage, null);
+    assert.equal(studentProgress.body.points[2].studentPercentage, null);
+    assert.equal(studentProgress.body.student.id, students[2].id);
+    assert.equal(studentProgress.body.points.some((point: any) => point.studentId), false);
+
     for (const query of [
       { academicYearId: yearB.id, subjectId: subjectA.id, studyGroupId: groupA.id },
       { academicYearId: yearA.id, subjectId: subjectB.id, studyGroupId: groupA.id },
@@ -109,6 +120,8 @@ async function main() {
       assert.equal(foreign.statusCode, 404);
       assert.equal(foreign.body.points, undefined);
     }
+    const foreignStudent = await responseFor({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupB.id, studentId: students[2].id }, institutionA.id, yearA.id, true);
+    assert.equal(foreignStudent.statusCode, 404);
 
     assert.equal(valid.body.points.some((point: any) => point.examName === archived.titleAr), false);
     console.log('Progress tracking isolated integration fixture passed.');

@@ -23,6 +23,43 @@ export interface ProgressTrackingPoint {
   noData: boolean;
 }
 
+export type StudentParticipationStatus = 'completed' | 'absent' | 'missing';
+
+export interface StudentProgressExamRow extends ProgressTrackingPoint {
+  participationStatus: StudentParticipationStatus;
+  studentScore: number | null;
+  studentPercentage: number | null;
+  groupAveragePercentage: number | null;
+  groupPassRate: number | null;
+  groupParticipantCount: number;
+  gapFromGroup: number | null;
+}
+
+export function buildStudentProgressPoints(
+  points: ProgressTrackingPoint[],
+  studentResults: Map<string, { totalScore: number; isAbsence: boolean }>,
+): StudentProgressExamRow[] {
+  return points.map((point) => {
+    const result = studentResults.get(point.examId);
+    const participationStatus: StudentParticipationStatus = result?.isAbsence ? 'absent' : result ? 'completed' : 'missing';
+    const studentScore = participationStatus === 'completed' ? result!.totalScore : null;
+    const studentPercentage = studentScore !== null && point.maxScore > 0 ? Number((studentScore / point.maxScore * 100).toFixed(2)) : null;
+    const gapFromGroup = studentPercentage !== null && point.averagePercentage !== null
+      ? Number((studentPercentage - point.averagePercentage).toFixed(2))
+      : null;
+    return {
+      ...point,
+      participationStatus,
+      studentScore,
+      studentPercentage,
+      groupAveragePercentage: point.averagePercentage,
+      groupPassRate: point.passRate,
+      groupParticipantCount: point.participantCount,
+      gapFromGroup,
+    };
+  });
+}
+
 export function buildProgressTrackingPoints(rows: ProgressTrackingExamRow[]): ProgressTrackingPoint[] {
   return [...rows]
     .sort((left, right) => left.examDate.getTime() - right.examDate.getTime() || left.id.localeCompare(right.id))

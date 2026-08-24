@@ -5,6 +5,27 @@ import { buildProgressTrackingPoints, buildStudentProgressPoints } from '../serv
 
 const isUuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
+export async function getProgressTrackingStudyGroups(req: ContextRequest, res: Response): Promise<any> {
+  const institutionId = req.context?.institutionId || '';
+  const academicYearId = String(req.query.academicYearId || req.context?.academicYearId || '');
+  const subjectId = String(req.query.subjectId || '');
+  if (!institutionId || !isUuid(academicYearId) || !isUuid(subjectId)) {
+    return res.status(400).json({ error: 'Academic year and subject are required.' });
+  }
+
+  const [academicYear, subject] = await Promise.all([
+    prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId, archivedAt: null }, select: { id: true } }),
+    prisma.subject.findFirst({ where: { id: subjectId, institutionId, academicYearId, archivedAt: null, isActive: true }, select: { id: true } }),
+  ]);
+  if (!academicYear || !subject) return res.status(404).json({ error: 'The selected progress tracking context is not available.' });
+
+  return res.json(await prisma.studyGroup.findMany({
+    where: { institutionId, academicYearId, subjectId, archivedAt: null, isActive: true },
+    select: { id: true, nameAr: true, nameHe: true, classId: true, subjectId: true, classRoom: { select: { id: true, nameAr: true } } },
+    orderBy: { nameAr: 'asc' },
+  }));
+}
+
 export async function getProgressTracking(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId || '';
   const academicYearId = String(req.query.academicYearId || req.context?.academicYearId || '');

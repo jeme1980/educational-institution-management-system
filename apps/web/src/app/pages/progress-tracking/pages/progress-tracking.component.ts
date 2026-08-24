@@ -56,6 +56,8 @@ export class ProgressTrackingComponent {
   readonly selectedStudyGroupId = signal('');
   readonly selectedStudentId = signal('');
   readonly mode = signal<'class' | 'student'>('class');
+  readonly availableStudyGroups = signal<any[]>([]);
+  readonly groupsLoading = signal(false);
   readonly groupMembers = signal<any[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
@@ -63,9 +65,10 @@ export class ProgressTrackingComponent {
   readonly studentResponse = signal<StudentProgressResponse | null>(null);
   private readonly route = inject(ActivatedRoute);
   private requestSequence = 0;
+  private groupRequestSequence = 0;
 
   readonly subjectsForYear = computed(() => this.api.subjects().filter((subject: any) => subject.academicYearId === this.selectedYearId() && subject.isActive !== false && !subject.archivedAt));
-  readonly groupsForSubject = computed(() => this.api.studyGroups().filter((group: any) => group.academicYearId === this.selectedYearId() && group.subjectId === this.selectedSubjectId() && group.isActive !== false && !group.archivedAt));
+  readonly groupsForSubject = computed(() => this.availableStudyGroups());
   readonly points = computed(() => this.response()?.points || []);
   readonly hasTrend = computed(() => usableProgressPoints(this.points()).length >= 2);
   readonly firstAverage = computed(() => this.response()?.summary.firstAverage);
@@ -89,11 +92,24 @@ export class ProgressTrackingComponent {
   }
 
   onModeChange(value: 'class' | 'student'): void { this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set(''); void this.router.navigate([], { queryParams: { mode: value === 'student' ? 'student' : null }, queryParamsHandling: 'merge' }); }
-  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); }
-  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); }
+  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); }
+  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); void this.loadStudyGroupsForSelection(); }
   onStudyGroupChange(value: string): void { this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null); if (value) void this.loadGroupMembers(value); }
   onStudentChange(value: string): void { this.selectedStudentId.set(value); void this.loadStudent(); }
   async loadGroupMembers(groupId: string): Promise<void> { this.groupMembers.set(await this.api.loadGroupMembers(groupId)); }
+  async loadStudyGroupsForSelection(): Promise<void> {
+    const academicYearId = this.selectedYearId();
+    const subjectId = this.selectedSubjectId();
+    const sequence = ++this.groupRequestSequence;
+    if (!academicYearId || !subjectId) { this.availableStudyGroups.set([]); this.groupsLoading.set(false); return; }
+    this.groupsLoading.set(true);
+    try {
+      const groups = await this.api.loadProgressTrackingStudyGroups({ academicYearId, subjectId });
+      if (sequence === this.groupRequestSequence) this.availableStudyGroups.set(Array.isArray(groups) ? groups : []);
+    } finally {
+      if (sequence === this.groupRequestSequence) this.groupsLoading.set(false);
+    }
+  }
   async load(): Promise<void> {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();

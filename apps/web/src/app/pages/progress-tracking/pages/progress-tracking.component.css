@@ -6,6 +6,7 @@
 .progress-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .progress-filters-student { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .progress-filters label { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.progress-filter-help { color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-normal); }
 .progress-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
 .progress-summary { margin: 0 0 var(--space-4); color: var(--on-surface-variant); font-size: var(--font-sm); }
 .progress-error { padding: var(--space-3) var(--space-4); border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-container); color: var(--on-danger-container); }

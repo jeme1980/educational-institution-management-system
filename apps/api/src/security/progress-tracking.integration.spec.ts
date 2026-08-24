@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { getProgressTracking, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
+import { getProgressTracking, getProgressTrackingStudyGroups, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
 import { testAdminPrisma as prisma } from '../db/test-admin-prisma';
 import { withRlsContext } from '../middleware/rls-request.middleware';
 
@@ -13,6 +13,17 @@ async function responseFor(query: Record<string, string>, institutionId: string,
     json(value: unknown) { body = value; return this; },
   } as any;
   await withRlsContext(institutionId, () => (student ? getStudentProgressTracking : getProgressTracking)({ context: { institutionId, academicYearId }, query } as any, response));
+  return { statusCode, body };
+}
+
+async function studyGroupsResponse(query: Record<string, string>, institutionId: string, academicYearId: string) {
+  let statusCode = 200;
+  let body: any;
+  const response = {
+    status(code: number) { statusCode = code; return this; },
+    json(value: unknown) { body = value; return this; },
+  } as any;
+  await withRlsContext(institutionId, () => getProgressTrackingStudyGroups({ context: { institutionId, academicYearId }, query } as any, response));
   return { statusCode, body };
 }
 
@@ -91,6 +102,12 @@ async function main() {
       prisma.studyGroup.findFirst({ where: { id: groupA.id, institutionId: institutionA.id, academicYearId: yearA.id, subjectId: subjectA.id, archivedAt: null, isActive: true } }),
     ]);
     assert.deepEqual(fixtureContext.map(Boolean), [true, true, true]);
+
+    const availableGroups = await studyGroupsResponse({ academicYearId: yearA.id, subjectId: subjectA.id }, institutionA.id, yearA.id);
+    assert.equal(availableGroups.statusCode, 200, JSON.stringify(availableGroups.body));
+    assert.deepEqual(availableGroups.body.map((group: any) => group.id), [groupA.id]);
+    const foreignGroups = await studyGroupsResponse({ academicYearId: yearA.id, subjectId: subjectB.id }, institutionA.id, yearA.id);
+    assert.equal(foreignGroups.statusCode, 404);
 
     const valid = await responseFor({ academicYearId: yearA.id, subjectId: subjectA.id, studyGroupId: groupA.id }, institutionA.id, yearA.id);
     assert.equal(valid.statusCode, 200, JSON.stringify(valid.body));

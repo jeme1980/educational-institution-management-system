@@ -17,8 +17,8 @@
       <h2 class="px-3 py-2 text-xs font-bold text-on-surface-variant">بيانات المؤسسة</h2>
       <nav class="space-y-1" aria-label="الجداول المساعدة للمؤسسة">
         @for (definition of definitions; track definition.key) {
-          <button type="button" (click)="selectTable(definition.key)" [class.bg-primary-container]="activeTable() === definition.key" [class.text-primary]="activeTable() === definition.key" class="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-on-surface-variant transition hover:bg-surface-container-low">
-            <mat-icon class="text-lg">{{ definition.icon }}</mat-icon><span>{{ definition.label }}</span>
+          <button type="button" (click)="selectTable(definition.key)" [class.semantic-nav-link--active]="activeTable() === definition.key" class="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-right text-sm text-on-surface-variant transition hover:bg-surface-container-low focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <mat-icon class="text-lg text-current">{{ definition.icon }}</mat-icon><span>{{ definition.label }}</span>
           </button>
         }
       </nav>

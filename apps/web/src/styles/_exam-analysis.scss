@@ -29,20 +29,6 @@
   box-shadow: var(--shadow-sm) !important;
 }
 
-.analysis-filter-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.analysis-filter-card::before {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  height: 3px;
-  background: var(--secondary);
-  content: '';
-}
-
 .analysis-filter-card__description {
   margin: 0 0 var(--space-4);
   color: var(--on-surface-variant);

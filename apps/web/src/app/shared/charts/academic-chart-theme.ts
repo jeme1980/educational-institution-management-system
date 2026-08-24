@@ -30,7 +30,7 @@ export function readAcademicChartColors(): AcademicChartColors {
   };
 }
 
-export function academicChartOptions<TType extends 'bar' | 'doughnut'>(
+export function academicChartOptions<TType extends 'bar' | 'line' | 'doughnut'>(
   theme: AcademicChartThemeService,
   title: string,
 ): ChartOptions<TType> {

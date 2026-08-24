@@ -31,6 +31,7 @@ export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
   { path: '/subjects', label: 'المناهج والمواد', icon: 'menu_book', permission: 'settings:read' },
   { path: '/exams', label: 'الامتحانات', icon: 'assignment', permission: 'exams:read' },
   { path: '/exam-analysis', label: 'تحليل الامتحان', icon: 'analytics', permission: 'exams:read' },
+  { path: '/progress-tracking', label: 'مسار التقدم', icon: 'trending_up', permission: 'exams:read' },
   { path: '/academic-years', label: 'الأعوام الدراسية', icon: 'calendar_today', permission: 'settings:read' },
   { path: '/settings', label: 'الإعدادات', icon: 'settings', permission: 'settings:read' },
 ];

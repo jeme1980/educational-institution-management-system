@@ -1,0 +1,38 @@
+<main class="progress-page" dir="rtl">
+  <ui-page-header title="مسار التقدم" description="تتبّع تطور الأداء عبر الامتحانات بمرور الوقت." eyebrow="التقييم والتحليل" />
+
+  <ui-filter-panel title="اختيار سياق المقارنة" icon="filter_alt">
+    <div class="progress-filters">
+      <label>السنة الدراسية<ui-select ariaLabel="اختيار السنة الدراسية" [ngModel]="selectedYearId()" (ngModelChange)="onYearChange($event)">@for (year of api.academicYears(); track year.id) {<option [value]="year.id">{{ year.yearLabel }}</option>}</ui-select></label>
+      <label>المادة<ui-select ariaLabel="اختيار المادة" [ngModel]="selectedSubjectId()" (ngModelChange)="onSubjectChange($event)" [disabled]="!selectedYearId()"><option value="">اختر المادة</option>@for (subject of subjectsForYear(); track subject.id) {<option [value]="subject.id">{{ subject.nameAr }}</option>}</ui-select></label>
+      <label>الصف/الشعبة<ui-select ariaLabel="اختيار الصف أو الشعبة" [ngModel]="selectedStudyGroupId()" (ngModelChange)="onStudyGroupChange($event)" [disabled]="!selectedSubjectId()"><option value="">اختر الشعبة</option>@for (group of groupsForSubject(); track group.id) {<option [value]="group.id">{{ group.nameAr }}</option>}</ui-select></label>
+    </div>
+  </ui-filter-panel>
+
+  @if (error()) { <div class="progress-error" role="alert">{{ error() }}</div> }
+  @if (loading()) { <ui-empty-state icon="progress_activity" title="جارٍ تحميل مسار التقدم" description="نجهز مقارنة الامتحانات للسياق المختار." /> }
+  @else if (!response()) { <ui-empty-state icon="timeline" title="ابدأ باختيار السياق" description="اختر السنة والمادة والشعبة لعرض مسار التقدم." /> }
+  @else {
+    <section class="progress-kpis" aria-label="ملخص مسار التقدم">
+      <ui-stat-card label="عدد الامتحانات" [value]="response()!.summary.examsCount" helper="ضمن السياق المختار" icon="assignment" tone="neutral" />
+      <ui-stat-card label="متوسط أول امتحان" [value]="format(firstAverage())" helper="النسبة المعيارية" icon="start" tone="primary" />
+      <ui-stat-card label="متوسط آخر امتحان" [value]="format(latestAverage())" helper="النسبة المعيارية" icon="flag" tone="primary" />
+      <ui-stat-card label="التغير بين البداية والنهاية" [value]="averageChange() === null ? '—' : (averageChange()! >= 0 ? '+' : '') + averageChange()!.toFixed(1) + ' نقطة'" helper="نقاط مئوية" icon="trending_up" tone="success" />
+    </section>
+
+    @if (hasTrend()) {
+      <ui-section-card title="اتجاه الأداء عبر الامتحانات" description="المتوسط ونسبة النجاح محسوبان من النتائج الفعلية فقط.">
+        <p class="progress-summary" role="status">{{ summaryText() }}</p>
+        <app-progress-trend-chart [points]="points()" (examSelected)="openExam($event)" />
+      </ui-section-card>
+    } @else if (points().length === 1) {
+      <ui-empty-state [compact]="true" icon="timeline" title="يلزم توفر امتحانين على الأقل لعرض اتجاه التقدم" description="يمكنك مراجعة بيانات الامتحان المتاح من القائمة أدناه." />
+    } @else if (!points().length) {
+      <ui-empty-state [compact]="true" icon="event_busy" title="لا توجد امتحانات مرتبطة" description="لا توجد امتحانات منشورة أو مؤهلة لهذا السياق حسب قواعد تحليل الامتحانات الحالية." />
+    }
+
+    <ui-section-card title="الامتحانات ضمن المسار" description="افتح تحليل امتحان محدد من الخط الزمني أو القائمة.">
+      <div class="progress-table-wrap"><table class="core-table"><thead><tr><th>التاريخ</th><th>الامتحان</th><th>النوع</th><th>متوسط الأداء</th><th>نسبة النجاح</th><th>المتقدمون</th><th>الإجراء</th></tr></thead><tbody>@for (point of points(); track point.examId) {<tr><td dir="ltr">{{ point.examDate }}</td><td>{{ point.examName }}</td><td>{{ point.examType?.nameAr || 'غير محدد' }}</td><td>{{ format(point.averagePercentage) }}</td><td>{{ format(point.passRate) }}</td><td>{{ point.participantCount }} / {{ point.eligibleCount }}</td><td><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" [ariaLabel]="'فتح تحليل ' + point.examName" (activated)="openExam(point.examId)"><mat-icon aria-hidden="true">open_in_new</mat-icon></ui-button></ui-table-actions></td></tr>} @empty {<tr><td colspan="7" class="empty-cell">لا توجد بيانات لعرضها.</td></tr>}</tbody></table></div>
+    </ui-section-card>
+  }
+</main>

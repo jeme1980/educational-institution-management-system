@@ -165,6 +165,15 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
+  async loadProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string }) {
+    try {
+      const query = new URLSearchParams(params).toString();
+      const res = await this.apiFetch(`/api/progress-tracking?${query}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load progress tracking', e); }
+    return null;
+  }
+
   async saveExamResults(examId: string, results: any[]) {
     try {
       const res = await this.apiFetch(`/api/exams/${examId}/results`, {

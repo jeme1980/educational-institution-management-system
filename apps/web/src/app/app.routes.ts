@@ -123,6 +123,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/exam-analysis/pages/exam-analysis').then(m => m.ExamAnalysisComponent),
   },
   {
+    path: 'progress-tracking',
+    title: 'مسار التقدم',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'exams:read' },
+    loadComponent: () => import('./pages/progress-tracking/pages/progress-tracking').then(m => m.ProgressTrackingComponent),
+  },
+  {
     path: 'academic-years',
     title: 'السنوات الدراسية',
     canActivate: [authGuard, permissionGuard],

@@ -37,3 +37,47 @@
 .ui-form-control--sm { min-height: var(--control-height-sm); }
 .ui-form-control--lg { min-height: var(--control-height-lg); }
 .ui-form-control--textarea { min-height: 6rem; padding-block: var(--space-2); resize: vertical; }
+
+/* Shared search suffix contract: inline-end is the visual left in RTL. */
+.search-icon {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  inset-block-start: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--on-surface-variant);
+  font-size: var(--space-5);
+  line-height: 1;
+}
+.search-icon ~ input,
+.search-icon ~ ui-input .ui-form-control,
+.search-icon ~ .ui-form-control {
+  padding-inline-end: calc(var(--space-3) + var(--space-5) + var(--space-2));
+}
+.search-icon ~ input[type='search'],
+.search-icon ~ ui-input input[type='search'] { appearance: none; }
+.search-box { position: relative; }
+.search-box > mat-icon { position: absolute; inset-inline-end: var(--space-2); inset-block-start: 50%; transform: translateY(-50%); pointer-events: none; color: var(--on-surface-variant); }
+.search-box input { padding-inline-end: calc(var(--space-2) + var(--space-5) + var(--space-2)); }
+
+/* Keep legacy search wrappers on the same logical contract during migration. */
+.relative:has(> mat-icon[class~='right-3']) > mat-icon,
+.relative:has(> mat-icon[class~='right-3.5']) > mat-icon {
+  top: auto;
+  right: auto;
+  inset-inline-end: var(--space-3);
+  inset-block-start: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--on-surface-variant);
+}
+.relative:has(> mat-icon[class~='right-3']) > input,
+.relative:has(> mat-icon[class~='right-3.5']) > input,
+.relative:has(> mat-icon[class~='right-3']) > ui-input .ui-form-control,
+.relative:has(> mat-icon[class~='right-3.5']) > ui-input .ui-form-control {
+  padding-inline-end: calc(var(--space-3) + var(--space-5) + var(--space-2));
+}
+.relative:has(> mat-icon[class~='right-3']) > input[type='search'],
+.relative:has(> mat-icon[class~='right-3.5']) > input[type='search'] { appearance: none; }

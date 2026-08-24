@@ -27,7 +27,7 @@
     <main class="overflow-hidden rounded-2xl border border-surface-border bg-surface shadow-xs">
       <div class="flex flex-col justify-between gap-4 border-b border-surface-border p-5 sm:flex-row">
         <div><h2 class="flex items-center gap-2 text-lg font-bold text-on-surface"><mat-icon class="text-primary">{{ currentDefinition().icon }}</mat-icon>{{ currentDefinition().label }}</h2><p class="mt-1 text-xs text-on-surface-variant">إضافة وتعديل السجلات الخاصة بالمؤسسة الحالية.</p></div>
-        <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="absolute end-3 top-2.5 text-lg text-on-surface-variant">search</mat-icon><ui-input type="search" ariaLabel="البحث في جداول المؤسسة" (input)="onSearch($event)" placeholder="بحث..." /></label>
+        <label class="relative w-full sm:w-72"><span class="sr-only">بحث</span><mat-icon class="search-icon text-lg text-on-surface-variant">search</mat-icon><ui-input type="search" ariaLabel="البحث في جداول المؤسسة" (input)="onSearch($event)" placeholder="بحث..." /></label>
       </div>
 
       <div class="core-table-wrap">

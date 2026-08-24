@@ -33,7 +33,7 @@
       </div>
 
       <div class="relative w-full md:w-96">
-        <mat-icon class="absolute end-3 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant">search</mat-icon>
+        <mat-icon class="search-icon text-lg text-on-surface-variant">search</mat-icon>
         <input
           type="text"
           [value]="searchTerm()"
@@ -69,7 +69,7 @@
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <div class="relative flex flex-col gap-2">
       <label for="student-filter-search" class="text-xs font-semibold text-on-surface-variant">البحث</label>
-      <mat-icon class="absolute end-3 top-9 -translate-y-1/2 text-base text-on-surface-variant">search</mat-icon>
+      <mat-icon class="search-icon text-base text-on-surface-variant">search</mat-icon>
       <input id="student-filter-search" type="text" [value]="searchTerm()" (input)="onSearchInput($event)" placeholder="البحث عن اسم الطالب أو الهوية" class="ui-form-control w-full pe-9 text-right text-sm" dir="rtl" />
     </div>
     <!-- Class Selector -->

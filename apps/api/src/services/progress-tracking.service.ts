@@ -25,6 +25,81 @@ export interface ProgressTrackingPoint {
 
 export type StudentParticipationStatus = 'completed' | 'absent' | 'missing';
 
+export type ProgressDimension = 'skill' | 'topic';
+export type DimensionProgressStatus = 'measured' | 'notMeasured' | 'detailUnavailable';
+
+export interface DimensionQuestionInput {
+  id: string;
+  maxPoints: number;
+  dimensionId: string | null;
+  dimensionName: string | null;
+}
+
+export interface DimensionScoreInput {
+  studentId: string;
+  questionId: string;
+  score: number;
+}
+
+export interface DimensionExamInput {
+  examId: string;
+  examName: string;
+  examDate: string;
+  questions: DimensionQuestionInput[];
+  participantIds: string[];
+  scores: DimensionScoreInput[];
+}
+
+export interface DimensionProgressPoint {
+  examId: string;
+  examName: string;
+  examDate: string;
+  status: DimensionProgressStatus;
+  masteryRate: number | null;
+  questionCount: number;
+  maxPoints: number;
+  participantCount: number;
+  unansweredRate: number | null;
+}
+
+export function buildDimensionProgressPoint(exam: DimensionExamInput, dimensionId: string): DimensionProgressPoint {
+  const questions = exam.questions.filter((question) => question.dimensionId === dimensionId);
+  const base = {
+    examId: exam.examId,
+    examName: exam.examName,
+    examDate: exam.examDate,
+    questionCount: questions.length,
+    maxPoints: Number(questions.reduce((sum, question) => sum + question.maxPoints, 0).toFixed(2)),
+    participantCount: exam.participantIds.length,
+  };
+  if (!questions.length) return { ...base, status: 'notMeasured', masteryRate: null, unansweredRate: null };
+
+  const questionIds = new Set(questions.map((question) => question.id));
+  const scores = exam.scores.filter((score) => questionIds.has(score.questionId) && exam.participantIds.includes(score.studentId));
+  if (!scores.length || !exam.participantIds.length || !base.maxPoints) return { ...base, status: 'detailUnavailable', masteryRate: null, unansweredRate: null };
+
+  const scoreByStudent = new Map<string, Map<string, number>>();
+  for (const score of scores) {
+    const byQuestion = scoreByStudent.get(score.studentId) || new Map<string, number>();
+    byQuestion.set(score.questionId, score.score);
+    scoreByStudent.set(score.studentId, byQuestion);
+  }
+  const masteryValues = exam.participantIds.map((studentId) => {
+    const byQuestion = scoreByStudent.get(studentId) || new Map<string, number>();
+    return questions.reduce((sum, question) => sum + Number(byQuestion.get(question.id) || 0), 0) / base.maxPoints * 100;
+  });
+  const unanswered = exam.participantIds.reduce((sum, studentId) => {
+    const byQuestion = scoreByStudent.get(studentId) || new Map<string, number>();
+    return sum + questions.filter((question) => !byQuestion.has(question.id)).length;
+  }, 0);
+  return {
+    ...base,
+    status: 'measured',
+    masteryRate: Number((masteryValues.reduce((sum, value) => sum + value, 0) / masteryValues.length).toFixed(2)),
+    unansweredRate: Number((unanswered / (exam.participantIds.length * questions.length) * 100).toFixed(2)),
+  };
+}
+
 export interface StudentProgressExamRow extends ProgressTrackingPoint {
   participationStatus: StudentParticipationStatus;
   studentScore: number | null;

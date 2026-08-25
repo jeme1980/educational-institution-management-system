@@ -9,10 +9,11 @@ import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-pan
 import { UiSectionCardComponent } from '../../../shared/components/ui-section-card/ui-section-card.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { ActionCenterResponse, ActionItem } from '../models/action-center.model';
 import { actionTypeLabel, groupActionItems } from './action-center.helpers';
 
-@Component({ selector: 'app-action-center', standalone: true, imports: [CommonModule, FormsModule, MatIconModule, UiPageHeaderComponent, UiFilterPanelComponent, UiSectionCardComponent, UiStatCardComponent, UiButtonComponent], templateUrl: './action-center.component.html', styleUrl: './action-center.component.css', changeDetection: ChangeDetectionStrategy.OnPush })
+@Component({ selector: 'app-action-center', standalone: true, imports: [CommonModule, FormsModule, MatIconModule, UiPageHeaderComponent, UiFilterPanelComponent, UiSectionCardComponent, UiStatCardComponent, UiButtonComponent, UiSelectComponent], templateUrl: './action-center.component.html', styleUrl: './action-center.component.css', changeDetection: ChangeDetectionStrategy.OnPush })
 export class ActionCenterComponent implements OnInit {
   private readonly api = inject(ApiService); private readonly router = inject(Router);
   readonly years = signal<any[]>([]); readonly subjects = signal<any[]>([]); readonly groups = signal<any[]>([]); readonly response = signal<ActionCenterResponse | null>(null); readonly loading = signal(false); readonly error = signal('');

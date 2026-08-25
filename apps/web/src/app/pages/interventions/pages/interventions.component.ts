@@ -103,6 +103,7 @@ export class InterventionsComponent {
   toggleSkill(id: string): void { this.selectedSkillIds.update(values => values.includes(id) ? values.filter(value => value !== id) : [...values, id]); }
   toggleStudent(id: string): void { this.selectedStudentIds.update(values => values.includes(id) ? values.filter(value => value !== id) : [...values, id]); }
   open(item: InterventionListItem): void { void this.router.navigate(['/interventions', item.id]); }
+  openCreate(): void { void this.router.navigate(['/interventions/new']); }
   goList(): void { void this.router.navigate(['/interventions']); }
   async updateStatus(status: InterventionStatus): Promise<void> { const item = this.detail(); if (!item) return; const result = await this.api.updateIntervention(item.id, { status }); if (result) this.detail.set({ ...item, status }); }
 }

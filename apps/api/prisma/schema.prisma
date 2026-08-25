@@ -274,6 +274,7 @@ model Institution {
   institutionProfiles     InstitutionProfile[]
   auditLogs               AuditLog[]
   subscriptions           InstitutionSubscription[]
+  interventions           Intervention[]
 
   @@index([statusId])
   @@index([regionId])
@@ -323,6 +324,7 @@ model AcademicYear {
   studyGroups         StudyGroup[]
   exams               Exam[]
   institutionProfiles InstitutionProfile[]
+  interventions       Intervention[]
 
   @@unique([institutionId, yearLabel])
   @@unique([institutionId, id])
@@ -883,6 +885,7 @@ model StudentEnrollment {
   studentFeature     StudentFeature?     @relation(fields: [studentFeatureId], references: [id], onDelete: Restrict)
   studyGroupStudents StudyGroupStudent[]
   attendanceRecords  Attendance[]
+  interventionStudents InterventionStudent[]
 
   @@unique([institutionId, academicYearId, studentId])
   @@unique([institutionId, id])
@@ -1041,6 +1044,7 @@ model Subject {
   skills                  Skill[]
   studyGroups             StudyGroup[]
   exams                   Exam[]
+  interventions           Intervention[]
 
   @@unique([institutionId, academicYearId, id])
   @@map("subjects")
@@ -1090,7 +1094,9 @@ model Skill {
   subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   gradeLevel     GradeLevel     @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
   examQuestions  ExamQuestion[]
+  interventionSkills InterventionSkill[]
 
+  @@unique([institutionId, id])
   @@index([institutionId, academicYearId, subjectId])
   @@index([gradeLevelId])
   @@map("skills")
@@ -1151,6 +1157,7 @@ model StudyGroup {
   staffAssignment   StaffAssignment?    @relation(fields: [institutionId, academicYearId, staffAssignmentId], references: [institutionId, academicYearId, id], onDelete: Restrict)
   students          StudyGroupStudent[]
   examGroups        ExamStudyGroup[]
+  interventions     Intervention[]
 
   @@unique([institutionId, id])
   @@index([institutionId, academicYearId, subjectId])
@@ -1201,12 +1208,79 @@ model Exam {
   examGroups         ExamStudyGroup[]
   examQuestions      ExamQuestion[]
   studentExamResults StudentExamResult[]
+  baselineInterventions Intervention[] @relation("InterventionBaselineExam")
 
   @@unique([institutionId, id])
   @@index([institutionId, academicYearId, academicPeriodId])
   @@index([subjectId])
   @@index([examTypeId])
   @@map("exams")
+}
+
+model Intervention {
+  id                String   @id @default(uuid()) @db.Uuid
+  institutionId     String   @db.Uuid
+  academicYearId    String   @db.Uuid
+  subjectId         String   @db.Uuid
+  studyGroupId      String   @db.Uuid
+  baselineExamId    String   @db.Uuid
+  title             String
+  activity          String?  @db.Text
+  plannedDuration   String?  @db.VarChar(120)
+  startDate         DateTime @db.Date
+  endDate           DateTime? @db.Date
+  successCriterion  Json?
+  status            String   @default("planned") @db.VarChar(20)
+  createdBy         String?  @db.Uuid
+  updatedBy         String?  @db.Uuid
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  archivedAt        DateTime?
+  institution       Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  subject           Subject @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  studyGroup        StudyGroup @relation(fields: [institutionId, studyGroupId], references: [institutionId, id], onDelete: Restrict)
+  baselineExam      Exam @relation("InterventionBaselineExam", fields: [institutionId, baselineExamId], references: [institutionId, id], onDelete: Restrict)
+  students          InterventionStudent[]
+  skills            InterventionSkill[]
+
+  @@unique([institutionId, id])
+  @@index([institutionId, academicYearId, subjectId, studyGroupId])
+  @@index([institutionId, baselineExamId])
+  @@index([institutionId, status, archivedAt])
+  @@map("interventions")
+}
+
+model InterventionStudent {
+  id                  String @id @default(uuid()) @db.Uuid
+  institutionId       String @db.Uuid
+  interventionId      String @db.Uuid
+  studentEnrollmentId String @db.Uuid
+  createdAt           DateTime @default(now())
+  intervention        Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
+  studentEnrollment   StudentEnrollment @relation(fields: [institutionId, studentEnrollmentId], references: [institutionId, id], onDelete: Restrict)
+
+  @@unique([interventionId, studentEnrollmentId])
+  @@index([institutionId, interventionId])
+  @@index([institutionId, studentEnrollmentId])
+  @@map("intervention_students")
+}
+
+model InterventionSkill {
+  id                String @id @default(uuid()) @db.Uuid
+  institutionId     String @db.Uuid
+  interventionId    String @db.Uuid
+  skillId           String @db.Uuid
+  baselineMastery   Decimal? @db.Decimal(5, 2)
+  targetMastery     Decimal? @db.Decimal(5, 2)
+  createdAt         DateTime @default(now())
+  intervention      Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
+  skill             Skill @relation(fields: [institutionId, skillId], references: [institutionId, id], onDelete: Restrict)
+
+  @@unique([interventionId, skillId])
+  @@index([institutionId, interventionId])
+  @@index([institutionId, skillId])
+  @@map("intervention_skills")
 }
 
 model ExamStudyGroup {

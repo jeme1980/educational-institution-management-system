@@ -133,7 +133,7 @@ export const routes: Routes = [
     path: 'interventions/new',
     title: 'خطة تدخل جديدة',
     canActivate: [authGuard, permissionGuard],
-    data: { requiredPermission: 'exams:create' },
+    data: { requiredPermission: 'exams:read' },
     loadComponent: () => import('./pages/interventions/pages/interventions').then(m => m.InterventionsComponent),
   },
   {

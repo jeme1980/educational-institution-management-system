@@ -20,4 +20,3 @@ export interface InterventionDetail extends InterventionListItem {
   students: Array<{ id: string; studentEnrollmentId: string; studentEnrollment?: { student?: { firstNameAr?: string; lastNameAr?: string } } }>;
   skills: Array<{ id: string; skillId: string; baselineMastery?: number | null; targetMastery?: number | null; skill?: { nameAr?: string } }>;
 }
-

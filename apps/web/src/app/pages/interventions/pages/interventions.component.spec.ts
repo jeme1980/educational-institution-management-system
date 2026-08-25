@@ -8,7 +8,6 @@ describe('Interventions workspace actions', () => {
   it('wires the new-plan button to the existing create route', () => {
     expect(template).toContain('(activated)="openCreate()"');
     expect(source).toContain('openCreate(): void');
-    expect(source).toContain("this.router.navigate(['/interventions/new'])");
+    expect(source).toContain("this.router.navigate(['/exam-analysis'], { queryParams: { tab: 'intervention' } })");
   });
 });
-

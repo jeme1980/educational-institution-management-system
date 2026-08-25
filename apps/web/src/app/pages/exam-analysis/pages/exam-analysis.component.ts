@@ -460,6 +460,7 @@ export class ExamAnalysisComponent implements OnInit {
   }
 
   async ngOnInit() {
+    if (this.route.snapshot.queryParamMap.get('tab') === 'intervention') this.activeTab.set('intervention');
     try {
       await this.dataService.initializeLookups();
       const requestedExamId = this.routeExamId();

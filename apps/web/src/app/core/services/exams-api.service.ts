@@ -183,6 +183,15 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
+  async loadSchoolDashboard(params: { academicYearId: string; subjectId?: string }) {
+    try {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][]).toString();
+      const res = await this.apiFetch(`/api/school-dashboard?${query}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load school dashboard', e); }
+    return null;
+  }
+
   async loadProgressTrackingStudyGroups(params: { academicYearId: string; subjectId: string }) {
     try {
       const query = new URLSearchParams(params).toString();

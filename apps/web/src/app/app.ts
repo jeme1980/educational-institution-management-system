@@ -20,6 +20,7 @@ export interface SchoolNavItem {
 
 export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
   { path: '/dashboard', label: 'لوحة القيادة', icon: 'grid_view' },
+  { path: '/school-dashboard', label: 'لوحة المدرسة', icon: 'insights', permission: 'exams:read' },
   { path: '/students', label: 'قائمة الطلاب', icon: 'groups', permission: 'students:read' },
   { path: '/attendance', label: 'الحضور والغياب', icon: 'event_available', permission: 'attendance:read' },
   { path: '/enrollments', label: 'بيانات الالتحاق', icon: 'badge', permission: 'students:update' },

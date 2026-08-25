@@ -31,6 +31,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/students/pages/students').then(m => m.StudentsComponent),
   },
   {
+    path: 'school-dashboard',
+    canActivate: [authGuard, permissionGuard],
+    title: 'لوحة المدرسة',
+    data: { requiredPermission: 'exams:read' },
+    loadComponent: () => import('./pages/school-dashboard/pages/school-dashboard').then(m => m.SchoolDashboardComponent),
+  },
+  {
     path: 'attendance',
     canActivate: [authGuard, permissionGuard],
     title: 'الحضور والغياب',

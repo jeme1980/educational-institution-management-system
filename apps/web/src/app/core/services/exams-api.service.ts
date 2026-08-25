@@ -174,6 +174,15 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
+  async loadActionCenter(params: { academicYearId: string; subjectId?: string; studyGroupId?: string }) {
+    try {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][]).toString();
+      const res = await this.apiFetch(`/api/action-center?${query}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load action center', e); }
+    return null;
+  }
+
   async loadProgressTrackingStudyGroups(params: { academicYearId: string; subjectId: string }) {
     try {
       const query = new URLSearchParams(params).toString();

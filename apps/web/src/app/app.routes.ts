@@ -130,6 +130,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/progress-tracking/pages/progress-tracking').then(m => m.ProgressTrackingComponent),
   },
   {
+    path: 'action-center',
+    title: 'مركز المتابعة التربوية',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'exams:read' },
+    loadComponent: () => import('./pages/action-center/pages/action-center').then(m => m.ActionCenterComponent),
+  },
+  {
     path: 'interventions/new',
     title: 'خطة تدخل جديدة',
     canActivate: [authGuard, permissionGuard],

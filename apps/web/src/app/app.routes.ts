@@ -130,6 +130,27 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/progress-tracking/pages/progress-tracking').then(m => m.ProgressTrackingComponent),
   },
   {
+    path: 'interventions/new',
+    title: 'خطة تدخل جديدة',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'exams:create' },
+    loadComponent: () => import('./pages/interventions/pages/interventions').then(m => m.InterventionsComponent),
+  },
+  {
+    path: 'interventions/:id',
+    title: 'متابعة خطة التدخل',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'exams:read' },
+    loadComponent: () => import('./pages/interventions/pages/interventions').then(m => m.InterventionsComponent),
+  },
+  {
+    path: 'interventions',
+    title: 'خطط التدخل',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'exams:read' },
+    loadComponent: () => import('./pages/interventions/pages/interventions').then(m => m.InterventionsComponent),
+  },
+  {
     path: 'academic-years',
     title: 'السنوات الدراسية',
     canActivate: [authGuard, permissionGuard],

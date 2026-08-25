@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, s
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
@@ -202,6 +202,7 @@ export class ExamAnalysisComponent implements OnInit {
   private dataService = inject(ExamAnalysisDataService);
   private calculator = inject(ExamAnalysisCalculatorService);
   private route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly routeExamId = signal(this.route.snapshot.paramMap.get('examId') || '');
 
   loading = signal(true);
@@ -442,6 +443,21 @@ export class ExamAnalysisComponent implements OnInit {
   topInterventionLevelId = computed(() => [...this.levels()].sort((left, right) => right.min - left.min)[0]?.id || '');
   followUpStudentCount = computed(() => countFollowUpStudents(this.interventionGroups(), this.topInterventionLevelId()));
   interventionGroupCount = computed(() => this.interventionGroups().filter(group => group.students.length > 0).length);
+
+  saveInterventionPlan(group: InterventionGroupView): void {
+    const data = this.dataset();
+    const groups = data?.groups || [];
+    const studyGroupId = this.selectedGroupId() !== 'ALL' ? this.selectedGroupId() : groups.length === 1 ? groups[0]?.studyGroupId : '';
+    if (!data || !studyGroupId) {
+      this.error.set('اختر شعبة واحدة قبل حفظ خطة التدخل للمتابعة.');
+      return;
+    }
+    void this.router.navigate(['/interventions/new'], { queryParams: {
+      academicYearId: data.exam.academicYearId, subjectId: data.exam.subjectId, studyGroupId, baselineExamId: data.exam.id,
+      title: `خطة ${group.name}`, activity: group.activity, duration: group.duration,
+      studentIds: group.students.map(student => student.studentId).join(','), skillIds: group.targetedSkills.map(skill => skill.id).join(','),
+    }});
+  }
 
   async ngOnInit() {
     try {

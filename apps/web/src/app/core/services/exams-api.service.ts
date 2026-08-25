@@ -201,6 +201,47 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
+  async loadInterventions(params: { academicYearId?: string; subjectId?: string; studyGroupId?: string; status?: string } = {}) {
+    try {
+      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][]).toString();
+      const res = await this.apiFetch(`/api/interventions${query ? `?${query}` : ''}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load interventions', e); }
+    return [];
+  }
+
+  async loadIntervention(id: string) {
+    try {
+      const res = await this.apiFetch(`/api/interventions/${id}`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load intervention', e); }
+    return null;
+  }
+
+  async loadInterventionOutcomes(id: string) {
+    try {
+      const res = await this.apiFetch(`/api/interventions/${id}/outcomes`, { headers: this.headers });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to load intervention outcomes', e); }
+    return null;
+  }
+
+  async createIntervention(payload: Record<string, unknown>) {
+    try {
+      const res = await this.apiFetch('/api/interventions', { method: 'POST', headers: this.headers, body: JSON.stringify(payload) });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to create intervention', e); }
+    return null;
+  }
+
+  async updateIntervention(id: string, payload: Record<string, unknown>) {
+    try {
+      const res = await this.apiFetch(`/api/interventions/${id}`, { method: 'PATCH', headers: this.headers, body: JSON.stringify(payload) });
+      if (res.ok) return await res.json();
+    } catch (e) { console.error('Failed to update intervention', e); }
+    return null;
+  }
+
   async saveExamResults(examId: string, results: any[]) {
     try {
       const res = await this.apiFetch(`/api/exams/${examId}/results`, {

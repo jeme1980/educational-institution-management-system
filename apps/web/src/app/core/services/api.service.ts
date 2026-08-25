@@ -185,6 +185,11 @@ export class ApiService extends BaseApiService {
   loadProgressTrackingStudyGroups(params: { academicYearId: string; subjectId: string }) { return this.examsApi.loadProgressTrackingStudyGroups(params); }
   loadProgressTrackingDimensions(params: { academicYearId: string; subjectId: string; studyGroupId: string; dimension: 'skill' | 'topic'; dimensionId?: string }) { return this.examsApi.loadProgressTrackingDimensions(params); }
   loadStudentProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string; studentId: string }) { return this.examsApi.loadStudentProgressTracking(params); }
+  loadInterventions(params: { academicYearId?: string; subjectId?: string; studyGroupId?: string; status?: string } = {}) { return this.examsApi.loadInterventions(params); }
+  loadIntervention(id: string) { return this.examsApi.loadIntervention(id); }
+  loadInterventionOutcomes(id: string) { return this.examsApi.loadInterventionOutcomes(id); }
+  createIntervention(payload: Record<string, unknown>) { return this.examsApi.createIntervention(payload); }
+  updateIntervention(id: string, payload: Record<string, unknown>) { return this.examsApi.updateIntervention(id, payload); }
   saveExamResults(examId: string, results: any[]) { return this.examsApi.saveExamResults(examId, results); }
   importExamResults(examId: string, file: File) { return this.examsApi.importExamResults(examId, file); }
   loadExamTypes() { return this.examsApi.loadExamTypes(); }

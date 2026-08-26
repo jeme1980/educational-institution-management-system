@@ -39,6 +39,7 @@
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "db:bootstrap": "npm run build && node dist/db/run-production-bootstrap.js",
     "db:seed:dev": "npm run build && node dist/db/run-seed.js",
+    "seed:demo": "npm run build && node dist/db/run-demo-seed.js",
     "start": "node dist/server.js"
   },
   "prisma": {

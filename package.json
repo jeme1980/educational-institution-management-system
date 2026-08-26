@@ -27,6 +27,7 @@
     "db:migrate:deploy": "npm run db:migrate:deploy --workspace @school-management-system/api",
     "db:bootstrap": "npm run db:bootstrap --workspace @school-management-system/api",
     "db:seed:dev": "npm run db:seed:dev --workspace @school-management-system/api",
+    "seed:demo": "npm run seed:demo --workspace @school-management-system/api",
     "test": "npm run test --workspace @school-management-system/web",
     "lint": "npm run lint --workspace @school-management-system/web"
   },

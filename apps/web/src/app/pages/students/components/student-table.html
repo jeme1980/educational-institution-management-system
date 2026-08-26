@@ -299,7 +299,7 @@
                 } @else {
                   <div [class]="student.genderId === 'gnd-female' || student.genderId === 'female'
                     ? 'flex h-12 w-12 items-center justify-center rounded-full border border-danger-container bg-danger-container font-bold text-danger'
-                    : 'flex h-12 w-12 items-center justify-center rounded-full border border-primary-container bg-primary-container font-bold text-primary'">
+                    : 'flex h-12 w-12 items-center justify-center rounded-full border border-primary-container bg-primary-container font-bold text-on-primary-container'">
                     <mat-icon class="text-lg leading-none block">{{ getGenderIcon(student.genderId) }}</mat-icon>
                   </div>
                 }
@@ -339,31 +339,21 @@
                 <div class="font-bold text-on-surface">{{ getInstitutionName(student.institutionId) }}</div>
                 <div class="text-[10px] text-on-surface-variant">{{ formatDate(student.birthDate) }}</div>
               </div>
-              <div class="flex items-center gap-1">
-                <button
-                  (click)="viewDetails.emit(student)"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  title="عرض التفاصيل"
-                >
-                  <mat-icon aria-hidden="true" class="text-base">visibility</mat-icon>
-                </button>
-                <button
-                  [hidden]="!canEdit()"
-                  (click)="edit.emit(student)"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-on-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  title="تعديل"
-                >
-                  <mat-icon aria-hidden="true" class="text-base">edit</mat-icon>
-                </button>
-                <button
-                  [hidden]="!canDelete()"
-                  (click)="delete.emit(student.id)"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md border-0 bg-transparent p-0 text-danger transition-colors hover:bg-danger-container focus-visible:outline focus-visible:outline-2 focus-visible:outline-danger"
-                  title="حذف"
-                >
-                  <mat-icon aria-hidden="true" class="text-base">delete</mat-icon>
-                </button>
-              </div>
+              <ui-table-actions>
+                <ui-button size="sm" variant="ghost" [iconOnly]="true" ariaLabel="عرض تفاصيل الطالب" title="عرض تفاصيل الطالب" (activated)="viewDetails.emit(student)">
+                  <mat-icon aria-hidden="true">visibility</mat-icon>
+                </ui-button>
+                @if (canEdit()) {
+                  <ui-button size="sm" variant="ghost" [iconOnly]="true" ariaLabel="تعديل الطالب" title="تعديل الطالب" (activated)="edit.emit(student)">
+                    <mat-icon aria-hidden="true">edit</mat-icon>
+                  </ui-button>
+                }
+                @if (canDelete()) {
+                  <ui-button size="sm" variant="danger" [iconOnly]="true" ariaLabel="أرشفة الطالب" title="أرشفة الطالب" (activated)="delete.emit(student.id)">
+                    <mat-icon aria-hidden="true">archive</mat-icon>
+                  </ui-button>
+                }
+              </ui-table-actions>
             </div>
           </div>
         }

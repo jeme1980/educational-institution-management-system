@@ -425,7 +425,13 @@ export class StudentsComponent implements OnInit {
   }
 
   async deleteStudent(id: string) {
-    if (await this.confirmDialog.confirm({ title: 'إزالة الطالب', message: 'هل أنت متأكد من إزالة هذا الطالب وحفظ حالة الإلغاء بالسجل؟', variant: 'danger' })) {
+    if (await this.confirmDialog.confirm({
+      title: 'أرشفة الطالب',
+      message: 'هل تريد أرشفة هذا الطالب؟ سيتم إخفاؤه من السجل النشط مع الاحتفاظ ببياناته التاريخية.',
+      confirmText: 'أرشفة',
+      cancelText: 'إلغاء',
+      variant: 'danger',
+    })) {
       this.studentStateService.deleteStudent(id).subscribe({
         next: (ok) => {
           if (ok) {

@@ -98,6 +98,14 @@ export async function seedSchoolAnalyticsDemo(): Promise<void> {
     }
   }
 
+  for (const exam of exams) {
+    const questions = await db.examQuestion.findMany({ where: { institutionId: ids.institution, examId: exam.id }, orderBy: { questionNumber: 'asc' }, select: { id: true } });
+    for (const student of students) {
+      const studentIndex = students.findIndex((item: any) => item.id === student.id);
+      await db.studentQuestionScore.createMany({ data: questions.map((question: any, questionIndex: number) => ({ institutionId: ids.institution, examQuestionId: question.id, studentId: student.id, score: Math.min(25, 10 + ((studentIndex + questionIndex + exams.findIndex((item: any) => item.id === exam.id)) % 4) * 5) })), skipDuplicates: true });
+    }
+  }
+
   const baseline = exams[0];
   const intervention = { id: id('1009', 1), institutionId: ids.institution, academicYearId: ids.academicYear, subjectId: subjects[0].id, studyGroupId: groups[0].id, baselineExamId: baseline.id, title: 'خطة دعم مهارات القياس', activity: 'تدريب متدرج ومتابعة أسبوعية', plannedDuration: '4 أسابيع', startDate: new Date('2026-01-10'), successCriterion: { targetMasteryPercentage: 70 }, status: 'active' };
   await db.intervention.upsert({ where: { id: intervention.id }, update: intervention, create: intervention });

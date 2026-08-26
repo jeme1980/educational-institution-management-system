@@ -34,65 +34,9 @@
     </div>
   </ui-page-header>
 
-  <!-- Page Header -->
-  <div class="legacy-page-header hidden flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-    <div>
-      <span class="text-[11px] font-extrabold text-[#00236f] bg-[#00236f]/5 px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">بوابة شؤون الطلاب</span>
-      <h1 class="text-2xl md:text-3xl font-extrabold text-slate-800 tracking-tight">إدارة قيد وتسجيل الطلاب</h1>
-      <p class="text-xs md:text-sm text-slate-500 mt-1">توزيع وتخصيص الطلاب على الصفوف والشعب الدراسية وتتبع الطاقة الاستيعابية بذكاء وكفاءة.</p>
-    </div>
-    <div class="flex items-center gap-3 w-full sm:w-auto">
-      <button [hidden]="!canCreateEnrollments()"
-        type="button"
-        (click)="exportEnrolledList()" 
-        class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-all font-bold text-xs shadow-xs active:scale-95 cursor-pointer"
-      >
-        <mat-icon class="text-[18px]">download</mat-icon>
-        <span>تصدير القوائم (CSV)</span>
-      </button>
-      
-      <button 
-        type="button"
-        (click)="openCreateModal()" 
-        class="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-[#00236f] hover:bg-[#1e3a8a] text-white px-5 py-2.5 rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95 cursor-pointer font-bold text-xs"
-      >
-        <mat-icon class="text-[18px]">person_add</mat-icon>
-        <span>تسجيل يدوي مخصص</span>
-      </button>
-    </div>
-  </div>
-
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
     <ui-stat-card label="إجمالي الطلاب المسجلين" [value]="totalActiveEnrollments()" helper="نشطون في السنة الدراسية" icon="how_to_reg" tone="success" />
     <ui-stat-card label="طلاب بانتظار التوزيع" [value]="totalUnassignedStudents()" helper="يحتاجون إلى شعبة دراسية" icon="pending_actions" tone="warning" />
-  </div>
-
-  <!-- Quick Metrics Dashboard (Bento Grid) -->
-  <div class="legacy-enrollment-metrics hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
-    <!-- Metric 1: Total Enrolled -->
-    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
-      <div class="space-y-1">
-        <span class="text-xs font-bold text-slate-400">إجمالي الطلاب المقيدين</span>
-        <div class="text-2xl font-black text-slate-800">{{ totalActiveEnrollments() }}</div>
-        <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md inline-block">نشط في السنة الدراسية</span>
-      </div>
-      <div class="h-12 w-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-        <mat-icon class="text-xl">how_to_reg</mat-icon>
-      </div>
-    </div>
-
-    <!-- Metric 2: Waiting Assignment -->
-    <div class="bg-white border border-slate-200/80 rounded-2xl p-5 flex items-center justify-between shadow-xs hover:border-[#00236f]/30 transition-all duration-300">
-      <div class="space-y-1">
-        <span class="text-xs font-bold text-slate-400">بانتظار التخصيص والفرز</span>
-        <div class="text-2xl font-black text-[#00236f]">{{ totalUnassignedStudents() }}</div>
-        <span class="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-md inline-block">طلاب مستجدين لم يقيدوا بعد</span>
-      </div>
-      <div class="h-12 w-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-        <mat-icon class="text-xl">pending_actions</mat-icon>
-      </div>
-    </div>
-
   </div>
 
   <!-- Global Filters & Selector Header Bar -->

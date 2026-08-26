@@ -5,11 +5,12 @@ import { ApiService, Student } from '../../../core/services/api.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-student-table',
-  imports: [CommonModule, MatIconModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent],
+  imports: [CommonModule, MatIconModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent, UiFilterPanelComponent],
   templateUrl: './student-table.html',
   styleUrl: './student-table.css',
 })

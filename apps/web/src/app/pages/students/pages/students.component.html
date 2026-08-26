@@ -1,4 +1,4 @@
-<div class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-screen-2xl flex-col gap-6 p-4 md:p-6" id="students-container" dir="rtl">
+<div class="mx-auto flex min-h-[calc(100vh-4rem)] max-w-[90rem] flex-col gap-5 p-3 md:p-4" id="students-container" dir="rtl">
   <!-- Page Header Area -->
   <app-student-header
     (exportTemplate)="exportTemplate()"
@@ -12,7 +12,7 @@
   <app-student-metrics
     [totalCount]="apiService.studentsTotal()"
     [activeCount]="activeStudentsCount()"
-    [filteredCount]="filteredStudents().length"
+    [filteredCount]="studentStateService.totalItems()"
     [guardiansCount]="studentsWithGuardiansCount()"
   ></app-student-metrics>
 
@@ -34,11 +34,11 @@
     [canEdit]="canUpdateStudents()"
     [canDelete]="canDeleteStudents()"
     (searchChange)="onSearchChange($event)"
-    (classFilterChange)="classFilter.set($event); currentPage.set(1)"
-    (statusFilterChange)="statusFilter.set($event); currentPage.set(1)"
-    (genderFilterChange)="genderFilter.set($event); currentPage.set(1)"
-    (sortByChange)="sortBy.set($event)"
-    (sortOrderChange)="sortOrder.set($event)"
+    (classFilterChange)="onClassFilterChange($event)"
+    (statusFilterChange)="onStatusFilterChange($event)"
+    (genderFilterChange)="onGenderFilterChange($event)"
+    (sortByChange)="onSortByChange($event)"
+    (sortOrderChange)="onSortOrderChange($event)"
     (pageChange)="onPageChange($event)"
     (pageSizeChange)="onPageSizeChange($event)"
     (viewDetails)="viewStudentDetails($event)"

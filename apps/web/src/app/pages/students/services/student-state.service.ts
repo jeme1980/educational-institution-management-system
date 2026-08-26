@@ -25,7 +25,7 @@ export class StudentStateService {
   isLoading = this.apiService.isLoading;
   totalItems = signal(0);
   currentPage = signal(1);
-  pageSize = signal(25);
+  pageSize = signal(10);
   totalPages = signal(1);
   private studentsRequestVersion = 0;
 
@@ -46,7 +46,7 @@ export class StudentStateService {
     this.isLoading.set(true);
     const params = new URLSearchParams({
       page: String(options.page ?? 1),
-      limit: String(options.pageSize ?? 25),
+      limit: String(options.pageSize ?? 10),
     });
     if (search) params.set('search', search);
     if (options.classId) params.set('classId', options.classId);
@@ -75,7 +75,7 @@ export class StudentStateService {
         if (Array.isArray(payload)) {
           this.totalItems.set(payload.length);
           this.currentPage.set(options.page ?? 1);
-          this.pageSize.set(options.pageSize ?? 25);
+          this.pageSize.set(options.pageSize ?? 10);
           this.totalPages.set(1);
           return payload;
         }
@@ -83,7 +83,7 @@ export class StudentStateService {
         const list = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []);
         const total = pagination?.total ?? pagination?.totalItems ?? payload.total ?? payload.totalItems ?? list.length;
         const page = pagination?.page ?? payload.page ?? options.page ?? 1;
-        const limit = pagination?.limit ?? payload.limit ?? options.pageSize ?? 25;
+        const limit = pagination?.limit ?? payload.limit ?? options.pageSize ?? 10;
         const reportedPages = Number(pagination?.totalPages ?? payload.totalPages ?? 0);
         const totalPages = Math.max(reportedPages, Math.max(1, Math.ceil(Number(total) / Number(limit))));
         this.totalItems.set(Number(total));

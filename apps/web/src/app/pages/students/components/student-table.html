@@ -37,7 +37,7 @@
   </div>
 
   <!-- Advanced Interactive Filters Section -->
-  <div class="rounded-2xl border border-surface-border bg-surface-container-lowest p-4">
+  <ui-filter-panel title="تصفية الطلاب" icon="filter_alt" resetLabel="مسح الفلاتر" (reset)="clearFilters()">
     <div class="mb-4 flex items-center justify-between gap-4 border-b border-surface-border pb-3">
       <div class="flex items-center gap-2 text-sm font-bold text-on-surface">
         <mat-icon class="text-base text-primary">filter_alt</mat-icon>
@@ -113,7 +113,7 @@
       </select>
     </div>
     </div>
-  </div>
+  </ui-filter-panel>
 
   <!-- Active Applied Filter Tags/Chips -->
   @if (hasActiveFilters()) {

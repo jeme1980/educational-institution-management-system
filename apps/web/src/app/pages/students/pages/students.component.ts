@@ -45,7 +45,7 @@ export class StudentsComponent implements OnInit {
   sortBy = signal<string>('nameAr');
   sortOrder = signal<'asc' | 'desc'>('asc');
   currentPage = signal<number>(1);
-  pageSize = signal<number>(25);
+  pageSize = signal<number>(10);
 
   showModal = signal<boolean>(false);
   isEditing = signal<boolean>(false);
@@ -185,6 +185,8 @@ export class StudentsComponent implements OnInit {
   onClassFilterChange(value: string) { this.classFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
   onStatusFilterChange(value: string) { this.statusFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
   onGenderFilterChange(value: string) { this.genderFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
+  onSortByChange(value: string) { this.sortBy.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
+  onSortOrderChange(value: 'asc' | 'desc') { this.sortOrder.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
   onPageChange(page: number) { this.currentPage.set(page); this.loadCurrentPage(); }
   onPageSizeChange(size: number) { this.pageSize.set(size); this.currentPage.set(1); this.loadCurrentPage(); }
   onClearFilters() {

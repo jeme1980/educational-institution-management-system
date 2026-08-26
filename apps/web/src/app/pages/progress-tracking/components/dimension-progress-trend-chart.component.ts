@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData } from 'chart.js';
-import { academicChartOptions, readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
+import { readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
 import { AcademicChartThemeService } from '../../../shared/charts/academic-chart-theme.service';
 import { DimensionProgressPoint } from '../models/progress-tracking.model';
+import { formatProgressExamAxisLabel, progressTrendChartOptions } from './progress-trend-chart.options';
 
 @Component({
   selector: 'app-dimension-progress-trend-chart',
@@ -21,11 +22,11 @@ export class DimensionProgressTrendChartComponent {
   readonly data = computed<ChartData<'line'>>(() => {
     const colors = readAcademicChartColors();
     const points = this.points();
-    return { labels: points.map((point) => point.examName), datasets: [{ label: `إتقان ${this.dimensionName() || 'البعد'}`, data: points.map((point) => point.masteryRate), borderColor: colors.primary, backgroundColor: colors.primary, tension: 0.25, spanGaps: false }] };
+    return { labels: points.map((point) => formatProgressExamAxisLabel(point.examName)), datasets: [{ label: `إتقان ${this.dimensionName() || 'البعد'}`, data: points.map((point) => point.masteryRate), borderColor: colors.primary, backgroundColor: colors.primary, tension: 0.25, spanGaps: false }] };
   });
   readonly options = computed(() => {
-    const base = academicChartOptions<'line'>(this.theme, this.ariaLabel());
+    const base = progressTrendChartOptions(this.theme, this.ariaLabel(), this.points().map((point) => point.examName));
     const colors = readAcademicChartColors();
-    return { ...base, plugins: { ...base.plugins, legend: { display: true, rtl: true, textDirection: 'rtl', labels: { color: colors.onSurface } }, tooltip: { ...base.plugins?.tooltip, callbacks: { label: (context: any) => { const point = this.points()[context.dataIndex]; return point ? `الإتقان: ${point.masteryRate ?? 'غير متاح'}%` : ''; }, afterBody: (contexts: any[]) => { const point = this.points()[contexts[0]?.dataIndex]; return point ? [`${point.examDate}`, `الأسئلة: ${point.questionCount}`, `الحد الأقصى: ${point.maxPoints}`, `المشاركون: ${point.participantCount}`, `غير المجاب: ${point.unansweredRate == null ? 'غير متاح' : `${point.unansweredRate}%`}`] : []; } } } }, scales: { x: { ticks: { color: colors.onSurfaceVariant }, grid: { display: false } }, y: { min: 0, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } };
+    return { ...base, plugins: { ...base.plugins, legend: { display: true, rtl: true, textDirection: 'rtl', labels: { color: colors.onSurface } }, tooltip: { ...base.plugins?.tooltip, callbacks: { ...base.plugins?.tooltip?.callbacks, label: (context: any) => { const point = this.points()[context.dataIndex]; return point ? `الإتقان: ${point.masteryRate ?? 'غير متاح'}%` : ''; }, afterBody: (contexts: any[]) => { const point = this.points()[contexts[0]?.dataIndex]; return point ? [`${point.examDate}`, `الأسئلة: ${point.questionCount}`, `الحد الأقصى: ${point.maxPoints}`, `المشاركون: ${point.participantCount}`, `غير المجاب: ${point.unansweredRate == null ? 'غير متاح' : `${point.unansweredRate}%`}`] : []; } } } } };
   });
 }

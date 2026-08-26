@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartData } from 'chart.js';
-import { academicChartOptions, readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
+import { readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
 import { AcademicChartThemeService } from '../../../shared/charts/academic-chart-theme.service';
 import { ProgressTrackingPoint } from '../models/progress-tracking.model';
+import { formatProgressExamAxisLabel, progressTrendChartOptions } from './progress-trend-chart.options';
 
 @Component({
   selector: 'app-progress-trend-chart',
@@ -22,7 +23,7 @@ export class ProgressTrendChartComponent {
     const colors = readAcademicChartColors();
     const points = this.points();
     return {
-      labels: points.map((point) => point.examName),
+      labels: points.map((point) => formatProgressExamAxisLabel(point.examName)),
       datasets: [
         { label: 'متوسط الأداء', data: points.map((point) => point.averagePercentage), borderColor: colors.primary, backgroundColor: colors.primary, tension: 0.25, spanGaps: false },
         { label: 'نسبة النجاح', data: points.map((point) => point.passRate), borderColor: colors.success, backgroundColor: colors.success, tension: 0.25, spanGaps: false },
@@ -30,9 +31,9 @@ export class ProgressTrendChartComponent {
     };
   });
   readonly options = computed(() => {
-    const base = academicChartOptions<'line'>(this.theme, this.ariaLabel());
+    const base = progressTrendChartOptions(this.theme, this.ariaLabel(), this.points().map((point) => point.examName));
     const colors = readAcademicChartColors();
-    return { ...base, plugins: { ...base.plugins, legend: { display: true, rtl: true, textDirection: 'rtl', labels: { color: colors.onSurface } }, tooltip: { ...base.plugins?.tooltip, callbacks: { label: (context: any) => { const point = this.points()[context.dataIndex]; if (!point) return ''; return context.datasetIndex === 0 ? `متوسط الأداء: ${point.averagePercentage ?? 'لا توجد بيانات'}%` : `نسبة النجاح: ${point.passRate ?? 'لا توجد بيانات'}%`; }, afterBody: (contexts: any[]) => { const point = this.points()[contexts[0]?.dataIndex]; return point ? [`${point.examDate}`, `المتقدمون: ${point.participantCount}`, `النوع: ${point.examType?.nameAr || 'غير محدد'}`] : []; } } } }, scales: { x: { ticks: { color: colors.onSurfaceVariant }, grid: { display: false } }, y: { min: 0, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } };
+    return { ...base, plugins: { ...base.plugins, legend: { display: true, rtl: true, textDirection: 'rtl', labels: { color: colors.onSurface } }, tooltip: { ...base.plugins?.tooltip, callbacks: { ...base.plugins?.tooltip?.callbacks, label: (context: any) => { const point = this.points()[context.dataIndex]; if (!point) return ''; return context.datasetIndex === 0 ? `متوسط الأداء: ${point.averagePercentage ?? 'لا توجد بيانات'}%` : `نسبة النجاح: ${point.passRate ?? 'لا توجد بيانات'}%`; }, afterBody: (contexts: any[]) => { const point = this.points()[contexts[0]?.dataIndex]; return point ? [`${point.examDate}`, `المتقدمون: ${point.participantCount}`, `النوع: ${point.examType?.nameAr || 'غير محدد'}`] : []; } } } } };
   });
   onChartClick(event: any): void { const index = event?.active?.[0]?.index; const point = Number.isInteger(index) ? this.points()[index] : null; if (point) this.examSelected.emit(point.examId); }
 }

@@ -196,5 +196,10 @@ export class ProgressTrackingComponent {
   participationLabel(value: StudentParticipationStatus): string { return studentParticipationLabel(value); }
   dimensionStatus(value: DimensionProgressStatus): string { return dimensionStatusLabel(value); }
   dimensionCoverage(measured: number, total: number): string { return dimensionCoverageText(measured, total); }
+  dimensionDisplayName(name: string): string {
+    const subjectName = this.api.subjects().find((subject: any) => subject.id === this.selectedSubjectId())?.nameAr;
+    const suffix = subjectName ? ` — ${subjectName}` : '';
+    return suffix && name.endsWith(suffix) ? name.slice(0, -suffix.length) : name;
+  }
   formatNullable(value: number | null): string { return value == null ? 'غير متاح' : `${value.toFixed(1)}%`; }
 }

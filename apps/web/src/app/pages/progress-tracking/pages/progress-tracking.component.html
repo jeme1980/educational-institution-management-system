@@ -14,6 +14,7 @@
     </div>
   </ui-filter-panel>
   @if (mode() === 'dimensions') {
+    <section class="dimension-controls" aria-label="اختيار نوع وقياس التحليل">
     <nav class="progress-dimension-switch" aria-label="نوع التحليل" role="tablist">
       <button type="button" role="tab" [attr.aria-selected]="dimensionType() === 'skill'" [class.progress-mode-active]="dimensionType() === 'skill'" (click)="onDimensionTypeChange('skill')">المهارات</button>
       <button type="button" role="tab" [attr.aria-selected]="dimensionType() === 'topic'" [class.progress-mode-active]="dimensionType() === 'topic'" (click)="onDimensionTypeChange('topic')">الموضوعات</button>
@@ -22,10 +23,11 @@
       <label class="dimension-selector">{{ dimensionType() === 'skill' ? 'المهارة' : 'الموضوع' }}
         <ui-select [ngModel]="selectedDimension()?.id || ''" (ngModelChange)="onDimensionChange($event)" [disabled]="!dimensionsForSelection().length">
           <option value="">اختر {{ dimensionType() === 'skill' ? 'المهارة' : 'الموضوع' }}</option>
-          @for (dimension of dimensionsForSelection(); track dimension.id) { <option [value]="dimension.id">{{ dimension.name }} — {{ dimensionCoverage(dimension.measuredExamCount, dimension.totalExamCount) }}</option> }
+          @for (dimension of dimensionsForSelection(); track dimension.id) { <option [value]="dimension.id">{{ dimensionDisplayName(dimension.name) }} — {{ dimensionCoverage(dimension.measuredExamCount, dimension.totalExamCount) }}</option> }
         </ui-select>
       </label>
     }
+    </section>
   }
   @if (error()) { <div class="progress-error" role="alert">{{ error() }}</div> }
   @if (loading()) { <ui-empty-state icon="progress_activity" title="جارٍ تحميل مسار التقدم" description="نجهز النتائج للسياق المختار." /> }
@@ -65,7 +67,7 @@
   } @else if (!studentResponse()) {
     <ui-empty-state icon="person_search" title="اختر طالبًا لعرض مسار تقدمه" description="اختر السنة والمادة والشعبة ثم الطالب المرتبط بالشعبة." />
   } @else {
-    <section class="student-identity" aria-label="هوية الطالب"><strong>{{ studentResponse()!.student.firstNameAr }} {{ studentResponse()!.student.lastNameAr }}</strong><span>{{ studentResponse()!.context.studyGroup.nameAr }} · {{ studentResponse()!.context.subject.nameAr }} · {{ studentResponse()!.context.academicYear.yearLabel }}</span></section>
+    <section class="student-identity" aria-label="هوية الطالب"><strong>{{ studentResponse()!.student.firstNameAr }} {{ studentResponse()!.student.lastNameAr }}</strong><div class="student-identity__context" aria-label="سياق الطالب"><span><b>الشعبة</b>{{ studentResponse()!.context.studyGroup.nameAr }}</span><span><b>المادة</b>{{ studentResponse()!.context.subject.nameAr }}</span><span><b>السنة</b><bdi dir="ltr">{{ studentResponse()!.context.academicYear.yearLabel }}</bdi></span></div></section>
     <section class="progress-kpis" aria-label="ملخص مسار الطالب">
       <ui-stat-card label="الامتحانات المكتملة" [value]="studentResponse()!.summary.completedCount" helper="من إجمالي الامتحانات" icon="assignment_turned_in" tone="neutral" />
       <ui-stat-card label="أول أداء مكتمل" [value]="format(studentResponse()!.summary.firstPercentage)" helper="نسبة الطالب" icon="start" tone="primary" />

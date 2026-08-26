@@ -3,10 +3,11 @@
 .progress-mode-switch button { min-height: 2.5rem; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-surface-variant); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
 .progress-mode-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .progress-mode-active { background: var(--primary) !important; color: var(--on-primary) !important; }
+.dimension-controls { display: grid; justify-items: start; gap: var(--space-3); }
 .progress-dimension-switch { display: inline-flex; justify-self: start; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--outline); border-radius: var(--radius-md); background: var(--surface-container-low); }
 .progress-dimension-switch button { min-height: 2.5rem; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--on-surface-variant); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
 .progress-dimension-switch button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.dimension-selector { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.dimension-selector { display: grid; gap: var(--space-1); min-width: min(100%, 32rem); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .progress-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .progress-filters-student { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .progress-filters label { display: grid; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
@@ -17,6 +18,9 @@
 .student-identity { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--outline); border-radius: var(--radius-md); background: var(--surface-container-low); }
 .student-identity strong { color: var(--on-surface); font-size: var(--font-lg); }
 .student-identity span { color: var(--on-surface-variant); font-size: var(--font-sm); }
+.student-identity__context { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); }
+.student-identity__context span { display: inline-flex; gap: var(--space-1); align-items: baseline; }
+.student-identity__context b { color: var(--on-surface); font-size: var(--font-xs); }
 .progress-status { display: inline-flex; padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: var(--success-container); color: var(--on-success-container); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .progress-status-absent { background: var(--warning-container); color: var(--on-warning-container); }
 .progress-status-missing { background: var(--surface-container-high); color: var(--on-surface-variant); }

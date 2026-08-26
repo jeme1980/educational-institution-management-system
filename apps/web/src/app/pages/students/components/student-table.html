@@ -32,27 +32,6 @@
         </button>
       </div>
 
-      <div class="search-field relative w-full md:w-96">
-        <mat-icon class="search-icon text-lg text-on-surface-variant">search</mat-icon>
-        <input
-          type="text"
-          [value]="searchTerm()"
-          (input)="onSearchInput($event)"
-          placeholder="البحث باسم الطالب، الهوية، الهاتف..."
-          class="ui-form-control w-full ps-10 text-right text-sm"
-          id="student-search-input"
-          dir="rtl"
-        />
-        @if (searchTerm()) {
-          <button
-            (click)="searchChange.emit('')"
-            class="absolute start-3 top-1/2 flex -translate-y-1/2 cursor-pointer items-center border-0 bg-transparent p-0 text-on-surface-variant hover:text-on-surface"
-            title="مسح البحث"
-          >
-            <mat-icon class="text-sm">close</mat-icon>
-          </button>
-        }
-      </div>
     </div>
     <span class="rounded-full bg-secondary-container px-3 py-1 text-xs font-bold text-on-secondary">{{ totalCount() }}</span>
   </div>

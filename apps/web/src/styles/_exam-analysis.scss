@@ -729,7 +729,7 @@
 .priority-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 0;
 }
 
 .priority-list li {
@@ -737,7 +737,8 @@
   align-items: center;
   gap: var(--space-3);
   border-bottom: 1px solid var(--outline-variant);
-  padding-bottom: var(--space-3);
+  padding-block: var(--space-3);
+  padding-inline: var(--space-4);
 }
 
 .priority-list li:last-child {
@@ -754,6 +755,7 @@
   background: var(--surface-container);
   color: var(--secondary);
   font-size: var(--font-xs);
+  line-height: 1;
 }
 
 .priority-list li strong {

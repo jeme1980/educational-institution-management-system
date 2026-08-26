@@ -1,5 +1,5 @@
 :host { display: block; }
-.action-center-page { display: grid; gap: var(--space-5); }
+.action-center-page { display: grid; max-width: 90rem; margin-inline: auto; padding: var(--space-4); gap: var(--space-5); color: var(--on-surface); }
 .filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 label { display: grid; gap: var(--space-2); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); }
@@ -23,3 +23,4 @@ h3 { margin: 0; color: var(--on-surface); font-size: var(--font-sm); }
 .error { border: 1px solid var(--danger); border-radius: var(--radius-md); background: var(--danger-container); color: var(--on-danger-container); }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .coverage { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .filters, .coverage, .kpi-grid { grid-template-columns: 1fr; } .action-item { grid-template-columns: 1fr; } .metric { min-width: 0; grid-template-columns: repeat(3, 1fr); align-items: center; } }
+@media (max-width: 480px) { .action-center-page { padding: var(--space-3); } }

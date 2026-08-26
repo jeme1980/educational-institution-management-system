@@ -26,7 +26,6 @@
 .table-head h2 { margin: 0 0 .25rem; color: var(--on-surface); font-size: 1rem; font-weight: 700; }
 .count { border-radius: 999px; background: var(--secondary-container); color: var(--on-secondary); padding: .4rem .75rem; font-size: .75rem; font-weight: 700; }
 .table-scroll { overflow-x: auto; }
-.table-card > .table-scroll:not(.registered-clean-table) { display: none; }
 .registered-clean-table table { width: 100%; min-width: 860px; border-collapse: collapse; text-align: right; }
 th, td { border-bottom: 1px solid var(--outline-variant); padding: .8rem .75rem; color: var(--on-surface-variant); font-size: .8rem; white-space: nowrap; vertical-align: middle; }
 th { background: var(--surface-container-low); color: var(--on-surface-variant); font-size: .75rem; font-weight: 700; }

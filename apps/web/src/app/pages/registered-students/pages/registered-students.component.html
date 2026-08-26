@@ -60,19 +60,6 @@
             </tbody>
           </table>
         </div>
-        <div class="table-scroll"><table><thead><tr><th>اسم المدرسة</th><th>السنة الدراسية</th><th>الاسم الأول</th><th>الاسم الثاني</th><th>الاسم الكامل</th><th>الصف</th><th>الجنس</th><th>تاريخ الميلاد</th><th>مميزات الطالب</th><th>المدينة</th><th>إجراء</th></tr></thead>
-          <tbody>
-            @for (row of rows(); track row.enrollment.id) {
-              <tr><td>{{institution()?.nameAr || '—'}}</td><td>{{year()?.yearLabel || '—'}}</td><td>{{row.student?.firstNameAr || '—'}}</td><td>{{row.student?.lastNameAr || '—'}}</td><td class="strong">{{row.student?.firstNameAr || ''}} {{row.student?.lastNameAr || ''}}</td>
-                <td>@if (editingId() === row.enrollment.id) { <select class="inline-select" [value]="editClassId()" (change)="editClassId.set($any($event.target).value)">@for (item of classes(); track item.id) { <option [value]="item.id">{{item.classCode || (item.gradeLevelInfo?.codeNumber + '-' + item.parallelNumber)}}</option> }</select> } @else { <span class="strong">{{classCode(row) || 'غير محدد'}}</span> }</td>
-                <td>{{genderName(row)}}</td><td>{{row.student?.birthDate ? (row.student.birthDate | date:'yyyy-MM-dd') : '—'}}</td>
-                <td>@if (editingId() === row.enrollment.id) { <select class="inline-select" [value]="editFeatureId()" (change)="editFeatureId.set($any($event.target).value)"><option value="">بدون ميزة</option>@for (item of features(); track item.id) { <option [value]="item.id">{{item.nameAr}}</option> }</select> } @else { {{featureName(row)}} }</td>
-                <td>{{row.student?.town?.nameAr || '—'}}</td>
-                <td>@if (editingId() === row.enrollment.id) { <button class="icon-btn save" type="button" (click)="saveEdit()" [disabled]="saving()"><mat-icon>check</mat-icon></button><button class="icon-btn" type="button" (click)="cancelEdit()"><mat-icon>close</mat-icon></button> } @else { <button class="icon-btn" type="button" (click)="openEdit(row)" title="تعديل الصف والميزة"><mat-icon>edit</mat-icon></button> }</td>
-              </tr>
-            } @empty { <tr><td colspan="11" class="empty">لا توجد سجلات مطابقة للفلاتر.</td></tr> }
-          </tbody>
-        </table></div>
       }
     </section>
   </div>

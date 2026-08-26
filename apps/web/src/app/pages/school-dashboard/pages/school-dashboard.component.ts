@@ -37,7 +37,7 @@ export class SchoolDashboardComponent implements OnInit {
   academicYearId = ''; subjectId = '';
   readonly subjectChartData = computed<ChartData<'bar'>>(() => { const colors = readAcademicChartColors(); const rows = this.data()?.bySubject || []; return { labels: rows.map(row => row.subjectName), datasets: [{ label: 'متوسط الأداء', data: rows.map(row => row.averagePerformance ?? 0), backgroundColor: colors.primary, borderRadius: 6, maxBarThickness: 46 }] }; });
   readonly groupChartData = computed<ChartData<'bar'>>(() => { const colors = readAcademicChartColors(); const rows = this.data()?.byGroup || []; return { labels: rows.map(row => row.name), datasets: [{ label: 'متوسط الأداء', data: rows.map(row => row.averagePerformance ?? 0), backgroundColor: colors.success, borderRadius: 6, maxBarThickness: 46 }] }; });
-  readonly chartOptions = computed(() => { this.theme.revision(); const base = academicChartOptions<'bar'>(this.theme, 'الأداء حسب المادة أو الشعبة'); const colors = readAcademicChartColors(); return { ...base, scales: { x: { ticks: { color: colors.onSurfaceVariant }, grid: { display: false } }, y: { beginAtZero: true, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } }; });
+  readonly chartOptions = computed(() => { this.theme.revision(); const base = academicChartOptions<'bar'>(this.theme, 'الأداء حسب المادة أو الشعبة'); const colors = readAcademicChartColors(); return { ...base, indexAxis: 'y' as const, scales: { x: { beginAtZero: true, max: 100, reverse: true, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } }, y: { ticks: { color: colors.onSurfaceVariant, autoSkip: false }, grid: { display: false } } } }; });
   readonly selectedGroups = computed(() => this.data()?.selectedSubjectGroups || []);
   readonly kpis = computed(() => { const summary = this.data()?.summary; return [
     { label: 'متوسط الأداء العام', value: summary?.schoolAverage === null || summary?.schoolAverage === undefined ? '—' : `${summary.schoolAverage}%`, icon: 'insights', tone: 'primary' as const },
@@ -51,4 +51,5 @@ export class SchoolDashboardComponent implements OnInit {
   async load(): Promise<void> { if (!this.academicYearId) { this.data.set(null); return; } this.loading.set(true); this.error.set(''); const result = await this.api.loadSchoolDashboard({ academicYearId: this.academicYearId, subjectId: this.subjectId || undefined }); if (result) this.data.set(result as SchoolDashboardData); else { this.data.set(null); this.error.set('تعذر تحميل لوحة المدرسة.'); } this.loading.set(false); }
   async yearChanged(): Promise<void> { this.subjectId = ''; await this.load(); }
   async subjectChanged(): Promise<void> { await this.load(); }
+  chartHeight(rowCount: number): number { return Math.min(32, Math.max(18, rowCount * 2.1)); }
 }

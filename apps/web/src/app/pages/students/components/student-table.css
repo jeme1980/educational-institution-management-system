@@ -1,7 +1,5 @@
 :host { display: block; }
 
-#student-table-section ui-filter-panel > .mb-4 { display: none; }
-
 #student-table-section ui-table-actions { flex-wrap: nowrap; gap: var(--space-1); vertical-align: middle; }
 
 #student-table-section ui-button[variant='danger'] {

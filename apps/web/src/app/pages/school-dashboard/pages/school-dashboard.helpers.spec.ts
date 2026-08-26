@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { schoolDashboardKpiValues, selectCurrentAcademicYear, shouldShowGroupComparison } from './school-dashboard.helpers';
+import { compactChartLabel, schoolDashboardKpiValues, selectCurrentAcademicYear, shouldShowGroupComparison } from './school-dashboard.helpers';
 
 describe('School dashboard helpers', () => {
   it('selects the current academic year without falling back to an arbitrary year', () => {
@@ -11,5 +11,9 @@ describe('School dashboard helpers', () => {
   });
   it('keeps zero data finite and renders a deliberate empty average', () => {
     expect(schoolDashboardKpiValues(null)).toEqual(['—', 0, 0, 0, 0]);
+  });
+  it('compacts only the chart display label while preserving a readable prefix', () => {
+    expect(compactChartLabel('الصف التجريبي — الرياضيات', 16)).toHaveLength(16);
+    expect(compactChartLabel('علوم')).toBe('علوم');
   });
 });

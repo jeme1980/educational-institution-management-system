@@ -7,4 +7,6 @@ export function schoolDashboardKpiValues(data: SchoolDashboardData | null): Arra
 
 export function shouldShowGroupComparison(groupCount: number): boolean { return groupCount >= 2; }
 
+export function compactChartLabel(label: string, maxLength = 16): string { return label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label; }
+
 export function selectCurrentAcademicYear<T extends { id: string; isCurrent?: boolean }>(years: readonly T[]): T | undefined { return years.find(year => year.isCurrent); }

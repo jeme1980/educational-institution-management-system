@@ -5,8 +5,9 @@
 .filters label { display:grid; gap: var(--space-2); color:var(--on-surface-variant); font-size:var(--font-xs); font-weight:var(--font-semibold); }
 .kpi-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:var(--space-4); }
 .dashboard-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-5); }
-.chart { min-height: 18rem; max-height: 32rem; padding: var(--space-4); }
+.chart { height: 18rem; padding: var(--space-4); }
 .chart canvas { display:block; width:100%!important; height:100%!important; }
+@media (max-width: 760px) { .chart--groups { overflow-x:auto; } .chart--groups canvas { min-width:40rem; } }
 .coverage-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:var(--space-3); padding:var(--space-5); }
 .coverage-grid div { display:grid; gap:var(--space-1); padding:var(--space-3); border:1px solid var(--outline-variant); border-radius:var(--radius-md); background:var(--surface-container-low); }
 .coverage-grid strong { color:var(--primary); font-size:var(--text-headline-md); }

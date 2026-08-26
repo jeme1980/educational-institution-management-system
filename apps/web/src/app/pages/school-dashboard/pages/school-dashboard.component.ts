@@ -14,7 +14,7 @@ import { UiSectionCardComponent } from '../../../shared/components/ui-section-ca
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { AcademicChartThemeService } from '../../../shared/charts/academic-chart-theme.service';
 import { academicChartOptions, readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
-import { selectCurrentAcademicYear } from './school-dashboard.helpers';
+import { compactChartLabel, selectCurrentAcademicYear } from './school-dashboard.helpers';
 
 export interface SchoolDashboardData {
   context: { academicYear: { id: string; yearLabel: string }; subject: { id: string; nameAr: string } | null };
@@ -37,7 +37,8 @@ export class SchoolDashboardComponent implements OnInit {
   academicYearId = ''; subjectId = '';
   readonly subjectChartData = computed<ChartData<'bar'>>(() => { const colors = readAcademicChartColors(); const rows = this.data()?.bySubject || []; return { labels: rows.map(row => row.subjectName), datasets: [{ label: 'متوسط الأداء', data: rows.map(row => row.averagePerformance ?? 0), backgroundColor: colors.primary, borderRadius: 6, maxBarThickness: 46 }] }; });
   readonly groupChartData = computed<ChartData<'bar'>>(() => { const colors = readAcademicChartColors(); const rows = this.data()?.byGroup || []; return { labels: rows.map(row => row.name), datasets: [{ label: 'متوسط الأداء', data: rows.map(row => row.averagePerformance ?? 0), backgroundColor: colors.success, borderRadius: 6, maxBarThickness: 46 }] }; });
-  readonly chartOptions = computed(() => { this.theme.revision(); const base = academicChartOptions<'bar'>(this.theme, 'الأداء حسب المادة أو الشعبة'); const colors = readAcademicChartColors(); return { ...base, indexAxis: 'y' as const, scales: { x: { beginAtZero: true, max: 100, reverse: true, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } }, y: { ticks: { color: colors.onSurfaceVariant, autoSkip: false }, grid: { display: false } } } }; });
+  readonly chartOptions = computed(() => { this.theme.revision(); const base = academicChartOptions<'bar'>(this.theme, 'الأداء حسب المادة أو الشعبة'); const colors = readAcademicChartColors(); return { ...base, scales: { x: { ticks: { color: colors.onSurfaceVariant, autoSkip: true, maxRotation: 0, minRotation: 0 }, grid: { display: false } }, y: { beginAtZero: true, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } }; });
+  readonly groupChartOptions = computed(() => { const base = this.chartOptions(); return { ...base, scales: { ...base.scales, x: { ...base.scales?.x, ticks: { ...base.scales?.x?.ticks, callback: (_value: string | number, index: number) => compactChartLabel(this.data()?.byGroup[index]?.name || String(_value)) } } } }; });
   readonly selectedGroups = computed(() => this.data()?.selectedSubjectGroups || []);
   readonly kpis = computed(() => { const summary = this.data()?.summary; return [
     { label: 'متوسط الأداء العام', value: summary?.schoolAverage === null || summary?.schoolAverage === undefined ? '—' : `${summary.schoolAverage}%`, icon: 'insights', tone: 'primary' as const },
@@ -51,5 +52,4 @@ export class SchoolDashboardComponent implements OnInit {
   async load(): Promise<void> { if (!this.academicYearId) { this.data.set(null); return; } this.loading.set(true); this.error.set(''); const result = await this.api.loadSchoolDashboard({ academicYearId: this.academicYearId, subjectId: this.subjectId || undefined }); if (result) this.data.set(result as SchoolDashboardData); else { this.data.set(null); this.error.set('تعذر تحميل لوحة المدرسة.'); } this.loading.set(false); }
   async yearChanged(): Promise<void> { this.subjectId = ''; await this.load(); }
   async subjectChanged(): Promise<void> { await this.load(); }
-  chartHeight(rowCount: number): number { return Math.min(32, Math.max(18, rowCount * 2.1)); }
 }

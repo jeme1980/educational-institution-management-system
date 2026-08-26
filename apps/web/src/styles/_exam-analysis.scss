@@ -680,8 +680,40 @@
   border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg);
   background: var(--surface-container-lowest);
-  padding: var(--space-3);
+  padding: var(--space-4);
   transition: background-color var(--transition-fast) ease, border-color var(--transition-fast) ease, transform var(--transition-fast) ease;
+}
+
+.overview-action-grid {
+  column-gap: var(--space-4);
+  row-gap: var(--space-4);
+}
+
+.overview-action-grid > .panel {
+  padding: var(--space-4);
+}
+
+.overview-action-grid__heading {
+  margin-block-end: var(--space-4);
+  gap: var(--space-3);
+  padding-inline: var(--space-4);
+}
+
+.overview-action-grid__heading > * {
+  min-width: 0;
+}
+
+.overview-action-grid__helper {
+  text-align: end;
+}
+
+.quick-insights__grid {
+  gap: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .overview-action-grid > .panel { padding: var(--space-3); }
+  .overview-action-grid__heading { padding-inline: var(--space-3); }
 }
 
 .insight-card:hover {

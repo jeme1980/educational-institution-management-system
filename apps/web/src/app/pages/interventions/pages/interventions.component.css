@@ -1,5 +1,5 @@
 :host { display: block; }
-.interventions-page { display: grid; gap: var(--space-4); padding-block: var(--space-2); }
+.interventions-page { display: grid; max-width: 90rem; margin-inline: auto; padding: var(--space-4); gap: var(--space-5); color: var(--on-surface); }
 .form-grid, .filters, .detail-grid, .selection-grid { display: grid; gap: var(--space-4); }
 .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); padding: var(--space-4); }
 .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -20,10 +20,11 @@ dt { color: var(--on-surface-variant); font-size: var(--font-xs); } dd { margin:
 .detail-grid p, .muted { padding: var(--space-5); color: var(--on-surface-variant); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; color: var(--on-surface); font-size: var(--font-sm); }
-th, td { padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--outline-variant); text-align: right; white-space: nowrap; }
+th, td { min-height: var(--table-row-height); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--outline-variant); text-align: right; white-space: nowrap; }
 td strong, td small { display: block; } td small { margin-top: var(--space-1); color: var(--on-surface-variant); font-size: var(--font-xs); }
 .status { display: inline-flex; border-radius: var(--radius-full); padding: var(--space-1) var(--space-3); background: var(--secondary-container); color: var(--on-secondary-container); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .status[data-status="active"] { background: var(--success-container); color: var(--on-success-container); }
 .status[data-status="cancelled"] { background: var(--danger-container); color: var(--on-danger-container); }
 .empty, .error { padding: var(--space-4); text-align: center; } .error { color: var(--on-danger-container); background: var(--danger-container); }
 @media (max-width: 800px) { .form-grid, .filters, .detail-grid, .selection-grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+@media (max-width: 480px) { .interventions-page { padding: var(--space-3); } }

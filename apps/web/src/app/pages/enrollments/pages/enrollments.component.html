@@ -45,7 +45,7 @@
       <!-- Year Selector -->
       <div class="relative min-w-[180px]">
         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">السنة الدراسية</label>
-        <div class="relative">
+        <div class="enrollment-select-with-icon relative">
           <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">calendar_today</mat-icon>
           <ui-select ariaLabel="اختيار السنة الدراسية" (change)="onYearChange($event)">
             @for (y of apiService.academicYears(); track y.id) {
@@ -58,7 +58,7 @@
       <!-- Grade Filter -->
       <div class="relative min-w-[160px]">
         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">المستوى الصفّي</label>
-        <div class="relative">
+        <div class="enrollment-select-with-icon relative">
           <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">school</mat-icon>
           <ui-select ariaLabel="تصفية حسب المستوى الصفّي" (change)="onGradeChange($event)">
             <option value="">جميع الصفوف</option>
@@ -72,12 +72,12 @@
       <!-- Target Classroom Selector -->
       <div class="relative min-w-[220px]">
         <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">الشعبة الصفية المستهدفة</label>
-        <div class="relative">
+        <div class="enrollment-select-with-icon relative">
           <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">meeting_room</mat-icon>
           <select 
             [value]="selectedClassroomId()" 
             (change)="selectedClassroomId.set($any($event.target).value)"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-extrabold text-[#00236f] hover:bg-slate-100/80 transition-all outline-none focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
+            class="enrollment-icon-select w-full bg-slate-50 border border-slate-200 rounded-xl pe-10 ps-4 py-2 text-xs font-extrabold text-[#00236f] hover:bg-slate-100/80 transition-all outline-none focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
           >
             <option value="">-- اختر شعبة للعرض والفرز --</option>
             @for (c of classesFilteredByGrade(); track c.id) {
@@ -377,11 +377,11 @@
           <!-- Select Student -->
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1.5">اختر الطالب المستهدف *</label>
-            <div class="relative">
+            <div class="enrollment-select-with-icon relative">
               <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">person</mat-icon>
               <select
                 formControlName="studentId"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
+                class="enrollment-icon-select w-full bg-slate-50 border border-slate-200 rounded-xl pe-10 ps-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
               >
                 <option value="">-- اختر الطالب من القائمة --</option>
                 @for (s of enrollmentStudentOptions(); track s.id) {
@@ -395,11 +395,11 @@
           <!-- Select Classroom -->
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1.5">اختر الشعبة الصفية *</label>
-            <div class="relative">
+            <div class="enrollment-select-with-icon relative">
               <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">meeting_room</mat-icon>
               <select
                 formControlName="classRoomId"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
+                class="enrollment-icon-select w-full bg-slate-50 border border-slate-200 rounded-xl pe-10 ps-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
               >
                 <option value="">-- اختر الشعبة الصفية --</option>
                 @for (c of availableClassesForEnrollment(); track c.id) {
@@ -509,11 +509,11 @@
 
           <div>
             <label class="block text-xs font-bold text-slate-600 mb-1.5">اختر الشعبة الدراسية البديلة *</label>
-            <div class="relative">
+            <div class="enrollment-select-with-icon relative">
               <mat-icon class="absolute right-3 top-2.5 text-[#00236f] text-lg">meeting_room</mat-icon>
               <select
                 #targetClassSelect
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
+                class="enrollment-icon-select w-full bg-slate-50 border border-slate-200 rounded-xl pe-10 ps-4 py-2.5 text-xs font-bold text-slate-700 transition-all outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 cursor-pointer appearance-none"
               >
                 <option value="">-- اختر الشعبة المستهدفة --</option>
                 @for (c of allClassesInSameYear(); track c.id) {

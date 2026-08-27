@@ -1,1 +1,12 @@
-/* Component styles are provided by the shared utility stylesheet. */
+/* Keep the icon clear of the selected value without changing the select contract. */
+.enrollment-select-with-icon {
+  display: block;
+}
+
+.enrollment-select-with-icon > .enrollment-icon-select {
+  padding-inline-end: calc(var(--space-10) + var(--space-2));
+}
+
+:host ::ng-deep .enrollment-select-with-icon > ui-select > .ui-form-control {
+  padding-inline-end: calc(var(--space-10) + var(--space-2));
+}

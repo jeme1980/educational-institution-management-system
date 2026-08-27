@@ -116,13 +116,24 @@
 
         <!-- Years List -->
         <div class="space-y-2.5 max-h-[calc(100vh-22rem)] overflow-y-auto pr-1">
+          @if (yearsLoading()) {
+            <div class="p-8 text-center text-slate-400 font-bold text-xs space-y-2">
+              <mat-icon class="text-3xl block mx-auto animate-spin">sync</mat-icon>
+              <span>جاري تحميل الأعوام الأكاديمية...</span>
+            </div>
+          } @else if (yearsLoadError(); as error) {
+            <div class="p-8 text-center text-rose-600 font-bold text-xs space-y-2">
+              <mat-icon class="text-3xl block mx-auto">error_outline</mat-icon>
+              <span>{{ error }}</span>
+            </div>
+          } @else {
           @for (year of filteredYears(); track year.id) {
             @let isSelected = selectedYear()?.id === year.id;
             <div
               (click)="selectYear(year)"
               (keydown.enter)="selectYear(year)"
               tabindex="0"
-              [class]="isSelected ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-[1.01]' : 'bg-white text-slate-800 border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
+              [class]="isSelected ? 'bg-primary text-on-primary border-primary shadow-md scale-[1.01]' : 'bg-white text-slate-800 border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
               class="p-4 rounded-2xl border transition-all duration-200 cursor-pointer space-y-3"
             >
               <div class="flex items-center justify-between">
@@ -196,6 +207,7 @@
               <span>لا توجد أعوام أكاديمية مطابقة للبحث.</span>
             </div>
           }
+          }
         </div>
 
       </div>
@@ -231,6 +243,17 @@
           </div>
 
           <!-- Periods list -->
+          @if (periodsLoading()) {
+            <div class="p-8 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-2xl space-y-2">
+              <mat-icon class="text-3xl text-slate-300 animate-spin block mx-auto">sync</mat-icon>
+              <p class="text-xs font-bold text-slate-500">جاري تحميل الفترات الدراسية...</p>
+            </div>
+          } @else if (periodsLoadError(); as error) {
+            <div class="p-8 text-center bg-rose-50/50 border border-dashed border-rose-200 rounded-2xl space-y-2">
+              <mat-icon class="text-3xl text-rose-400 block mx-auto">error_outline</mat-icon>
+              <p class="text-xs font-bold text-rose-700">{{ error }}</p>
+            </div>
+          } @else {
           <div class="space-y-3">
             <div class="flex items-center justify-between text-xs font-extrabold text-slate-700">
               <span class="flex items-center gap-1.5">
@@ -306,6 +329,7 @@
               }
             </div>
           </div>
+          }
 
         </div>
       } @else {

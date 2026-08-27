@@ -24,6 +24,10 @@ export class AcademicYearsComponent implements OnInit {
   selectedYear = signal<AcademicYear | null>(null);
   searchQuery = signal<string>('');
   isProcessing = signal<boolean>(false);
+  yearsLoading = signal<boolean>(false);
+  periodsLoading = signal<boolean>(false);
+  yearsLoadError = signal<string | null>(null);
+  periodsLoadError = signal<string | null>(null);
   toast = signal<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
   // Modals visibility
@@ -63,9 +67,24 @@ export class AcademicYearsComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.apiService.loadAcademicYears();
-    this.apiService.loadAcademicPeriods();
     this.initForms();
+    void this.loadAcademicData();
+  }
+
+  private async loadAcademicData(): Promise<void> {
+    this.yearsLoading.set(true);
+    this.periodsLoading.set(true);
+    this.yearsLoadError.set(null);
+    this.periodsLoadError.set(null);
+
+    const yearsRequest = this.apiService.loadAcademicYears()
+      .catch(() => this.yearsLoadError.set('تعذر تحميل الأعوام الأكاديمية حالياً.'))
+      .finally(() => this.yearsLoading.set(false));
+    const periodsRequest = this.apiService.loadAcademicPeriods()
+      .catch(() => this.periodsLoadError.set('تعذر تحميل الفترات الدراسية حالياً.'))
+      .finally(() => this.periodsLoading.set(false));
+
+    await Promise.all([yearsRequest, periodsRequest]);
   }
 
   initForms() {

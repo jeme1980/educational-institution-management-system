@@ -12,7 +12,7 @@ import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-academic-years',
   imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
-  styles: ['#academic-years-container > div:has(h1), #academic-years-container > div:has(.bg-emerald-50) { display: none; }'],
+  styles: ['#academic-years-container > .academic-years-legacy-header, #academic-years-container > .academic-years-legacy-metrics { display: none; }'],
   templateUrl: './academic-years.component.html',
   styleUrl: './academic-years.component.css'
 })

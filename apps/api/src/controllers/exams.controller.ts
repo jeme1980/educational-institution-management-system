@@ -23,6 +23,47 @@ async function examRelations(req: ContextRequest, body: any) {
   return { period, subject, examType };
 }
 
+async function persistPostResultQuestions(tx: any, exam: any, institutionId: string, rows: any[]): Promise<void> {
+  const existing = await tx.examQuestion.findMany({ where: { examId: exam.id, institutionId }, orderBy: { questionNumber: 'asc' } });
+  const scores = await tx.studentQuestionScore.groupBy({ by: ['examQuestionId'], where: { institutionId, examQuestionId: { in: existing.map((question: any) => question.id) } } });
+  const scoredIds = new Set(scores.map((score: any) => score.examQuestionId));
+  const incoming = rows.map((row: any, index: number) => ({
+    id: uuid(row.id),
+    questionTypeId: uuid(row.questionTypeId),
+    topicId: uuid(row.topicId),
+    skillId: uuid(row.skillId),
+    questionNumber: index + 1,
+    maxScore: Number(row.maxScore ?? row.points),
+    contentAr: String(row.contentAr || '').trim() || null,
+    contentHe: String(row.contentHe || '').trim() || null,
+  }));
+  const ids = incoming.map(row => row.id).filter((id): id is string => Boolean(id));
+  if (new Set(ids).size !== ids.length) throw new Error('DUPLICATE_QUESTION_ID');
+  const existingById = new Map<string, any>(existing.map((question: any) => [question.id, question] as [string, any]));
+  for (const row of incoming) {
+    if (row.id && !existingById.has(row.id)) throw new Error('INVALID_QUESTION_ID');
+    const previous = row.id ? existingById.get(row.id) : null;
+    if (previous && scoredIds.has(previous.id) && (previous.questionTypeId !== row.questionTypeId || Number(previous.maxScore) !== row.maxScore)) throw new Error('SCORED_QUESTION_STRUCTURE_LOCKED');
+    if (!row.questionTypeId || !Number.isFinite(row.maxScore) || row.maxScore <= 0) throw new Error('INVALID_QUESTION');
+  }
+  for (const question of existing) if (!ids.includes(question.id) && scoredIds.has(question.id)) throw new Error('SCORED_QUESTION_REMOVAL');
+  const total = incoming.reduce((sum, row) => sum + row.maxScore, 0);
+  if (total > Number(exam.maxScore) + 0.01) throw new Error('QUESTION_TOTAL_EXCEEDS_EXAM');
+
+  for (const [index, question] of existing.entries()) await tx.examQuestion.update({ where: { id: question.id }, data: { questionNumber: -(index + 1) } });
+  const removedIds = existing.filter((question: any) => !ids.includes(question.id)).map((question: any) => question.id);
+  if (removedIds.length) await tx.examQuestion.deleteMany({ where: { id: { in: removedIds }, institutionId } });
+  const newRows = incoming.map((row, sourceIndex) => ({ row, sourceIndex })).filter(item => !item.row.id).map((item, index) => ({ ...item, tempQuestionNumber: -(existing.length + index + 1) }));
+  if (newRows.length) await tx.examQuestion.createMany({ data: newRows.map(({ row, tempQuestionNumber }) => ({ institutionId, examId: exam.id, questionTypeId: row.questionTypeId!, topicId: row.topicId, skillId: row.skillId, questionNumber: tempQuestionNumber, maxScore: row.maxScore, contentAr: row.contentAr, contentHe: row.contentHe })) });
+  const created = newRows.length ? await tx.examQuestion.findMany({ where: { examId: exam.id, institutionId, questionNumber: { lt: 0 } }, orderBy: { questionNumber: 'asc' } }) : [];
+  const createdByTempNumber = new Map(created.map((question: any) => [question.questionNumber, question.id]));
+  for (const row of incoming) {
+    const id = row.id || createdByTempNumber.get(newRows.find(item => item.sourceIndex === incoming.indexOf(row))?.tempQuestionNumber || 0);
+    if (!id) continue;
+    await tx.examQuestion.update({ where: { id }, data: { questionTypeId: row.questionTypeId, topicId: row.topicId, skillId: row.skillId, questionNumber: row.questionNumber, maxScore: row.maxScore, contentAr: row.contentAr, contentHe: row.contentHe } });
+  }
+}
+
 export async function getExams(req: ContextRequest, res: Response): Promise<any> {
   const { institutionId, academicYearId } = context(req);
   const exams = await prisma.exam.findMany({ where: { institutionId, academicYearId, archivedAt: null }, include: { subject: { select: { id: true, nameAr: true, nameHe: true } }, academicPeriod: { select: { id: true, nameAr: true, startDate: true, endDate: true } }, examType: { select: { id: true, nameAr: true, nameHe: true } }, _count: { select: { studentExamResults: true, examQuestions: true, examGroups: true } } }, orderBy: [{ examDate: 'asc' }, { titleAr: 'asc' }] });
@@ -173,7 +214,7 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
   const exam = await prisma.exam.findFirst({ where: { id, institutionId, academicYearId, archivedAt: null } });
   if (!exam) return res.status(404).json({ error: '״§„״§…״×״­״§† ״÷״± …ˆ״¬ˆ״¯.' });
 
-  if (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) return res.status(409).json({ error: 'Questions cannot be replaced after results have been recorded.' });
+  const hasRecordedResults = (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) > 0;
   const relations = await examRelations(req, { ...exam, ...body });
   const titleAr = String(body.titleAr ?? exam.titleAr).trim();
   const examDate = body.examDate ? new Date(body.examDate) : exam.examDate;
@@ -181,6 +222,7 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
   const weight = body.weight === '' || body.weight === null ? null : body.weight !== undefined ? Number(body.weight) : (exam.weight === null ? null : Number(exam.weight));
   const groupIds: string[] = Array.from(new Set<string>((Array.isArray(body.studyGroupIds) ? body.studyGroupIds : []).map((value: unknown) => uuid(value)).filter((value: string | null): value is string => Boolean(value))));
   const questions = Array.isArray(body.questions) ? body.questions : [];
+  if (hasRecordedResults && body.maxScore !== undefined && Number(body.maxScore) !== Number(exam.maxScore)) return res.status(409).json({ error: 'لا يمكن تغيير الدرجة القصوى للامتحان بعد تسجيل النتائج التفصيلية.' });
   if (!relations?.period || !relations.subject || !relations.examType) return res.status(400).json({ error: '״¨״§†״§״× ״§„״×״±״© ״£ˆ ״§„…״§״¯״© ״£ˆ †ˆ״¹ ״§„״§…״×״­״§† ״÷״± ״µ״§„״­״©.' });
   if (!titleAr || !Number.isFinite(maxScore) || maxScore <= 0 || Number.isNaN(examDate.getTime()) || (weight !== null && (!Number.isFinite(weight) || weight < 0))) return res.status(400).json({ error: '״×״­‚‚ …† ״¹†ˆ״§† ״§„״§…״×״­״§† ˆ״§„״×״§״±״® ˆ״§„״¯״±״¬״§״× ˆ״§„ˆ״²†.' });
   if (!groupIds.length) return res.status(400).json({ error: '״¬״¨ ״±״¨״· ״§„״§…״×״­״§† ״¨…״¬…ˆ״¹״© ״×״¹„…״© ˆ״§״­״¯״© ״¹„‰ ״§„״£‚„.' });
@@ -199,6 +241,25 @@ export async function saveExamBuilder(req: AuthRequest, res: Response): Promise<
     prisma.skill.findMany({ where: { id: { in: normalizedQuestions.flatMap(q => q.skillId ? [q.skillId] : []) }, institutionId, academicYearId, subjectId: relations.subject.id, isActive: true, archivedAt: null }, select: { id: true } }),
   ]);
   if (types.length !== new Set(normalizedQuestions.map(q => q.questionTypeId)).size || topics.length !== new Set(normalizedQuestions.flatMap(q => q.topicId ? [q.topicId] : [])).size || skills.length !== new Set(normalizedQuestions.flatMap(q => q.skillId ? [q.skillId] : [])).size) return res.status(400).json({ error: 'ˆ״¬״¯ †ˆ״¹ ״³״₪״§„ ״£ˆ …ˆ״¶ˆ״¹ ״£ˆ …‡״§״±״© ״÷״± …״±״×״¨״· ״¨״§„…״§״¯״© ״£ˆ ״§„…״₪״³״³״©.' });
+  if (hasRecordedResults) {
+    try {
+      const saved = await prisma.$transaction(async tx => {
+        const updated = await tx.exam.update({ where: { id: exam.id }, data: { academicPeriodId: relations.period!.id, subjectId: relations.subject!.id, examTypeId: relations.examType!.id, titleAr, titleHe: body.titleHe !== undefined ? String(body.titleHe || '').trim() || null : exam.titleHe, examDate, maxScore, weight, isPublished: body.isPublished !== undefined ? Boolean(body.isPublished) : exam.isPublished, notes: body.notes !== undefined ? String(body.notes || '').trim() || null : exam.notes, updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } });
+        await tx.examStudyGroup.deleteMany({ where: { examId: exam.id, institutionId } });
+        await tx.examStudyGroup.createMany({ data: groupIds.map(studyGroupId => ({ institutionId, examId: exam.id, studyGroupId })) });
+        await persistPostResultQuestions(tx, exam, institutionId, questions);
+        return updated;
+      });
+      await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'QUESTIONS_SAVED', entityType: 'Exam', entityId: exam.id, metadata: { questionCount: questions.length, groupCount: groupIds.length, preservedResults: true } });
+      return res.json(saved);
+    } catch (error: any) {
+      if (error?.message === 'SCORED_QUESTION_STRUCTURE_LOCKED') return res.status(409).json({ error: 'لا يمكن تغيير نوع السؤال أو درجته بعد تسجيل النتائج.' });
+      if (error?.message === 'SCORED_QUESTION_REMOVAL') return res.status(409).json({ error: 'لا يمكن حذف سؤال لديه نتائج مسجلة.' });
+      if (error?.message === 'QUESTION_TOTAL_EXCEEDS_EXAM') return res.status(400).json({ error: 'مجموع درجات الأسئلة يتجاوز الدرجة القصوى للامتحان.' });
+      if (error?.message === 'INVALID_QUESTION_ID' || error?.message === 'DUPLICATE_QUESTION_ID' || error?.message === 'INVALID_QUESTION') return res.status(400).json({ error: 'بيانات الأسئلة غير صالحة.' });
+      throw error;
+    }
+  }
   const saved = await prisma.$transaction(async tx => {
     const updated = await tx.exam.update({ where: { id: exam.id }, data: { academicPeriodId: relations.period!.id, subjectId: relations.subject!.id, examTypeId: relations.examType!.id, titleAr, titleHe: body.titleHe !== undefined ? String(body.titleHe || '').trim() || null : exam.titleHe, examDate, maxScore, weight, isPublished: body.isPublished !== undefined ? Boolean(body.isPublished) : exam.isPublished, notes: body.notes !== undefined ? String(body.notes || '').trim() || null : exam.notes, updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } });
     await tx.examStudyGroup.deleteMany({ where: { examId: exam.id, institutionId } });
@@ -296,7 +357,7 @@ export async function createExamsByIdQuestions(req: AuthRequest, res: Response):
   const { institutionId, academicYearId } = context(req);
   const exam = await prisma.exam.findFirst({ where: { id: String(req.params.id), institutionId, academicYearId, archivedAt: null } });
   if (!exam) return res.status(404).json({ error: '\u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f.' });
-  if (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) return res.status(409).json({ error: 'Questions cannot be replaced after results have been recorded.' });
+  const hasRecordedResults = (await prisma.studentExamResult.count({ where: { examId: exam.id, institutionId } })) > 0;
   const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
   const typeIds: string[] = Array.from(new Set(questions.map((q: any) => uuid(q.questionTypeId)).filter((id: string | null): id is string => Boolean(id))));
   const topicIds: string[] = Array.from(new Set(questions.map((q: any) => uuid(q.topicId)).filter((id: string | null): id is string => Boolean(id))));
@@ -312,6 +373,19 @@ export async function createExamsByIdQuestions(req: AuthRequest, res: Response):
   if (typeIds.length !== types.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0646\u0648\u0639 \u0633\u0624\u0627\u0644 \u0635\u062d\u064a\u062d.' });
   if (topicIds.length !== topics.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0648\u0636\u0648\u0639 \u0645\u0631\u062a\u0628\u0637 \u0628\u0645\u0627\u062f\u0629 \u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u0648\u0627\u0644\u0637\u0628\u0642\u0629.' });
   if (skillIds.length !== skills.length) return res.status(400).json({ error: '\u064a\u0631\u062c\u0649 \u0627\u062e\u062a\u064a\u0627\u0631 \u0645\u0647\u0627\u0631\u0629 \u0645\u0631\u062a\u0628\u0637\u0629 \u0628\u0645\u0627\u062f\u0629 \u0627\u0644\u0627\u0645\u062a\u062d\u0627\u0646 \u0648\u0627\u0644\u0637\u0628\u0642\u0629.' });
+  if (hasRecordedResults) {
+    try {
+      await prisma.$transaction(tx => persistPostResultQuestions(tx, exam, institutionId, questions));
+    } catch (error: any) {
+      if (error?.message === 'SCORED_QUESTION_STRUCTURE_LOCKED') return res.status(409).json({ error: '\u0644\u0627 \u064a\u0645\u0643\u0646 \u062a\u063a\u064a\u064a\u0631 \u0646\u0648\u0639 \u0627\u0644\u0633\u0624\u0627\u0644 \u0623\u0648 \u062f\u0631\u062c\u062a\u0647 \u0628\u0639\u062f \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u0646\u062a\u0627\u0626\u062c.' });
+      if (error?.message === 'SCORED_QUESTION_REMOVAL') return res.status(409).json({ error: '\u0644\u0627 \u064a\u0645\u0643\u0646 \u062d\u0630\u0641 \u0633\u0624\u0627\u0644 \u0644\u062f\u064a\u0647 \u0646\u062a\u0627\u0626\u062c \u0645\u0633\u062c\u0644\u0629.' });
+      if (error?.message === 'QUESTION_TOTAL_EXCEEDS_EXAM') return res.status(400).json({ error: '\u0645\u062c\u0645\u0648\u0639 \u062f\u0631\u062c\u0627\u062a \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u064a\u062a\u062c\u0627\u0648\u0632 \u0627\u0644\u062f\u0631\u062c\u0629 \u0627\u0644\u0642\u0635\u0648\u0649 \u0644\u0644\u0627\u0645\u062a\u062d\u0627\u0646.' });
+      if (error?.message === 'INVALID_QUESTION_ID' || error?.message === 'DUPLICATE_QUESTION_ID' || error?.message === 'INVALID_QUESTION') return res.status(400).json({ error: '\u0628\u064a\u0627\u0646\u0627\u062a \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u063a\u064a\u0631 \u0635\u0627\u0644\u062d\u0629.' });
+      throw error;
+    }
+    await recordAuditEvent(prisma, { institutionId, actorUserId: req.user?.uid, action: 'QUESTIONS_SAVED', entityType: 'Exam', entityId: exam.id, metadata: { questionCount: questions.length, preservedResults: true } });
+    return res.json({ success: true });
+  }
   await prisma.$transaction(async tx => {
     await tx.examQuestion.deleteMany({ where: { examId: exam.id, institutionId } });
     if (questions.length) await tx.examQuestion.createMany({ data: questions.map((q: any, index: number) => ({ institutionId, examId: exam.id, questionTypeId: uuid(q.questionTypeId)!, topicId: uuid(q.topicId), skillId: uuid(q.skillId), questionNumber: Number(q.questionNumber || index + 1), maxScore: Number(q.maxScore ?? q.points ?? 0), contentAr: q.contentAr ? String(q.contentAr) : null, contentHe: q.contentHe ? String(q.contentHe) : null })) });

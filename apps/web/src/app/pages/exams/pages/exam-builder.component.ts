@@ -62,6 +62,8 @@ export class ExamBuilderComponent implements OnInit {
   });
 
   readonly isEditMode = computed(() => Boolean(this.examId()));
+  readonly hasRecordedScores = signal(false);
+  private readonly originalQuestionDimensions = new Map<string, { topicId: string | null; skillId: string | null }>();
   readonly currentYear = computed(() => this.api.academicYears().find((item: any) => item.id === this.api.selectedAcademicYearId()) || null);
   readonly availableGroups = computed(() => this.groups().filter(group =>
     group.subjectId === this.formSubjectId() &&
@@ -106,6 +108,10 @@ export class ExamBuilderComponent implements OnInit {
         this.form.reset({ titleAr: current.titleAr, titleHe: current.titleHe || '', academicPeriodId: current.academicPeriodId, subjectId: current.subjectId, examTypeId: current.examTypeId, examDate: String(current.examDate).slice(0, 10), maxScore: Number(current.maxScore), weight: current.weight == null ? null : Number(current.weight), isPublished: current.isPublished, notes: current.notes || '' });
         this.selectedGroupIds.set((await this.state.loadExamStudyGroups(id)).map((item: any) => item.studyGroupId));
         await this.loadQuestions(id);
+        const resultData = await this.api.loadExamResults(id);
+        this.hasRecordedScores.set(Boolean(resultData?.results?.some((result: any) => result.questionScores?.some((score: any) => score.score !== null && score.score !== undefined))));
+        this.applyQuestionEditingPolicy();
+        this.captureQuestionDimensions();
       } else {
         this.form.reset({ titleAr: '', titleHe: '', academicPeriodId: this.api.academicPeriods()[0]?.id || '', subjectId: this.api.subjects()[0]?.id || '', examTypeId: this.api.examTypes()[0]?.id || '', examDate: new Date().toISOString().slice(0, 10), maxScore: 100, weight: null, isPublished: false, notes: '' });
         this.formSubjectId.set(this.form.controls.subjectId.value);
@@ -133,6 +139,7 @@ export class ExamBuilderComponent implements OnInit {
 
   questionGroup(row: any = {}): any {
     return this.fb.group({
+      id: [row.id || null],
       // رقم السؤال ترتيب داخلي ويُعاد توليده تلقائيًا، لذلك لا يجوز أن يمنع الحفظ.
       questionNumber: [Number(row.questionNumber || this.questions.length + 1)],
       questionTypeId: [row.questionTypeId || this.api.questionTypes()[0]?.id || ''],
@@ -146,7 +153,7 @@ export class ExamBuilderComponent implements OnInit {
   }
 
   addQuestion(row: any = {}): void { const control = this.questionGroup(row); this.questions.push(control); this.watchQuestion(control); this.questionsVersion.update(value => value + 1); if (!this.hydrating) this.hasChanges.set(true); }
-  removeQuestion(index: number): void { this.questions.removeAt(index); this.questions.controls.forEach((control, i) => control.get('questionNumber')?.setValue(i + 1, { emitEvent: false })); this.questionsVersion.update(value => value + 1); this.hasChanges.set(true); }
+  removeQuestion(index: number): void { const control = this.questions.at(index); if (this.isQuestionStructureLocked(control)) { this.error.set('لا يمكن حذف سؤال لديه نتائج مسجلة.'); return; } this.questions.removeAt(index); this.questions.controls.forEach((item, i) => item.get('questionNumber')?.setValue(i + 1, { emitEvent: false })); this.questionsVersion.update(value => value + 1); this.hasChanges.set(true); }
   duplicateQuestion(index: number): void { const source = this.questions.at(index)?.getRawValue(); if (!source) return; this.addQuestion({ ...source, questionNumber: this.questions.length + 1 }); }
   moveQuestion(index: number, direction: -1 | 1): void { const target = index + direction; if (target < 0 || target >= this.questions.length) return; const current = this.questions.at(index); this.questions.removeAt(index, { emitEvent: false }); this.questions.insert(target, current, { emitEvent: false }); this.questions.controls.forEach((control, i) => control.get('questionNumber')?.setValue(i + 1, { emitEvent: false })); this.questionsVersion.update(value => value + 1); this.hasChanges.set(true); }
   private watchQuestion(control: any): void { control.valueChanges.subscribe(() => { this.refreshQuestionValidity(control); this.questionsVersion.update(value => value + 1); if (!this.hydrating) this.hasChanges.set(true); }); }
@@ -185,11 +192,39 @@ export class ExamBuilderComponent implements OnInit {
   private questionPayload(): any[] {
     return this.questions.getRawValue().map((row: any, index: number) => ({
       ...row,
+      id: row.id || undefined,
       questionNumber: index + 1,
       topicId: row.topicId || null,
       skillId: row.skillId || null,
       contentAr: String(row.contentAr || '').trim() || null,
     }));
+  }
+
+  isQuestionStructureLocked(control: any): boolean {
+    return this.hasRecordedScores() && Boolean(control.get('id')?.value);
+  }
+  private applyQuestionEditingPolicy(): void {
+    if (this.hasRecordedScores()) this.form.controls.maxScore.disable({ emitEvent: false });
+    this.questions.controls.forEach(control => {
+      if (!this.isQuestionStructureLocked(control)) return;
+      control.get('questionTypeId')?.disable({ emitEvent: false });
+      control.get('maxScore')?.disable({ emitEvent: false });
+    });
+  }
+  private captureQuestionDimensions(): void {
+    this.originalQuestionDimensions.clear();
+    this.questions.controls.forEach(control => {
+      const id = control.get('id')?.value;
+      if (id) this.originalQuestionDimensions.set(id, { topicId: control.get('topicId')?.value || null, skillId: control.get('skillId')?.value || null });
+    });
+  }
+  private hasQuestionDimensionChanges(): boolean {
+    return this.questions.controls.some(control => {
+      const id = control.get('id')?.value;
+      const original = id ? this.originalQuestionDimensions.get(id) : null;
+      if (!original) return false;
+      return original.topicId !== (control.get('topicId')?.value || null) || original.skillId !== (control.get('skillId')?.value || null);
+    });
   }
   toggleGroup(id: string, event: Event): void { const checked = (event.target as HTMLInputElement).checked; this.selectedGroupIds.update(ids => checked ? [...new Set([...ids, id])] : ids.filter(item => item !== id)); this.hasChanges.set(true); }
   setPanel(panel: 'details' | 'groups' | 'questions'): void { this.activePanel.set(panel); }
@@ -397,6 +432,7 @@ export class ExamBuilderComponent implements OnInit {
     const invalidQuestions = this.invalidQuestionControls();
     if (invalidQuestions.length) { invalidQuestions.forEach(control => control.markAllAsTouched()); this.error.set(`يوجد ${invalidQuestions.length} سؤال يحتاج إلى استكمال البيانات.`); return; }
     if (this.scoreMismatch()) { this.error.set(`مجموع درجات الأسئلة (${this.totalScore()}) أكبر من الدرجة القصوى للامتحان (${this.form.controls.maxScore.value}). خفّض درجات الأسئلة قبل الحفظ.`); return; }
+    if (this.hasRecordedScores() && this.hasQuestionDimensionChanges() && !await this.confirmDialog.confirm({ title: 'تعديل تصنيف الأسئلة', message: 'سيؤثر تغيير الموضوع أو المهارة على التحليلات المرتبطة بهذا الامتحان دون إعادة احتساب النتائج. هل تريد المتابعة؟', variant: 'warning' })) return;
     this.saving.set(true); this.error.set('');
     try {
       const id = this.examId();

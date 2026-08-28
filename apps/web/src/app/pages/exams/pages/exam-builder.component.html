@@ -50,6 +50,7 @@
           }
 
           @if (activePanel() === 'questions') {
+            @if (hasRecordedScores()) { <div class="notice warning"><mat-icon>lock</mat-icon><span>لا يمكن تغيير بنية السؤال أو درجته بعد تسجيل النتائج التفصيلية. يمكن تعديل نص السؤال، الموضوع، والمهارة.</span></div> }
             <div class="question-import-actions"><input id="question-import-file" type="file" accept=".xlsx" class="hidden" (change)="importQuestions($event)" /><button type="button" class="ghost-button import-action" (click)="downloadQuestionTemplate()" [disabled]="importingQuestions()"><mat-icon>download</mat-icon> تنزيل قالب الاستيراد</button><button type="button" class="ghost-button import-action" (click)="openQuestionImport()" [disabled]="importingQuestions()"><mat-icon>upload_file</mat-icon>{{ importingQuestions() ? 'جارٍ الاستيراد...' : 'استيراد من Excel' }}</button></div>
             <section class="content-card"><div class="card-heading"><div><span class="eyebrow">الخطوة 3</span><h2>بناء الأسئلة</h2><p>أضف الأسئلة على مراحل. يُمنع الحفظ فقط عندما يتجاوز مجموع الدرجات الدرجة القصوى.</p></div><mat-icon>quiz</mat-icon></div>
               <div class="question-toolbar"><div class="question-count"><strong>{{ questions.length }}</strong><span>أسئلة مضافة</span></div><label class="search-box"><mat-icon>search</mat-icon><input placeholder="ابحث داخل الأسئلة..." (input)="setQuestionSearch($event)" /></label><button type="button" class="primary-action compact" (click)="addQuestion()"><mat-icon>add</mat-icon> إضافة سؤال</button></div>

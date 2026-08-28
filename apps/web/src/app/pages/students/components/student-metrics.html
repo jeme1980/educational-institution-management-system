@@ -1,6 +1,30 @@
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" id="student-metrics-grid">
-  <ui-stat-card id="metric-total-students" label="إجمالي الطلاب بالسجل" [value]="totalCount()" icon="groups" tone="primary" iconTreatment="on-container" />
-  <ui-stat-card id="metric-active-students" label="طلاب نشطون حاليًا" [value]="activeCount()" icon="verified_user" tone="success" />
-  <ui-stat-card id="metric-filtered-students" label="نتائج التصفية الحالية" [value]="filteredCount()" icon="filter_alt" tone="primary" iconTreatment="on-container" />
-  <ui-stat-card id="metric-students-guardians" label="سجلات بأوصياء مسجلين" [value]="guardiansCount()" icon="family_restroom" tone="warning" />
-</div>
+<section class="student-metrics" aria-label="ملخص الطلاب">
+  <div class="student-metrics__toolbar">
+    <button
+      type="button"
+      class="student-metrics__toggle"
+      [attr.aria-expanded]="!collapsed()"
+      aria-controls="student-metrics-grid"
+      [attr.aria-label]="collapsed() ? 'توسيع ملخص الطلاب' : 'طي ملخص الطلاب'"
+      (click)="toggleCollapsed()"
+    >
+      <mat-icon aria-hidden="true">{{ collapsed() ? 'expand_more' : 'expand_less' }}</mat-icon>
+    </button>
+  </div>
+
+  @if (collapsed()) {
+    <div class="student-metrics__summary" id="student-metrics-grid" role="status">
+      <span>{{ totalCount() }} إجمالي</span><span aria-hidden="true">·</span>
+      <span>{{ activeCount() }} نشط</span><span aria-hidden="true">·</span>
+      <span>{{ filteredCount() }} نتائج</span><span aria-hidden="true">·</span>
+      <span>{{ guardiansCount() }} بأوصياء</span>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" id="student-metrics-grid">
+      <ui-stat-card id="metric-total-students" label="إجمالي الطلاب بالسجل" [value]="totalCount()" icon="groups" tone="primary" iconTreatment="on-container" [compact]="true" />
+      <ui-stat-card id="metric-active-students" label="طلاب نشطون حاليًا" [value]="activeCount()" icon="verified_user" tone="success" [compact]="true" />
+      <ui-stat-card id="metric-filtered-students" label="نتائج التصفية الحالية" [value]="filteredCount()" icon="filter_alt" tone="primary" iconTreatment="on-container" [compact]="true" />
+      <ui-stat-card id="metric-students-guardians" label="سجلات بأوصياء مسجلين" [value]="guardiansCount()" icon="family_restroom" tone="warning" [compact]="true" />
+    </div>
+  }
+</section>

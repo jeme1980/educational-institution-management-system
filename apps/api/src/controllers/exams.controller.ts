@@ -43,7 +43,7 @@ async function persistPostResultQuestions(tx: any, exam: any, institutionId: str
   for (const row of incoming) {
     if (row.id && !existingById.has(row.id)) throw new Error('INVALID_QUESTION_ID');
     const previous = row.id ? existingById.get(row.id) : null;
-    if (previous && scoredIds.has(previous.id) && (previous.questionTypeId !== row.questionTypeId || Number(previous.maxScore) !== row.maxScore)) throw new Error('SCORED_QUESTION_STRUCTURE_LOCKED');
+    if (previous && scoredIds.has(previous.id) && Number(previous.maxScore) !== row.maxScore) throw new Error('SCORED_QUESTION_STRUCTURE_LOCKED');
     if (!row.questionTypeId || !Number.isFinite(row.maxScore) || row.maxScore <= 0) throw new Error('INVALID_QUESTION');
   }
   for (const question of existing) if (!ids.includes(question.id) && scoredIds.has(question.id)) throw new Error('SCORED_QUESTION_REMOVAL');

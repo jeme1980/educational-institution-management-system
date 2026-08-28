@@ -2,6 +2,22 @@
 
 #student-table-section ui-table-actions { flex-wrap: nowrap; gap: var(--space-1); vertical-align: middle; }
 
+.student-table-shell { width: 100%; overflow: visible; }
+#student-table-scroll-container { overflow-x: visible; }
+#student-table-scroll-container .core-table { table-layout: auto; width: 100%; }
+#student-table-scroll-container .core-table th:last-child,
+#student-table-scroll-container .core-table td:last-child {
+  width: calc(var(--space-8) * 3 + var(--space-1) * 2 + var(--space-4));
+  min-width: calc(var(--space-8) * 3 + var(--space-1) * 2 + var(--space-4));
+  white-space: nowrap;
+}
+
+@media (max-width: 1023px) {
+  .student-table-shell { overflow: hidden; }
+  #student-table-scroll-container { overflow-x: auto; }
+  #student-table-scroll-container .core-table { min-width: 64rem; }
+}
+
 #student-table-section ui-button[variant='danger'] {
   --danger: transparent;
   --on-primary: var(--danger);

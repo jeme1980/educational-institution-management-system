@@ -63,7 +63,7 @@ export class ExamBuilderComponent implements OnInit {
 
   readonly isEditMode = computed(() => Boolean(this.examId()));
   readonly hasRecordedScores = signal(false);
-  private readonly originalQuestionDimensions = new Map<string, { topicId: string | null; skillId: string | null }>();
+  private readonly originalQuestionDimensions = new Map<string, { questionTypeId: string | null; topicId: string | null; skillId: string | null }>();
   readonly currentYear = computed(() => this.api.academicYears().find((item: any) => item.id === this.api.selectedAcademicYearId()) || null);
   readonly availableGroups = computed(() => this.groups().filter(group =>
     group.subjectId === this.formSubjectId() &&
@@ -207,7 +207,6 @@ export class ExamBuilderComponent implements OnInit {
     if (this.hasRecordedScores()) this.form.controls.maxScore.disable({ emitEvent: false });
     this.questions.controls.forEach(control => {
       if (!this.isQuestionStructureLocked(control)) return;
-      control.get('questionTypeId')?.disable({ emitEvent: false });
       control.get('maxScore')?.disable({ emitEvent: false });
     });
   }
@@ -215,7 +214,7 @@ export class ExamBuilderComponent implements OnInit {
     this.originalQuestionDimensions.clear();
     this.questions.controls.forEach(control => {
       const id = control.get('id')?.value;
-      if (id) this.originalQuestionDimensions.set(id, { topicId: control.get('topicId')?.value || null, skillId: control.get('skillId')?.value || null });
+      if (id) this.originalQuestionDimensions.set(id, { questionTypeId: control.get('questionTypeId')?.value || null, topicId: control.get('topicId')?.value || null, skillId: control.get('skillId')?.value || null });
     });
   }
   private hasQuestionDimensionChanges(): boolean {
@@ -224,6 +223,14 @@ export class ExamBuilderComponent implements OnInit {
       const original = id ? this.originalQuestionDimensions.get(id) : null;
       if (!original) return false;
       return original.topicId !== (control.get('topicId')?.value || null) || original.skillId !== (control.get('skillId')?.value || null);
+    });
+  }
+  private hasQuestionTypeChanges(): boolean {
+    return this.questions.controls.some(control => {
+      const id = control.get('id')?.value;
+      const original = id ? this.originalQuestionDimensions.get(id) : null;
+      if (!original) return false;
+      return original.questionTypeId !== (control.get('questionTypeId')?.value || null);
     });
   }
   toggleGroup(id: string, event: Event): void { const checked = (event.target as HTMLInputElement).checked; this.selectedGroupIds.update(ids => checked ? [...new Set([...ids, id])] : ids.filter(item => item !== id)); this.hasChanges.set(true); }
@@ -432,7 +439,8 @@ export class ExamBuilderComponent implements OnInit {
     const invalidQuestions = this.invalidQuestionControls();
     if (invalidQuestions.length) { invalidQuestions.forEach(control => control.markAllAsTouched()); this.error.set(`يوجد ${invalidQuestions.length} سؤال يحتاج إلى استكمال البيانات.`); return; }
     if (this.scoreMismatch()) { this.error.set(`مجموع درجات الأسئلة (${this.totalScore()}) أكبر من الدرجة القصوى للامتحان (${this.form.controls.maxScore.value}). خفّض درجات الأسئلة قبل الحفظ.`); return; }
-    if (this.hasRecordedScores() && this.hasQuestionDimensionChanges() && !await this.confirmDialog.confirm({ title: 'تعديل تصنيف الأسئلة', message: 'سيؤثر تغيير الموضوع أو المهارة على التحليلات المرتبطة بهذا الامتحان دون إعادة احتساب النتائج. هل تريد المتابعة؟', variant: 'warning' })) return;
+    if (this.hasRecordedScores() && this.hasQuestionTypeChanges() && !await this.confirmDialog.confirm({ title: 'تغيير نوع السؤال', message: 'تغيير نوع السؤال سيعيد تصنيف النتائج التاريخية لهذا السؤال في التحليلات، ولن يغيّر علامات الطلاب المسجلة. هل تريد المتابعة؟', confirmText: 'متابعة', cancelText: 'إلغاء', variant: 'warning' })) return;
+    if (this.hasRecordedScores() && this.hasQuestionDimensionChanges() && !await this.confirmDialog.confirm({ title: 'تعديل تصنيف الأسئلة', message: 'سيؤثر تغيير الموضوع أو المهارة على التحليلات المرتبطة بهذا الامتحان دون إعادة احتساب النتائج. هل تريد المتابعة؟', confirmText: 'متابعة', cancelText: 'إلغاء', variant: 'warning' })) return;
     this.saving.set(true); this.error.set('');
     try {
       const id = this.examId();

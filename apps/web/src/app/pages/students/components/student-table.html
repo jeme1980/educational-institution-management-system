@@ -3,7 +3,7 @@
   <div class="flex flex-col items-start justify-between gap-4 rounded-2xl border border-surface-border bg-surface-container-lowest p-4 md:flex-row md:items-center">
     <div class="flex items-center gap-2">
       <div class="h-6 w-1 rounded-full bg-primary"></div>
-      <h2 class="text-sm font-black text-slate-800">سجل الطلاب الشامل</h2>
+      <h2 class="text-sm font-black text-on-surface">سجل الطلاب الشامل</h2>
     </div>
 
     <div class="flex flex-col sm:flex-row items-stretch gap-2 w-full md:w-auto">
@@ -111,12 +111,12 @@
   <!-- Active Applied Filter Tags/Chips -->
   @if (hasActiveFilters()) {
     <div class="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-container-low px-5 py-2 text-xs" id="active-filters-chips">
-      <span class="text-slate-500 font-bold">التصفيات النشطة:</span>
+      <span class="text-on-surface-variant font-bold">التصفيات النشطة:</span>
       
       @if (searchTerm()) {
         <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
           <span>بحث: "{{ searchTerm() }}"</span>
-          <button (click)="searchChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button (click)="searchChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
@@ -125,7 +125,7 @@
       @if (classFilter()) {
         <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
           <span>الشعبة: {{ getClassName(classFilter()) }}</span>
-          <button (click)="classFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button (click)="classFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
@@ -134,7 +134,7 @@
       @if (statusFilter()) {
         <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
           <span>الحالة: {{ getStatusLabel(statusFilter()) }}</span>
-          <button (click)="statusFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button (click)="statusFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
@@ -143,7 +143,7 @@
       @if (genderFilter()) {
         <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
           <span>الجنس: {{ genderFilter() === 'gnd-male' ? 'ذكر' : 'أنثى' }}</span>
-          <button (click)="genderFilterChange.emit('')" class="hover:text-rose-600 font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button (click)="genderFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
@@ -151,7 +151,7 @@
 
       <button
         (click)="clearFilters()"
-        class="mr-auto text-[10px] text-rose-600 hover:text-rose-800 font-black hover:underline bg-transparent border-0 cursor-pointer"
+        class="mr-auto text-[10px] text-error hover:text-error font-black hover:underline bg-transparent border-0 cursor-pointer"
       >
         إعادة تعيين كافة المرشحات
       </button>
@@ -160,9 +160,9 @@
 
   <!-- Data Display State -->
   @if (isLoading()) {
-    <div class="p-16 text-center text-slate-500 text-sm flex flex-col items-center justify-center gap-3" id="student-table-loader">
+    <div class="p-16 text-center text-on-surface-variant text-sm flex flex-col items-center justify-center gap-3" id="student-table-loader">
       <mat-icon class="animate-spin text-primary text-3xl">sync</mat-icon>
-      <span class="font-bold text-slate-600">جاري تحميل وتحديث سجلات الطلاب...</span>
+      <span class="font-bold text-on-surface-variant">جاري تحميل وتحديث سجلات الطلاب...</span>
     </div>
   } @else if (loadError()) {
     <div class="space-y-3 p-16 text-center text-danger" id="student-table-error" role="alert">
@@ -173,7 +173,7 @@
   } @else if (students().length === 0) {
     <div class="space-y-3 p-16 text-center text-on-surface-variant" id="student-table-empty">
       <mat-icon class="text-6xl text-outline">person_off</mat-icon>
-      <div class="text-base font-bold text-slate-700">لم يتم العثور على أي طالب متطابق مع الاختيارات</div>
+      <div class="text-base font-bold text-on-surface">لم يتم العثور على أي طالب متطابق مع الاختيارات</div>
       <div class="mx-auto max-w-sm text-xs leading-relaxed text-on-surface-variant">
         قم بتعديل حقول البحث والتصفية بالأعلى أو انقر فوق "إضافة طالب جديد" لتسجيل طالب جديد بالمنظومة بالكامل.
       </div>
@@ -181,11 +181,20 @@
   } @else {
     <div class="student-table-shell overflow-hidden rounded-2xl border border-surface-border bg-surface-container-lowest">
     @if (viewMode() === 'table') {
+      @if (selectedStudentIds().size > 0) {
+        <div class="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-container-low px-4 py-3" role="region" aria-label="إجراءات الطلاب المحددين">
+          <span class="text-xs font-bold text-on-surface">تم تحديد {{ selectedStudentIds().size }} طالب</span>
+          @if (canEdit()) {
+            <ui-button size="sm" variant="secondary" (activated)="requestBulkStatusChange()"><mat-icon aria-hidden="true">published_with_changes</mat-icon>تغيير الحالة الأكاديمية</ui-button>
+          }
+          <ui-button size="sm" variant="ghost" (activated)="clearSelection()">إلغاء التحديد</ui-button>
+        </div>
+      }
       <div class="core-table-wrap rounded-none border-0" id="student-table-scroll-container">
         <table class="core-table text-sm whitespace-nowrap">
           <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant">
             <tr>
-              <th class="w-12 py-3 px-2 text-center">#</th>
+              <th class="w-16 py-3 px-2 text-center"><mat-checkbox [checked]="isAllCurrentPageSelected()" [indeterminate]="isSomeCurrentPageSelected()" (change)="toggleSelectAll()" aria-label="تحديد طلاب الصفحة الحالية"></mat-checkbox></th>
               <th (click)="toggleSort('nameAr')" class="w-[30%] cursor-pointer px-4 py-3 text-right transition-colors hover:bg-surface-container-high">
                 <div class="flex items-center gap-1">
                   <span>الطالب</span>
@@ -206,7 +215,7 @@
           <tbody class="bg-surface">
             @for (student of students(); track student.id; let rowIndex = $index) {
               <tr class="group transition-colors hover:bg-surface-container-low">
-                <td class="py-3 px-2 text-center font-mono text-on-surface-variant">{{ rowNumber(rowIndex) }}</td>
+                <td class="py-3 px-2 text-center font-mono text-on-surface-variant"><div class="flex items-center justify-center gap-1"><mat-checkbox [checked]="isSelected(student.id)" (change)="toggleSelection(student.id)" [attr.aria-label]="'تحديد الطالب ' + student.firstNameAr"></mat-checkbox><span>{{ rowNumber(rowIndex) }}</span></div></td>
                 <td class="overflow-hidden px-4 py-3">
                   <div class="flex min-w-0 items-center gap-3">
                     @if (student.photoUrl) {
@@ -217,8 +226,9 @@
                       </div>
                     }
                     <div class="min-w-0 truncate">
-                      <div class="truncate text-sm font-semibold text-slate-800 group-hover:text-primary transition-colors">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
-                      <div class="mt-0.5 truncate text-xs text-slate-400 font-mono">{{ student.nationalId || '—' }}</div>
+                      <div class="truncate text-sm font-semibold text-on-surface group-hover:text-primary transition-colors">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
+                      <div class="mt-0.5 truncate text-xs text-on-surface-variant font-mono">{{ student.nationalId || '—' }}</div>
+                      @if (student.guardian || student.relationTypeId) { <mat-icon class="text-base text-on-surface-variant" matTooltip="لديه ولي أمر مسجّل" aria-label="لديه ولي أمر مسجّل">family_restroom</mat-icon> }
                     </div>
                   </div>
                 </td>
@@ -234,7 +244,7 @@
                 <td class="whitespace-nowrap px-4 py-3 font-mono text-sm text-on-surface-variant">{{ getContactPhone(student) }}</td>
                 <td class="px-4 py-3">
                   <span [class]="getStatusClass(student.studentStatusId) + ' inline-block py-0.5 text-center text-[10px] leading-none'">
-                    {{ student.isActive ? 'نشط' : 'غير نشط' }}
+                    {{ getStatusLabel(student.studentStatusId) }}
                   </span>
                 </td>
                 <td class="relative px-2 py-3">
@@ -275,9 +285,9 @@
                   </div>
                 }
                 <div>
-                  <div class="font-black text-slate-800 text-sm">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
+                  <div class="font-black text-on-surface text-sm">{{ student.firstNameAr }} {{ student.lastNameAr }}</div>
                   @if (student.firstNameHe || student.lastNameHe) {
-                    <div class="text-[11px] text-slate-400 font-semibold font-sans" dir="ltr">{{ student.firstNameHe || '' }} {{ student.lastNameHe || '' }}</div>
+                    <div class="text-[11px] text-on-surface-variant font-semibold font-sans" dir="ltr">{{ student.firstNameHe || '' }} {{ student.lastNameHe || '' }}</div>
                   }
                 </div>
               </div>
@@ -288,20 +298,20 @@
 
             <div class="grid grid-cols-1 gap-2 text-[11px] text-on-surface-variant sm:grid-cols-2">
               <div class="rounded-md bg-surface-container-low px-3 py-2">
-                <div class="text-[10px] text-slate-400 mb-1">رقم الهوية</div>
-                <div class="font-bold text-slate-700 font-mono">{{ student.nationalId ? student.nationalId : '—' }}</div>
+                <div class="text-[10px] text-on-surface-variant mb-1">رقم الهوية</div>
+                <div class="font-bold text-on-surface font-mono">{{ student.nationalId ? student.nationalId : '—' }}</div>
               </div>
               <div class="rounded-md bg-surface-container-low px-3 py-2">
-                <div class="text-[10px] text-slate-400 mb-1">الشعبة</div>
-                <div class="font-bold text-slate-700">{{ getClassName(student.classId) }}</div>
+                <div class="text-[10px] text-on-surface-variant mb-1">الشعبة</div>
+                <div class="font-bold text-on-surface">{{ getClassName(student.classId) }}</div>
               </div>
               <div class="rounded-md bg-surface-container-low px-3 py-2">
-                <div class="text-[10px] text-slate-400 mb-1">الهاتف</div>
-                <div class="font-bold text-slate-700 font-mono">{{ student.phoneNumber || 'لا يوجد هاتف' }}</div>
+                <div class="text-[10px] text-on-surface-variant mb-1">الهاتف</div>
+                <div class="font-bold text-on-surface font-mono">{{ student.phoneNumber || 'لا يوجد هاتف' }}</div>
               </div>
               <div class="rounded-md bg-surface-container-low px-3 py-2">
-                <div class="text-[10px] text-slate-400 mb-1">البريد</div>
-                <div class="font-bold text-slate-700 font-mono truncate">{{ student.email || '—' }}</div>
+                <div class="text-[10px] text-on-surface-variant mb-1">البريد</div>
+                <div class="font-bold text-on-surface font-mono truncate">{{ student.email || '—' }}</div>
               </div>
             </div>
 

@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-student-metrics',
-  imports: [MatIconModule, UiStatCardComponent],
+  imports: [MatIconModule, MatTooltipModule, UiStatCardComponent],
   templateUrl: './student-metrics.html',
 })
 export class StudentMetrics {

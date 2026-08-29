@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, input, output, inject, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output, inject, computed, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiService, Student } from '../../../core/services/api.service';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
@@ -10,7 +12,7 @@ import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-pan
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-student-table',
-  imports: [CommonModule, MatIconModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent, UiFilterPanelComponent],
+  imports: [CommonModule, MatIconModule, MatCheckboxModule, MatTooltipModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent, UiFilterPanelComponent],
   templateUrl: './student-table.html',
   styleUrl: './student-table.css',
 })
@@ -46,11 +48,24 @@ export class StudentTable {
   viewDetails = output<Student>();
   edit = output<Student>();
   delete = output<string>();
+  bulkStatusChange = output<string[]>();
+
+  selectedStudentIds = signal<Set<string>>(new Set());
 
   viewMode = signal<'table' | 'cards'>('table');
   actionMenuId = signal<string | null>(null);
 
   private searchTimeout: any;
+
+  private readonly clearSelectionOnViewChange = effect(() => {
+    this.currentPage();
+    this.pageSize();
+    this.searchTerm();
+    this.classFilter();
+    this.statusFilter();
+    this.genderFilter();
+    this.clearSelection();
+  });
 
   onSearchInput(event: Event) {
     const value = (event.target as HTMLInputElement).value;
@@ -90,6 +105,44 @@ export class StudentTable {
 
   closeActionMenu() {
     this.actionMenuId.set(null);
+  }
+
+  toggleSelection(id: string) {
+    const next = new Set(this.selectedStudentIds());
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    this.selectedStudentIds.set(next);
+  }
+
+  isSelected(id: string): boolean {
+    return this.selectedStudentIds().has(id);
+  }
+
+  toggleSelectAll() {
+    const currentPageIds = this.students().map((student) => student.id);
+    const next = new Set(this.selectedStudentIds());
+    if (this.isAllCurrentPageSelected()) currentPageIds.forEach((id) => next.delete(id));
+    else currentPageIds.forEach((id) => next.add(id));
+    this.selectedStudentIds.set(next);
+  }
+
+  isAllCurrentPageSelected(): boolean {
+    const currentPageIds = this.students().map((student) => student.id);
+    return currentPageIds.length > 0 && currentPageIds.every((id) => this.selectedStudentIds().has(id));
+  }
+
+  isSomeCurrentPageSelected(): boolean {
+    const currentPageIds = this.students().map((student) => student.id);
+    return currentPageIds.some((id) => this.selectedStudentIds().has(id)) && !this.isAllCurrentPageSelected();
+  }
+
+  clearSelection() {
+    if (this.selectedStudentIds().size > 0) this.selectedStudentIds.set(new Set());
+  }
+
+  requestBulkStatusChange() {
+    const ids = [...this.selectedStudentIds()].filter((id) => this.students().some((student) => student.id === id));
+    if (ids.length) this.bulkStatusChange.emit(ids);
   }
 
   hasActiveFilters = computed(() => {

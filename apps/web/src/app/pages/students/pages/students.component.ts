@@ -13,6 +13,8 @@ import { TabType, DetailTabType, ToastState } from '../models/student.model';
 import { firstValueFrom } from 'rxjs';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
+import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -27,6 +29,8 @@ import { AuthService } from '../../../core/services/auth.service';
     StudentTable,
     StudentDetailsModal,
     StudentFormModal,
+    UiModalComponent,
+    UiButtonComponent,
   ],
   templateUrl: './students.component.html',
   styleUrl: './students.component.css',
@@ -60,6 +64,10 @@ export class StudentsComponent implements OnInit {
   importErrors = signal<string[]>([]);
   isExportingStudents = signal(false);
   studentLoadError = signal('');
+  bulkStatusModalOpen = signal(false);
+  bulkStatusId = signal('');
+  bulkStatusStudentIds = signal<string[]>([]);
+  bulkStatusSaving = signal(false);
 
   canCreateStudents = computed(() => this.authService.hasPermission('students:create'));
   canUpdateStudents = computed(() => this.authService.hasPermission('students:update'));
@@ -471,6 +479,49 @@ export class StudentsComponent implements OnInit {
 
     if (!date || Number.isNaN(date.getTime())) return String(value ?? '');
     return this.toDisplayDate(date.getUTCDate(), date.getUTCMonth() + 1, date.getUTCFullYear()) || String(value ?? '');
+  }
+
+  openBulkStatusDialog(ids: string[]) {
+    if (!this.canUpdateStudents() || !ids.length) return;
+    this.bulkStatusStudentIds.set(ids);
+    this.bulkStatusId.set('');
+    this.bulkStatusModalOpen.set(true);
+  }
+
+  closeBulkStatusDialog() {
+    if (!this.bulkStatusSaving()) this.bulkStatusModalOpen.set(false);
+  }
+
+  async applyBulkStatus() {
+    const statusId = this.bulkStatusId();
+    const ids = this.bulkStatusStudentIds();
+    if (!statusId || !ids.length || this.bulkStatusSaving()) return;
+
+    if (!await this.confirmDialog.confirm({
+      title: 'تغيير الحالة الأكاديمية',
+      message: `سيتم تغيير الحالة الأكاديمية لـ ${ids.length} طالب. هل تريد المتابعة؟`,
+      confirmText: 'متابعة',
+      cancelText: 'إلغاء',
+      variant: 'warning',
+    })) return;
+
+    this.bulkStatusSaving.set(true);
+    let successCount = 0;
+    let failureCount = 0;
+    try {
+      for (const id of ids) {
+        const ok = await firstValueFrom(this.studentStateService.updateStudentStatus(id, statusId));
+        if (ok) successCount++;
+        else failureCount++;
+      }
+      this.bulkStatusModalOpen.set(false);
+      this.showToast(failureCount === 0 ? 'success' : 'error', failureCount === 0
+        ? `تم تحديث حالة ${successCount} طالب.`
+        : `تم تحديث ${successCount} طلاب، وتعذر تحديث ${failureCount} طالب.`);
+      this.loadCurrentPage();
+    } finally {
+      this.bulkStatusSaving.set(false);
+    }
   }
 
   private toDisplayDate(day: number, month: number, year: number): string | null {

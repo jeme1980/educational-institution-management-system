@@ -44,7 +44,27 @@
     (viewDetails)="viewStudentDetails($event)"
     (edit)="openEditModal($event)"
     (delete)="deleteStudent($event)"
+    (bulkStatusChange)="openBulkStatusDialog($event)"
   ></app-student-table>
+
+  <ui-modal [open]="bulkStatusModalOpen()" title="تغيير الحالة الأكاديمية" size="sm" [closeOnBackdrop]="!bulkStatusSaving()" [closeOnEscape]="!bulkStatusSaving()" (closed)="closeBulkStatusDialog()">
+    <div ui-modal-body class="grid gap-3">
+      <p class="text-sm text-on-surface-variant">اختر الحالة الجديدة للطلاب المحددين.</p>
+      <label class="grid gap-1 text-sm font-semibold text-on-surface">
+        الحالة الأكاديمية
+        <select class="ui-form-control" [value]="bulkStatusId()" (change)="bulkStatusId.set($any($event.target).value)">
+          <option value="">اختر الحالة</option>
+          @for (status of apiService.lookups()?.studentStatuses || []; track status.id) {
+            <option [value]="status.id">{{ status.nameAr }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    <div ui-modal-footer class="flex gap-2">
+      <ui-button type="button" variant="secondary" [disabled]="bulkStatusSaving()" (activated)="closeBulkStatusDialog()">إلغاء</ui-button>
+      <ui-button type="button" [disabled]="!bulkStatusId() || bulkStatusSaving()" [loading]="bulkStatusSaving()" (activated)="applyBulkStatus()">متابعة</ui-button>
+    </div>
+  </ui-modal>
 
   <!-- Add / Edit Student Modal -->
   <app-student-form-modal

@@ -300,7 +300,6 @@ export class StudentStateService {
     ).pipe(
       map((res) => {
         if (res.ok) {
-          this.forceRefreshStudent(id);
           return true;
         }
         return false;
@@ -308,6 +307,25 @@ export class StudentStateService {
       catchError((error) => {
         console.error(`Error updating student ${id}:`, error);
         return throwError(() => new Error('فشل تحديث بيانات الطالب.'));
+      })
+    );
+  }
+
+  updateStudentStatus(id: string, studentStatusId: string): Observable<boolean> {
+    return from(this.apiService.apiFetch(`/api/students/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ studentStatusId }),
+    })).pipe(
+      map((res) => {
+        if (res.ok) {
+          return true;
+        }
+        return false;
+      }),
+      catchError((error) => {
+        console.error(`Error updating student status ${id}:`, error);
+        return of(false);
       })
     );
   }

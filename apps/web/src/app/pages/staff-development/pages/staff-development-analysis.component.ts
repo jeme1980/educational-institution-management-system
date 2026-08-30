@@ -61,7 +61,13 @@ export class StaffDevelopmentAnalysisComponent implements OnInit {
   readonly specialtyAggregates = computed(() => this.aggregate(this.filteredRecords(), item => item.staffMember?.specialization?.nameAr || 'بدون تخصص'));
   readonly providerAggregates = computed(() => this.aggregate(this.filteredRecords(), item => item.provider?.name || 'بدون جهة مقدمة'));
   readonly completionAggregates = computed(() => this.aggregate(this.filteredRecords(), item => item.courseName || item.courseCode, item => item.courseCode));
-  readonly yearlyAggregates = computed(() => this.aggregate(this.filteredRecords(), item => this.yearOf(item.startDate)));
+  readonly yearlyAggregates = computed(() => [...this.aggregate(this.filteredRecords(), item => this.yearOf(item.startDate))].sort((a, b) => {
+    const yearA = Number(a.label);
+    const yearB = Number(b.label);
+    if (!Number.isFinite(yearA)) return 1;
+    if (!Number.isFinite(yearB)) return -1;
+    return yearA - yearB;
+  }));
   readonly teacherRows = computed(() => this.teacherSummary(this.filteredRecords()));
   readonly uncoveredStaff = computed(() => Math.max(0, this.api.staff().filter(staff => !staff.archivedAt).length - this.participatingStaff()));
 

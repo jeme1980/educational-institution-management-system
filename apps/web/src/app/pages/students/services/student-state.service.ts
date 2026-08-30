@@ -311,25 +311,6 @@ export class StudentStateService {
     );
   }
 
-  updateStudentStatus(id: string, studentStatusId: string): Observable<boolean> {
-    return from(this.apiService.apiFetch(`/api/students/${id}`, {
-      method: 'PUT',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ studentStatusId }),
-    })).pipe(
-      map((res) => {
-        if (res.ok) {
-          return true;
-        }
-        return false;
-      }),
-      catchError((error) => {
-        console.error(`Error updating student status ${id}:`, error);
-        return of(false);
-      })
-    );
-  }
-
   /**
    * Deletes a student and forces a refresh across all caches and lists.
    */

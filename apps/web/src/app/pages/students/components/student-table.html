@@ -181,20 +181,11 @@
   } @else {
     <div class="student-table-shell overflow-hidden rounded-2xl border border-surface-border bg-surface-container-lowest">
     @if (viewMode() === 'table') {
-      @if (selectedStudentIds().size > 0) {
-        <div class="flex flex-wrap items-center gap-2 border-b border-surface-border bg-surface-container-low px-4 py-3" role="region" aria-label="إجراءات الطلاب المحددين">
-          <span class="text-xs font-bold text-on-surface">تم تحديد {{ selectedStudentIds().size }} طالب</span>
-          @if (canEdit()) {
-            <ui-button size="sm" variant="secondary" (activated)="requestBulkStatusChange()"><mat-icon aria-hidden="true">published_with_changes</mat-icon>تغيير الحالة الأكاديمية</ui-button>
-          }
-          <ui-button size="sm" variant="ghost" (activated)="clearSelection()">إلغاء التحديد</ui-button>
-        </div>
-      }
       <div class="core-table-wrap rounded-none border-0" id="student-table-scroll-container">
         <table class="core-table text-sm whitespace-nowrap">
           <thead class="border-b border-surface-border bg-surface-container-low text-on-surface-variant">
             <tr>
-              <th class="w-16 py-3 px-2 text-center"><mat-checkbox [checked]="isAllCurrentPageSelected()" [indeterminate]="isSomeCurrentPageSelected()" (change)="toggleSelectAll()" aria-label="تحديد طلاب الصفحة الحالية"></mat-checkbox></th>
+              <th class="w-12 py-3 px-2 text-center">#</th>
               <th (click)="toggleSort('nameAr')" class="w-[30%] cursor-pointer px-4 py-3 text-right transition-colors hover:bg-surface-container-high">
                 <div class="flex items-center gap-1">
                   <span>الطالب</span>
@@ -215,7 +206,7 @@
           <tbody class="bg-surface">
             @for (student of students(); track student.id; let rowIndex = $index) {
               <tr class="group transition-colors hover:bg-surface-container-low">
-                <td class="py-3 px-2 text-center font-mono text-on-surface-variant"><div class="flex items-center justify-center gap-1"><mat-checkbox [checked]="isSelected(student.id)" (change)="toggleSelection(student.id)" [attr.aria-label]="'تحديد الطالب ' + student.firstNameAr"></mat-checkbox><span>{{ rowNumber(rowIndex) }}</span></div></td>
+                <td class="py-3 px-2 text-center font-mono text-on-surface-variant">{{ rowNumber(rowIndex) }}</td>
                 <td class="overflow-hidden px-4 py-3">
                   <div class="flex min-w-0 items-center gap-3">
                     @if (student.photoUrl) {

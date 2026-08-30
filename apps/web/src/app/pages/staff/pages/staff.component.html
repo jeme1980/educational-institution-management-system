@@ -570,164 +570,52 @@
          <ui-modal [open]="true" [title]="isEditMode() ? 'تعديل بيانات عضو الكادر' : 'إضافة عضو كادر جديد'" size="md" (closed)="closeModal()">
 
             <!-- Form -->
-            <form ui-modal-body [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="p-6 space-y-4 text-xs">
-              <div class="grid grid-cols-1 gap-4">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">رقم الهوية الوطنية (national_id)</label>
-                  <input
-                    type="text"
-                    formControlName="nationalId"
-                    placeholder="رقم الهوية المكون من 9 أرقام"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
-                  />
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">الاسم الأول بالعربية *</label>
-                  <input
-                    type="text"
-                    formControlName="firstNameAr"
-                    placeholder="مثال: محمد"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
-                  />
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">اسم العائلة بالعربية *</label>
-                  <input
-                    type="text"
-                    formControlName="familyNameAr"
-                    placeholder="مثال: الخطيب"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
-                  />
-                </div>
-              </div>
+            <form ui-modal-body [formGroup]="staffForm" (ngSubmit)="saveStaff()" class="grid gap-4 p-6 text-xs" dir="rtl">
+  <div>
+    <label class="mb-1 block font-bold text-on-surface">رقم الهوية الوطنية</label>
+    <input type="text" formControlName="nationalId" placeholder="أدخل رقم الهوية الوطنية" class="ui-form-control w-full" />
+  </div>
 
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">Phone (phone_number)</label>
-                  <input type="tel" formControlName="phoneNumber" dir="ltr" placeholder="05x-xxxxxxx" class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all" />
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">Email</label>
-                  <input type="email" formControlName="email" dir="ltr" placeholder="name@example.com" class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all" />
-                </div>
-              </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div><label class="mb-1 block font-bold text-on-surface">الاسم الأول بالعربية *</label><input type="text" formControlName="firstNameAr" placeholder="أدخل الاسم الأول" class="ui-form-control w-full" /></div>
+    <div><label class="mb-1 block font-bold text-on-surface">اسم العائلة بالعربية *</label><input type="text" formControlName="familyNameAr" placeholder="أدخل اسم العائلة" class="ui-form-control w-full" /></div>
+  </div>
 
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">الاسم الأول بالعبرية</label>
-                  <input
-                    type="text"
-                    formControlName="firstNameHe"
-                    placeholder="مثال: מוחמד"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
-                    dir="ltr"
-                  />
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">اسم العائلة بالعبرية</label>
-                  <input
-                    type="text"
-                    formControlName="familyNameHe"
-                    placeholder="مثال: אל-חטיב"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
-                     dir="ltr"
-                   />
-                 </div>
-               </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div><label class="mb-1 block font-bold text-on-surface">الاسم الأول بالعبرية</label><input type="text" formControlName="firstNameHe" placeholder="أدخل الاسم الأول بالعبرية" class="ui-form-control w-full font-sans" dir="ltr" /></div>
+    <div><label class="mb-1 block font-bold text-on-surface">اسم العائلة بالعبرية</label><input type="text" formControlName="familyNameHe" placeholder="أدخل اسم العائلة بالعبرية" class="ui-form-control w-full font-sans" dir="ltr" /></div>
+  </div>
 
-                @if (false) {
-                <div class="hidden">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي بالعربية</label>
-                  <input
-                    type="text"
-                    [value]="getPrimaryAssignmentRole(selectedStaffId() || '')" readonly hidden
-                    placeholder="مثال: معلم أول رياضيات"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all"
-                  />
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">المسمى الوظيفي بالعبرية</label>
-                  <input
-                    type="text"
-                    [value]="getPrimaryAssignmentRole(selectedStaffId() || '')" readonly hidden
-                    placeholder="مثال: מורה למתמטיקה"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all font-sans"
-                    dir="ltr"
-                  />
-                </div>
-               </div>
-               }
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div><label class="mb-1 block font-bold text-on-surface">رقم الهاتف</label><input type="tel" formControlName="phoneNumber" dir="ltr" placeholder="05x-xxxxxxx" class="ui-form-control w-full" /></div>
+    <div><label class="mb-1 block font-bold text-on-surface">البريد الإلكتروني</label><input type="email" formControlName="email" dir="ltr" placeholder="أدخل البريد الإلكتروني" class="ui-form-control w-full" /></div>
+  </div>
 
-               <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">الجنس</label>
-                  <select
-                    formControlName="genderId"
-                    class="w-full px-3 py-2 rounded-lg border border-surface-border focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f] transition-all bg-white"
-                  >
-                    <option value="">غير محدد</option>
-                    @for (gender of (apiService.lookups()?.genders || []); track gender.id) {
-                      <option [value]="gender.id">{{ gender.nameAr }}</option>
-                    }
-                  </select>
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-700 mb-1">رمز المؤسسة</label>
-                  <select formControlName="institutionId" class="w-full px-3 py-2 rounded-lg border border-surface-border bg-white focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f]">
-                    <option value="" disabled>اختر المؤسسة التعليمية</option>
-                    @for (inst of apiService.institutions(); track inst.id) {
-                      <option [value]="inst.id">{{ inst.nameAr }}</option>
-                    }
-                  </select>
-                </div>
-              </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <label class="mb-1 block font-bold text-on-surface">الجنس</label>
+      <select formControlName="genderId" class="ui-form-control w-full"><option value="">غير محدد</option>@for (gender of (apiService.lookups()?.genders || []); track gender.id) {<option [value]="gender.id">{{ gender.nameAr }}</option>}</select>
+    </div>
+    <div>
+      <label class="mb-1 block font-bold text-on-surface">التخصص</label>
+      <select formControlName="specializationId" class="ui-form-control w-full"><option value="">بدون تخصص</option>@for (specialization of (apiService.publicLookups()['specializations'] || []); track specialization.id) {@if (specialization.isActive !== false) {<option [value]="specialization.id">{{ specialization.nameAr }}</option>}}</select>
+    </div>
+  </div>
 
-               <div>
-                 <label class="block font-bold text-slate-700 mb-1">التخصص</label>
-                 <select formControlName="specializationId" class="w-full px-3 py-2 rounded-lg border border-surface-border bg-white focus:ring-2 focus:ring-[#00236f]/20 focus:border-[#00236f]">
-                   <option value="">بدون تخصص</option>
-                   @for (specialization of (apiService.publicLookups()['specializations'] || []); track specialization.id) {
-                     @if (specialization.isActive !== false) {
-                       <option [value]="specialization.id">{{ specialization.nameAr }}</option>
-                     }
-                   }
-                 </select>
-               </div>
+  <div>
+    <label class="mb-1 block font-bold text-on-surface">المؤسسة</label>
+    <select formControlName="institutionId" class="ui-form-control w-full"><option value="" disabled>اختر المؤسسة التعليمية</option>@for (inst of apiService.institutions(); track inst.id) {<option [value]="inst.id">{{ inst.nameAr }}</option>}</select>
+  </div>
 
-               <div class="bg-slate-50 p-3 rounded-lg border border-surface-border">
-                <label class="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    formControlName="isArchived"
-                    class="w-4 h-4 text-[#00236f] rounded border-slate-300 focus:ring-[#00236f]"
-                  />
-                  <span class="font-bold text-slate-700">مؤرشف / مجاز (تعطيل النشاط)</span>
-                </label>
-              </div>
+  <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-surface-border bg-surface-container-low p-3 text-on-surface"><input type="checkbox" formControlName="isArchived" class="h-4 w-4 rounded border-outline accent-primary" /><span class="font-bold">مؤرشف / مجمّد (تعطيل النشاط)</span></label>
 
-              <!-- Action buttons -->
-              @if (apiService.usersApi.staffError()) { <div class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">{{ apiService.usersApi.staffError() }}</div> }
-               <div ui-modal-footer class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  (click)="closeModal()"
-                  class="px-4 py-2 text-slate-600 hover:bg-slate-100 font-bold rounded-lg transition-all"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  [disabled]="staffForm.invalid || isSaving()"
-                  class="px-5 py-2.5 rounded-lg bg-[#00236f] hover:bg-[#1e3a8a] disabled:opacity-50 text-white font-bold transition-all shadow-2xs flex items-center gap-2"
-                >
-                  <mat-icon class="text-base">save</mat-icon>
-                  <span>{{ isSaving() ? 'جاري الحفظ...' : 'حفظ البيانات' }}</span>
-                </button>
-              </div>
-            </form>
+  @if (apiService.usersApi.staffError()) { <div class="rounded-lg border border-error bg-error-container px-3 py-2 text-xs font-bold text-on-error-container">{{ apiService.usersApi.staffError() }}</div> }
+
+  <div ui-modal-footer class="flex items-center justify-end gap-3 border-t border-surface-border pt-4">
+    <button type="button" (click)="closeModal()" class="rounded-lg px-4 py-2 font-bold text-on-surface-variant transition-colors hover:bg-surface-container-high">إلغاء</button>
+    <button type="submit" [disabled]="staffForm.invalid || isSaving()" class="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 font-bold text-on-primary transition-colors hover:bg-primary-container disabled:opacity-50"><mat-icon class="text-base">save</mat-icon><span>{{ isSaving() ? 'جارٍ الحفظ...' : 'حفظ البيانات' }}</span></button>
+  </div>
+</form>
          </ui-modal>
       }
 

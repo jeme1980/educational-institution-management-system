@@ -27,6 +27,7 @@ export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
   { path: '/registered-students', label: 'الطلاب المسجلون', icon: 'assignment_ind', permission: 'students:read' },
   { path: '/staff', label: 'الكادر والتعيينات', icon: 'supervisor_account', permission: 'teachers:read' },
   { path: '/staff-development', label: 'إدارة الاستكمالات', icon: 'workspace_premium', permission: 'teachers:read' },
+  { path: '/staff-development/analysis', label: 'تحليل الاستكمالات', icon: 'analytics', permission: 'teachers:read' },
   { path: '/classes', label: 'الشعب والصفوف', icon: 'meeting_room', permission: 'settings:read' },
   { path: '/study-groups', label: 'مجموعات الدراسة', icon: 'diversity_3', permission: 'settings:read' },
   { path: '/subjects', label: 'المناهج والمواد', icon: 'menu_book', permission: 'settings:read' },

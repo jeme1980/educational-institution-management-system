@@ -66,6 +66,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/staff/pages/staff').then(m => m.StaffComponent),
   },
   {
+    path: 'staff-development/analysis',
+    title: 'تحليل الاستكمالات والتطوير المهني',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'teachers:read' },
+    loadComponent: () => import('./pages/staff-development/pages/staff-development-analysis').then(m => m.StaffDevelopmentAnalysisComponent),
+  },
+  {
     path: 'staff-development',
     canActivate: [authGuard, permissionGuard],
     title: 'التطوير المهني',

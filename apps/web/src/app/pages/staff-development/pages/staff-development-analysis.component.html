@@ -1,0 +1,37 @@
+<main class="staff-analysis" dir="rtl">
+  <ui-page-header eyebrow="التطوير المهني" title="تحليل الاستكمالات والتطوير المهني" description="استخراج اتجاهات التطوير المهني وتوزيع الساعات والمشاركة لدعم التخطيط التربوي.">
+    <div ui-page-actions><a class="analysis-link" href="/staff-development">إدارة الاستكمالات</a></div>
+  </ui-page-header>
+
+  <ui-filter-panel title="تصفية التحليل" icon="filter_alt" resetLabel="مسح الفلاتر" (reset)="resetFilters()">
+    <div class="filters">
+      <label>السنة الدراسية<ui-select [ngModel]="selectedYearId()" (ngModelChange)="selectedYearId.set($event)" ariaLabel="السنة الدراسية"><option value="ALL">كل السنوات</option>@for (year of years(); track year.id) {<option [value]="year.id">{{ year.yearLabel }}</option>}</ui-select></label>
+      <label>التخصص<ui-select [ngModel]="selectedSpecializationId()" (ngModelChange)="selectedSpecializationId.set($event)" ariaLabel="التخصص"><option value="ALL">كل التخصصات</option>@for (item of specializations(); track item.id) {<option [value]="item.id">{{ item.nameAr }}</option>}</ui-select></label>
+      <label>الموظف<ui-select [ngModel]="selectedStaffId()" (ngModelChange)="selectedStaffId.set($event)" ariaLabel="الموظف"><option value="ALL">كل الموظفين</option>@for (staff of api.staff(); track staff.id) {<option [value]="staff.id">{{ staff.firstNameAr }} {{ staff.familyNameAr }}</option>}</ui-select></label>
+      <label>الجهة المقدمة<ui-select [ngModel]="selectedProviderId()" (ngModelChange)="selectedProviderId.set($event)" ariaLabel="الجهة المقدمة"><option value="ALL">كل الجهات</option>@for (provider of providers(); track provider.id) {<option [value]="provider.id">{{ provider.name }}</option>}</ui-select></label>
+      <label>الاستكمال<ui-select [ngModel]="selectedCompletion()" (ngModelChange)="selectedCompletion.set($event)" ariaLabel="الاستكمال"><option value="ALL">كل الاستكمالات</option>@for (completion of completions(); track completion.code) {<option [value]="completion.code">{{ completion.label }}</option>}</ui-select></label>
+    </div>
+  </ui-filter-panel>
+
+  <section class="kpis" aria-label="مؤشرات التطوير المهني">
+    <ui-stat-card label="الموظفون المشاركون" [value]="participatingStaff()" helper="موظفون لديهم سجل ضمن الفلاتر" icon="groups" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="إجمالي السجلات" [value]="totalRecords()" helper="السجلات المطابقة" icon="assignment" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="إجمالي الساعات" [value]="totalHours()" helper="مجموع الساعات المسجلة" icon="schedule" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="متوسط الساعات" [value]="averageHoursLabel()" helper="لكل موظف مشارك" icon="timelapse" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="الجهات المقدمة" [value]="distinctProviders()" helper="جهات في النتائج" icon="business" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="الاستكمالات" [value]="distinctCompletions()" helper="حسب رمز الاستكمال" icon="workspace_premium" tone="primary" iconTreatment="on-container" />
+  </section>
+
+  @if (!hasData()) { <div class="empty-state" role="status"><mat-icon aria-hidden="true">info</mat-icon><p>لا توجد بيانات استكمالات ضمن الفلاتر المختارة.</p></div> }
+  @if (hasData()) {
+    <section class="charts-grid">
+      <article class="chart-card"><h2>اتجاه ساعات التطوير عبر السنوات</h2><div class="chart chart--line" role="img" aria-label="اتجاه ساعات التطوير عبر السنوات"><canvas baseChart type="line" [data]="yearlyChartData()" [options]="lineOptions()"></canvas></div></article>
+      <article class="chart-card"><h2>تغطية الكادر بالتطوير المهني</h2><div class="chart chart--donut" role="img" aria-label="تغطية الكادر بالتطوير المهني"><canvas baseChart type="doughnut" [data]="coverageChartData()" [options]="doughnutOptions()"></canvas></div><p class="chart-note">التغطية محسوبة من الكادر النشط في المؤسسة، لا من المشاركين فقط.</p></article>
+      <article class="chart-card chart-card--wide"><h2>ساعات التطوير حسب التخصص</h2><div class="chart chart--bars" role="img" aria-label="ساعات التطوير حسب التخصص"><canvas baseChart type="bar" [data]="specialtyChartData()" [options]="barOptions()"></canvas></div></article>
+      <article class="chart-card chart-card--wide"><h2>المزودون حسب ساعات التطوير</h2><div class="chart chart--bars" role="img" aria-label="المزودون حسب ساعات التطوير"><canvas baseChart type="bar" [data]="providerChartData()" [options]="barOptions()"></canvas></div></article>
+      <article class="chart-card chart-card--wide"><h2>الاستكمالات الأكثر مشاركة</h2><div class="chart chart--bars" role="img" aria-label="الاستكمالات الأكثر مشاركة"><canvas baseChart type="bar" [data]="completionParticipationData()" [options]="barOptions()"></canvas></div></article>
+      <article class="chart-card chart-card--wide"><h2>الاستكمالات حسب إجمالي الساعات</h2><div class="chart chart--bars" role="img" aria-label="الاستكمالات حسب إجمالي الساعات"><canvas baseChart type="bar" [data]="completionHoursData()" [options]="barOptions()"></canvas></div></article>
+    </section>
+    <section class="table-card"><h2>تحليل الكادر</h2><div class="table-scroll"><table><thead><tr><th>الموظف</th><th>التخصص</th><th>عدد السجلات</th><th>إجمالي الساعات</th><th>آخر تاريخ</th><th>آخر استكمال</th><th>آخر جهة</th></tr></thead><tbody>@for (row of teacherRows(); track row.latest.staffMemberId) {<tr><td>{{ row.staff?.firstNameAr }} {{ row.staff?.familyNameAr }}</td><td>{{ row.staff?.specialization?.nameAr || 'بدون تخصص' }}</td><td>{{ row.records }}</td><td>{{ row.hours }}</td><td dir="ltr">{{ row.latest.startDate | date:'yyyy-MM-dd' }}</td><td>{{ row.latest.courseName }}</td><td>{{ row.latest.provider?.name || 'بدون جهة' }}</td></tr>}</tbody></table></div></section>
+  }
+</main>

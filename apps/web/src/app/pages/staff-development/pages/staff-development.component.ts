@@ -13,12 +13,13 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 
 @Component({
   selector: 'app-staff-development',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent, UiFilterPanelComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiInputComponent, UiSelectComponent, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent, UiFilterPanelComponent, UiTableActionsComponent],
   templateUrl: './staff-development.component.html',
-  styles: ['main > header, main > section:nth-of-type(2), main > section:nth-of-type(3) { display: none; }'],
+  styleUrl: './staff-development.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StaffDevelopmentComponent implements OnInit {

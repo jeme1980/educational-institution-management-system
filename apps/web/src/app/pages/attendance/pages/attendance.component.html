@@ -11,20 +11,29 @@
     </div>
   </ui-filter-panel>
 
-  <section class="attendance-summary" aria-label="ملخص الحضور">
-    <div class="summary-items">
-      <span>إجمالي الطلاب <strong>{{ summary().total }}</strong></span>
-      <span class="summary-item--success">حاضر <strong>{{ summary().PRESENT }}</strong></span>
-      <span class="summary-item--danger">غائب <strong>{{ summary().ABSENT }}</strong></span>
-      <span class="summary-item--warning">متأخر <strong>{{ summary().LATE }}</strong></span>
-      <span class="summary-item--primary">معذور <strong>{{ summary().EXCUSED }}</strong></span>
-      <span>غير مسجل <strong>{{ summary().unrecorded }}</strong></span>
+  <section class="attendance-toolbar" aria-label="ملخص وإجراءات الحضور">
+    <div class="attendance-summary" aria-label="ملخص الحضور">
+      <div class="summary-items">
+        <span class="summary-item summary-item--total"><span>إجمالي الطلاب</span><strong>{{ summary().total }}</strong></span>
+        <span class="summary-item summary-item--success"><span>حاضر</span><strong>{{ summary().PRESENT }}</strong></span>
+        <span class="summary-item summary-item--danger"><span>غائب</span><strong>{{ summary().ABSENT }}</strong></span>
+        <span class="summary-item summary-item--warning"><span>متأخر</span><strong>{{ summary().LATE }}</strong></span>
+        <span class="summary-item summary-item--primary"><span>معذور</span><strong>{{ summary().EXCUSED }}</strong></span>
+        <span class="summary-item summary-item--unrecorded"><span>غير مسجل</span><strong>{{ summary().unrecorded }}</strong></span>
+      </div>
     </div>
-    <ui-button size="sm" variant="secondary" [disabled]="!students().length || !canUpdate()" (activated)="setAllPresent()"><mat-icon icon>done_all</mat-icon>تعيين الجميع حاضر</ui-button>
+    <div class="attendance-actions">
+      <div class="save-state" role="status" aria-live="polite">
+        @if (saving()) { جارٍ الحفظ... } @else if (dirty()) { توجد تغييرات غير محفوظة } @else if (notice()) { {{ notice() }} } @else { لا توجد تغييرات }
+      </div>
+      <div class="attendance-action-buttons">
+        <ui-button size="sm" variant="secondary" [disabled]="!students().length || !canUpdate()" (activated)="setAllPresent()"><mat-icon icon>done_all</mat-icon>تعيين الجميع حاضر</ui-button>
+        <ui-button variant="primary" [loading]="saving()" [disabled]="saving() || !students().length || !canUpdate() || !dirty()" (activated)="save()">حفظ الحضور</ui-button>
+      </div>
+    </div>
   </section>
 
   @if (error()) { <div role="alert" class="attendance-message attendance-message--error"><span>{{ error() }}</span><button type="button" (click)="loadRoster()">إعادة المحاولة</button></div> }
-  @if (notice()) { <div role="status" class="attendance-message attendance-message--success">{{ notice() }}</div> }
 
   <section class="attendance-table-card">
     <div class="attendance-table-scroll">
@@ -32,6 +41,5 @@
       @else if (!students().length) { <div class="attendance-empty"><mat-icon aria-hidden="true">event_busy</mat-icon><p>لا توجد تسجيلات مؤهلة لهذا النطاق.</p></div> }
       @else { <table><thead><tr><th scope="col">الطالب</th><th scope="col">الرقم الوطني</th><th scope="col">حالة الحضور</th></tr></thead><tbody>@for (student of students(); track student.studentEnrollmentId) {<tr><td class="student-name">{{ student.firstNameAr }} {{ student.lastNameAr }}</td><td dir="ltr">{{ student.nationalId }}</td><td><div class="status-controls" role="group" [attr.aria-label]="'حالة حضور ' + student.firstNameAr + ' ' + student.lastNameAr">@for (status of statuses; track status) {<button type="button" class="status-button status-button--{{ status | lowercase }}" [attr.aria-pressed]="student.attendance?.status === status" [class.status-button--selected]="student.attendance?.status === status" (click)="setStatus(student, status)">{{ statusLabel(status) }}</button>}</div></td></tr>}</tbody></table> }
     </div>
-    <div class="attendance-save"><span class="save-state">@if (saving()) { جارٍ الحفظ... } @else if (dirty()) { توجد تغييرات غير محفوظة } @else if (notice()) { تم حفظ الحضور } @else { لا توجد تغييرات }</span><ui-button variant="primary" [loading]="saving()" [disabled]="saving() || !students().length || !canUpdate() || !dirty()" (activated)="save()">حفظ الحضور</ui-button></div>
   </section>
 </main>

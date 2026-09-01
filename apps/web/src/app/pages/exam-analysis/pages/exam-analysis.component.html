@@ -1,6 +1,6 @@
 <div dir="rtl" class="analysis-page mx-auto min-h-[calc(100vh-4rem)] max-w-[1600px] space-y-5 p-4 md:p-6" [class.analysis-page--intervention]="activeTab() === 'intervention'">
   <ui-page-header class="intervention-print-header" eyebrow="التقييم والنتائج / تحليل الامتحانات" title="تحليل الامتحانات" description="تحليل تشخيصي للطلاب والأسئلة والمهارات والموضوعات مع توصيات قابلة للتنفيذ.">
-    <div ui-page-actions class="print:hidden">
+    <div ui-page-actions class="analysis-header-actions print:hidden">
       <ui-button variant="secondary" (activated)="exportResults()"><mat-icon aria-hidden="true">table_view</mat-icon> تصدير Excel</ui-button>
       <ui-button variant="primary" (activated)="printReport()"><mat-icon aria-hidden="true">picture_as_pdf</mat-icon> تقرير PDF / طباعة</ui-button>
     </div>

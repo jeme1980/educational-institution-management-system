@@ -6,11 +6,13 @@
 .development-filters label { display: grid; gap: var(--space-1); min-width: 0; color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
 .development-search { position: relative; }
 .development-search .search-icon { position: absolute; z-index: 1; inset-inline-start: var(--space-3); bottom: var(--space-2); color: var(--on-surface-variant); pointer-events: none; }
-.development-table-card { overflow: hidden; border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
+.development-table-card { overflow: hidden; border: 1px solid var(--surface-border); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
 .development-table-scroll { overflow-x: auto; }
 table { width: 100%; min-width: 52rem; border-collapse: collapse; color: var(--on-surface); text-align: right; }
-th, td { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--outline-variant); vertical-align: middle; }
+th, td { padding: var(--space-3) var(--space-4); vertical-align: middle; }
 thead { background: var(--surface-container-low); color: var(--on-surface-variant); font-size: var(--font-xs); }
+thead tr { border-block-end: 1px solid var(--surface-border); }
+tbody tr:not(:last-child) > td { border-block-end: 1px solid var(--surface-border); }
 tbody tr { transition: background-color var(--transition-fast) var(--ease-standard); }
 tbody tr:hover { background: var(--surface-container-low); }
 .employee-name { min-width: 10rem; color: var(--on-surface); font-weight: var(--font-semibold); }

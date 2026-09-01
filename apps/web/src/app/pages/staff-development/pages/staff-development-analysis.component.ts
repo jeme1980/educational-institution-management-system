@@ -76,7 +76,7 @@ export class StaffDevelopmentAnalysisComponent implements OnInit {
     const rows = this.yearlyAggregates();
     return { labels: rows.map(row => row.label), datasets: [{ label: 'إجمالي الساعات', data: rows.map(row => row.hours), borderColor: colors.primary, backgroundColor: colors.primary, tension: 0.25, fill: false }] };
   });
-  readonly specialtyChartData = computed(() => this.horizontalData(this.specialtyAggregates(), 'إجمالي الساعات', 'hours'));
+  readonly specialtyChartData = computed(() => this.verticalData(this.specialtyAggregates(), 'إجمالي الساعات', 'hours'));
   readonly providerChartData = computed(() => this.horizontalData(this.providerAggregates(), 'إجمالي الساعات', 'hours'));
   readonly completionParticipationData = computed(() => this.horizontalData([...this.completionAggregates()].sort((a, b) => b.staff - a.staff || b.hours - a.hours), 'عدد الموظفين', 'staff'));
   readonly completionHoursData = computed(() => this.horizontalData(this.completionAggregates(), 'إجمالي الساعات', 'hours'));
@@ -84,6 +84,7 @@ export class StaffDevelopmentAnalysisComponent implements OnInit {
 
   readonly lineOptions = computed(() => this.options('line', 'اتجاه ساعات التطوير عبر السنوات'));
   readonly barOptions = computed(() => this.options('bar', 'تحليل ساعات التطوير'));
+  readonly specialtyBarOptions = computed(() => this.options('bar', 'ساعات التطوير حسب التخصص', 'x'));
   readonly doughnutOptions = computed(() => this.options('doughnut', 'تغطية الكادر بالتطوير المهني'));
 
   async ngOnInit(): Promise<void> {
@@ -115,5 +116,7 @@ export class StaffDevelopmentAnalysisComponent implements OnInit {
     return [...map.values()].sort((a, b) => b.hours - a.hours);
   }
   private horizontalData(rows: Aggregate[], label: string, metric: 'hours' | 'staff'): ChartData<'bar'> { const colors = readAcademicChartColors(); return { labels: rows.map(row => row.label), datasets: [{ label, data: rows.map(row => metric === 'staff' ? row.staff : row.hours), backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: 5, maxBarThickness: 28 }] }; }
-  private options(type: 'bar' | 'line' | 'doughnut', title: string): ChartOptions<any> { const base = academicChartOptions<any>(this.theme, title); const colors = readAcademicChartColors(); return { ...base, indexAxis: type === 'bar' ? 'y' : undefined, scales: type === 'doughnut' ? undefined : { x: { ticks: { color: colors.onSurfaceVariant }, grid: { color: colors.outline } }, y: { beginAtZero: true, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => type === 'line' ? `${value}` : `${value}` }, grid: { color: colors.outline } } }, plugins: { ...base.plugins, tooltip: { ...base.plugins?.tooltip, callbacks: { label: (context: any) => `${context.dataset.label}: ${context.raw ?? 0}` } } } }; }
+  private verticalData(rows: Aggregate[], label: string, metric: 'hours' | 'staff'): ChartData<'bar'> { const colors = readAcademicChartColors(); return { labels: rows.map(row => this.shortLabel(row.label)), datasets: [{ label, data: rows.map(row => metric === 'staff' ? row.staff : row.hours), fullLabels: rows.map(row => row.label), backgroundColor: colors.primary, borderColor: colors.primary, borderRadius: 5, maxBarThickness: 28 } as any] }; }
+  private shortLabel(label: string): string { return label.length > 18 ? `${label.slice(0, 17)}…` : label; }
+  private options(type: 'bar' | 'line' | 'doughnut', title: string, indexAxis: 'x' | 'y' = 'y'): ChartOptions<any> { const base = academicChartOptions<any>(this.theme, title); const colors = readAcademicChartColors(); return { ...base, indexAxis: type === 'bar' ? indexAxis : undefined, scales: type === 'doughnut' ? undefined : { x: { ticks: { color: colors.onSurfaceVariant, maxRotation: indexAxis === 'x' ? 0 : undefined, minRotation: indexAxis === 'x' ? 0 : undefined }, grid: { color: colors.outline } }, y: { beginAtZero: true, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => type === 'line' ? `${value}` : `${value}` }, grid: { color: colors.outline } } }, plugins: { ...base.plugins, tooltip: { ...base.plugins?.tooltip, callbacks: { label: (context: any) => { const fullLabel = context.dataset.fullLabels?.[context.dataIndex]; return `${context.dataset.label}: ${fullLabel ? `${fullLabel} — ` : ''}${context.raw ?? 0}`; } } } } }; }
 }

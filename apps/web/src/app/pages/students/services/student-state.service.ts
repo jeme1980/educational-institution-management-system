@@ -21,7 +21,7 @@ export class StudentStateService {
   // Link to the main students signal from ApiService to keep global state in perfect sync
   students = this.apiService.students;
   isLoading = this.apiService.isLoading;
-  totalItems = signal(0);
+  filteredTotal = signal(0);
   private studentsRequestVersion = 0;
 
   // In-memory caches for student-specific grades and attendance
@@ -60,17 +60,17 @@ export class StudentStateService {
       map((payload) => {
         if (requestVersion !== this.studentsRequestVersion) return Array.isArray(payload) ? payload : (Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []));
         if (Array.isArray(payload)) {
-          this.totalItems.set(payload.length);
+          this.filteredTotal.set(payload.length);
           return payload;
         }
         const list = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []);
-        this.totalItems.set(list.length);
+        this.filteredTotal.set(list.length);
         return list;
       }),
       tap((data: Student[]) => {
         if (requestVersion !== this.studentsRequestVersion) return;
         this.students.set(data);
-        this.apiService.studentsTotal.set(this.totalItems());
+        this.apiService.studentsTotal.set(this.filteredTotal());
         this.isLoading.set(false);
       }),
       catchError((error) => {

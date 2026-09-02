@@ -22,7 +22,7 @@ export class AuditLogComponent {
   async load(): Promise<void> {
     this.loading.set(true); this.error.set('');
     const result = await this.settingsApi.loadAuditLogs({ action: this.action, entityType: this.entityType, from: this.from, to: this.to });
-    this.rows.set(result.items || []); this.total.set(result.total || 0); if (result.error) this.error.set(result.error);
+    this.rows.set(result.items || []); this.total.set((result.items || []).length); if (result.error) this.error.set(result.error);
     this.loading.set(false);
   }
 

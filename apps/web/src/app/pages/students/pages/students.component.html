@@ -12,14 +12,14 @@
   <app-student-metrics
     [totalCount]="apiService.studentsTotal()"
     [activeCount]="activeStudentsCount()"
-    [filteredCount]="studentStateService.totalItems()"
+    [filteredCount]="studentStateService.filteredTotal()"
     [guardiansCount]="studentsWithGuardiansCount()"
   ></app-student-metrics>
 
   <!-- Main Data Table Container Section -->
   <app-student-table
     [students]="studentStateService.students()"
-    [totalCount]="studentStateService.totalItems()"
+    [totalCount]="studentStateService.filteredTotal()"
     [searchTerm]="searchTerm()"
     [classFilter]="classFilter()"
     [statusFilter]="statusFilter()"

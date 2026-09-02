@@ -20,8 +20,8 @@ export async function getAuditLogs(req: ContextRequest, res: Response): Promise<
   const from = req.query.from ? new Date(String(req.query.from)) : undefined;
   const to = req.query.to ? new Date(String(req.query.to)) : undefined;
   const where = { institutionId, ...(action ? { action } : {}), ...(entityType ? { entityType } : {}), ...(actorUserId ? { actorUserId } : {}), ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}) };
-  const items = await prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' } });
-  return res.json({ items: items.map((item) => ({ ...item, metadata: safeAuditMetadata(item.metadata) })), total: items.length });
+  const items = await prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, take: 10 });
+  return res.json({ items: items.map((item) => ({ ...item, metadata: safeAuditMetadata(item.metadata) })) });
 }
 
 export async function getAuditLogById(req: ContextRequest, res: Response): Promise<any> {

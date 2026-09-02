@@ -8,7 +8,7 @@
       <label class="text-xs font-semibold text-slate-600">نوع السجل<input [(ngModel)]="entityType" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Student" /></label>
       <label class="text-xs font-semibold text-slate-600">من تاريخ<input type="date" [(ngModel)]="from" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
       <label class="text-xs font-semibold text-slate-600">إلى تاريخ<input type="date" [(ngModel)]="to" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></label>
-      <div class="flex gap-2"><button type="button" (click)="page.set(1); load()" class="rounded-xl bg-[#00236f] px-4 py-2 text-sm font-bold text-white">بحث</button><button type="button" (click)="reset()" class="rounded-xl border border-slate-200 px-4 py-2 text-sm">مسح</button></div>
+      <div class="flex gap-2"><button type="button" (click)="load()" class="rounded-xl bg-[#00236f] px-4 py-2 text-sm font-bold text-white">بحث</button><button type="button" (click)="reset()" class="rounded-xl border border-slate-200 px-4 py-2 text-sm">مسح</button></div>
     </div>
   </section>
   @if (error()) { <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{{ error() }}</div> }
@@ -16,6 +16,6 @@
     <div class="core-table-wrap"><table class="core-table text-sm"><thead class="bg-slate-50 text-right text-xs text-slate-500"><tr><th scope="col" class="px-4 py-3">التاريخ</th><th scope="col" class="px-4 py-3">العملية</th><th scope="col" class="px-4 py-3">نوع السجل</th><th scope="col" class="px-4 py-3">معرف السجل</th><th scope="col" class="px-4 py-3">التفاصيل</th></tr></thead><tbody>
       @for (row of rows(); track row.id) { <tr class="border-t border-slate-100 align-middle"><td class="whitespace-nowrap px-4 py-3 text-slate-500">{{ row.createdAt | date:'yyyy-MM-dd HH:mm' }}</td><td class="px-4 py-3 font-semibold">{{ row.action }}</td><td class="px-4 py-3">{{ row.entityType }}</td><td class="px-4 py-3 font-mono text-xs">{{ row.entityId || '—' }}</td><td class="px-4 py-3 text-xs text-slate-500">{{ row.metadata | json }}</td></tr> } @empty { <tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">لا توجد سجلات مطابقة.</td></tr> }
     </tbody></table></div>
-    <div class="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500"><span>إجمالي السجلات: {{ total() }}</span><div class="flex gap-2"><button type="button" (click)="previous()" class="rounded-lg border border-slate-200 px-3 py-1.5" [disabled]="page() === 1">السابق</button><span class="px-2 py-1.5">{{ page() }}</span><button type="button" (click)="next()" class="rounded-lg border border-slate-200 px-3 py-1.5" [disabled]="page() * pageSize() >= total()">التالي</button></div></div>
+    <div class="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500"><span>إجمالي السجلات: {{ total() }}</span></div>
   </section>
 </div>

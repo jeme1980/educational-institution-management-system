@@ -5,8 +5,6 @@ import { Observable, from, throwError, of } from 'rxjs';
 import { catchError, shareReplay, switchMap, tap, map } from 'rxjs/operators';
 
 export interface StudentPageOptions {
-  page?: number;
-  pageSize?: number;
   classId?: string;
   statusId?: string;
   genderId?: string;
@@ -24,9 +22,6 @@ export class StudentStateService {
   students = this.apiService.students;
   isLoading = this.apiService.isLoading;
   totalItems = signal(0);
-  currentPage = signal(1);
-  pageSize = signal(10);
-  totalPages = signal(1);
   private studentsRequestVersion = 0;
 
   // In-memory caches for student-specific grades and attendance
@@ -45,8 +40,6 @@ export class StudentStateService {
     const requestVersion = ++this.studentsRequestVersion;
     this.isLoading.set(true);
     const params = new URLSearchParams({
-      page: String(options.page ?? 1),
-      limit: String(options.pageSize ?? 10),
     });
     if (search) params.set('search', search);
     if (options.classId) params.set('classId', options.classId);
@@ -62,34 +55,16 @@ export class StudentStateService {
         return from(res.json() as Promise<Student[] | {
           data?: Student[];
           students?: Student[];
-          page?: number;
-          limit?: number;
-          total?: number;
-          totalItems?: number;
-          totalPages?: number;
-          pagination?: { page?: number; limit?: number; total?: number; totalItems?: number; totalPages?: number };
         }>);
       }),
       map((payload) => {
         if (requestVersion !== this.studentsRequestVersion) return Array.isArray(payload) ? payload : (Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []));
         if (Array.isArray(payload)) {
           this.totalItems.set(payload.length);
-          this.currentPage.set(options.page ?? 1);
-          this.pageSize.set(options.pageSize ?? 10);
-          this.totalPages.set(1);
           return payload;
         }
-        const pagination = payload.pagination;
         const list = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []);
-        const total = pagination?.total ?? pagination?.totalItems ?? payload.total ?? payload.totalItems ?? list.length;
-        const page = pagination?.page ?? payload.page ?? options.page ?? 1;
-        const limit = pagination?.limit ?? payload.limit ?? options.pageSize ?? 10;
-        const reportedPages = Number(pagination?.totalPages ?? payload.totalPages ?? 0);
-        const totalPages = Math.max(reportedPages, Math.max(1, Math.ceil(Number(total) / Number(limit))));
-        this.totalItems.set(Number(total));
-        this.currentPage.set(Number(page));
-        this.pageSize.set(Number(limit));
-        this.totalPages.set(Number(totalPages));
+        this.totalItems.set(list.length);
         return list;
       }),
       tap((data: Student[]) => {

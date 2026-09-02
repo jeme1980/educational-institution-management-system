@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ApiService, Student } from '../../../core/services/api.service';
-import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
@@ -11,7 +10,7 @@ import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-pan
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-student-table',
-  imports: [CommonModule, MatIconModule, MatTooltipModule, PaginationComponent, UiButtonComponent, UiTableActionsComponent, UiFilterPanelComponent],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, UiButtonComponent, UiTableActionsComponent, UiFilterPanelComponent],
   templateUrl: './student-table.html',
   styleUrl: './student-table.css',
 })
@@ -20,15 +19,12 @@ export class StudentTable {
 
   students = input<Student[]>([]);
   totalCount = input<number>(0);
-  serverTotalPages = input<number | null>(null);
   searchTerm = input<string>('');
   classFilter = input<string>('');
   statusFilter = input<string>('');
   genderFilter = input<string>('');
   sortBy = input<string>('nameAr');
   sortOrder = input<'asc' | 'desc'>('asc');
-  currentPage = input<number>(1);
-  pageSize = input<number>(10);
   isLoading = input<boolean>(false);
   loadError = input<string>('');
   canEdit = input<boolean>(false);
@@ -40,8 +36,6 @@ export class StudentTable {
   genderFilterChange = output<string>();
   sortByChange = output<string>();
   sortOrderChange = output<'asc' | 'desc'>();
-  pageChange = output<number>();
-  pageSizeChange = output<number>();
   clearFiltersChange = output<void>();
 
   viewDetails = output<Student>();
@@ -80,8 +74,7 @@ export class StudentTable {
   }
 
   rowNumber(rowIndex: number): number {
-    const size = this.pageSize();
-    return size === -1 ? rowIndex + 1 : ((this.currentPage() - 1) * size) + rowIndex + 1;
+    return rowIndex + 1;
   }
 
   toggleActionMenu(studentId: string) {
@@ -96,42 +89,6 @@ export class StudentTable {
     return !!this.searchTerm() || !!this.classFilter() || !!this.statusFilter() || !!this.genderFilter();
   });
 
-  totalPages = computed(() => {
-    const total = this.totalCount();
-    const size = this.pageSize();
-    if (size === -1 || total === 0) return 1;
-    return Math.ceil(total / size);
-  });
-
-  getPagesArray = computed(() => {
-    const pages: number[] = [];
-    const total = this.totalPages();
-    const current = this.currentPage();
-    
-    // Display up to 5 surrounding page numbers
-    let start = Math.max(1, current - 2);
-    const end = Math.min(total, start + 4);
-    if (end - start < 4) {
-      start = Math.max(1, end - 4);
-    }
-    for (let i = start; i <= end; i++) {
-      if (i >= 1 && i <= total) {
-        pages.push(i);
-      }
-    }
-    return pages;
-  });
-
-  getDisplayRangeStart = computed(() => {
-    if (this.totalCount() === 0) return 0;
-    return (this.currentPage() - 1) * this.pageSize() + 1;
-  });
-
-  getDisplayRangeEnd = computed(() => {
-    const size = this.pageSize();
-    if (size === -1) return this.totalCount();
-    return Math.min(this.totalCount(), this.currentPage() * size);
-  });
 
   getGenderIcon(genderId?: string): string {
     if (genderId === 'gnd-female' || genderId === 'female') return 'woman';

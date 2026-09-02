@@ -5,7 +5,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { StaffMember, StaffAssignment } from '../models/staff.model';
 import { StaffHeaderComponent } from '../components/staff-header.component';
-import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
 import { sanitizeSpreadsheetText } from '../../../core/utils/spreadsheet-security';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
@@ -16,7 +15,7 @@ import { AuthService } from '../../../core/services/auth.service';
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-staff',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, PaginationComponent, UiInputComponent, UiSelectComponent, UiModalComponent, UiConfirmDialogComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StaffHeaderComponent, UiInputComponent, UiSelectComponent, UiModalComponent, UiConfirmDialogComponent],
   templateUrl: './staff.component.html',
   styleUrl: './staff.component.css'
 })
@@ -38,12 +37,6 @@ export class StaffComponent implements OnInit {
   assignmentRoleFilter = signal<string>('ALL');
   assignmentYearFilter = signal<string>('ALL');
 
-  // Pagination Staff
-  currentPage = signal<number>(1);
-  itemsPerPage = 10;
-
-  // Pagination Assignment
-  currentAssignmentPage = signal<number>(1);
 
   // Profile View Modal
   selectedProfileStaff = signal<StaffMember | null>(null);
@@ -196,41 +189,6 @@ export class StaffComponent implements OnInit {
     });
   });
 
-  // --- PAGINATED AND RANGE HELPERS ---
-  paginatedStaff = computed(() => {
-    const start = (this.currentPage() - 1) * this.itemsPerPage;
-    return this.filteredStaff().slice(start, start + this.itemsPerPage);
-  });
-
-  totalStaffPages = computed(() => {
-    return Math.max(1, Math.ceil(this.filteredStaff().length / this.itemsPerPage));
-  });
-
-  getStaffRangeStart(): number {
-    return this.filteredStaff().length === 0 ? 0 : (this.currentPage() - 1) * this.itemsPerPage + 1;
-  }
-
-  getStaffRangeEnd(): number {
-    return Math.min(this.currentPage() * this.itemsPerPage, this.filteredStaff().length);
-  }
-
-  paginatedAssignments = computed(() => {
-    const start = (this.currentAssignmentPage() - 1) * this.itemsPerPage;
-    return this.filteredAssignments().slice(start, start + this.itemsPerPage);
-  });
-
-  totalAssignmentPages = computed(() => {
-    return Math.max(1, Math.ceil(this.filteredAssignments().length / this.itemsPerPage));
-  });
-
-  getAssignmentRangeStart(): number {
-    return this.filteredAssignments().length === 0 ? 0 : (this.currentAssignmentPage() - 1) * this.itemsPerPage + 1;
-  }
-
-  getAssignmentRangeEnd(): number {
-    return Math.min(this.currentAssignmentPage() * this.itemsPerPage, this.filteredAssignments().length);
-  }
-
   // --- AVATAR & INITIALS HELPERS ---
   getInitials(first = '', family = ''): string {
     const f = first.trim().charAt(0) || '';
@@ -294,48 +252,33 @@ export class StaffComponent implements OnInit {
     this.jobTitleFilter.set('ALL');
     this.assignmentRoleFilter.set('ALL');
     this.assignmentYearFilter.set(this.apiService.selectedAcademicYearId() || 'ALL');
-    this.currentPage.set(1);
-    this.currentAssignmentPage.set(1);
   }
 
   applyFilters() {
-    this.currentPage.set(1);
-    this.currentAssignmentPage.set(1);
   }
 
   updateSearchTerm(e: Event) {
     this.searchTerm.set((e.target as HTMLInputElement).value);
-    this.currentPage.set(1);
-    this.currentAssignmentPage.set(1);
   }
 
   updateGenderFilter(e: Event) {
     this.genderFilter.set((e.target as HTMLSelectElement).value);
-    this.currentPage.set(1);
   }
 
   updateStatusFilter(e: Event) {
     this.statusFilter.set((e.target as HTMLSelectElement).value);
-    this.currentPage.set(1);
   }
 
   updateJobTitleFilter(e: Event) {
     this.jobTitleFilter.set((e.target as HTMLSelectElement).value);
-    this.currentPage.set(1);
   }
 
   updateAssignmentRoleFilter(e: Event) {
     this.assignmentRoleFilter.set((e.target as HTMLSelectElement).value);
-    this.currentAssignmentPage.set(1);
   }
 
   updateAssignmentYearFilter(e: Event) {
     this.assignmentYearFilter.set((e.target as HTMLSelectElement).value);
-    this.currentAssignmentPage.set(1);
-  }
-
-  getPageNumbers(total: number): number[] {
-    return Array.from({ length: total }, (_, i) => i + 1);
   }
 
   // --- RESOLVING FOREIGN KEYS ---

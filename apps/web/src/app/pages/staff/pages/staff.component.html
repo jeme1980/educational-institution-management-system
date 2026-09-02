@@ -121,7 +121,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 text-sm">
-                @for (member of paginatedStaff(); track member.id) {
+                @for (member of filteredStaff(); track member.id) {
                   <tr class="hover:bg-[#F8FAFC] transition-colors">
                     <td class="py-3 px-4 text-slate-700 font-medium">{{ member.specialization?.nameAr || '-' }}</td>
                     <td class="py-3 px-4">
@@ -206,44 +206,6 @@
             </table>
           </div>
 
-          <app-pagination [page]="currentPage()" [pageSize]="itemsPerPage" [totalItems]="filteredStaff().length" [pageSizeOptions]="[10]" [disabled]="apiService.isLoading()" (pageChange)="currentPage.set($event)" />
-          <!-- Legacy pagination kept hidden while the shared component is authoritative. -->
-          <div class="hidden flex items-center justify-between px-4 py-3 border-t border-surface-border bg-[#F8FAFC]">
-            <div class="text-xs text-secondary font-medium">
-              عرض {{ getStaffRangeStart() }} إلى {{ getStaffRangeEnd() }} من أصل {{ filteredStaff().length }} موظف
-            </div>
-            <div class="flex gap-1">
-              <button
-                [disabled]="currentPage() === 1"
-                (click)="currentPage.set(currentPage() - 1)"
-                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
-              >
-                السابق
-              </button>
-              
-              @for (p of getPageNumbers(totalStaffPages()); track p) {
-                <button
-                  (click)="currentPage.set(p)"
-                  [class.bg-[#00236f]]="currentPage() === p"
-                  [class.text-white]="currentPage() === p"
-                  [class.border-[#00236f]]="currentPage() === p"
-                  [class.bg-white]="currentPage() !== p"
-                  [class.text-secondary]="currentPage() !== p"
-                  class="w-8 h-8 flex items-center justify-center border border-surface-border rounded-lg transition-all text-xs font-semibold"
-                >
-                  {{ p }}
-                </button>
-              }
-
-              <button
-                [disabled]="currentPage() >= totalStaffPages()"
-                (click)="currentPage.set(currentPage() + 1)"
-                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
-              >
-                التالي
-              </button>
-            </div>
-          </div>
         </div>
       }
 
@@ -325,7 +287,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 text-sm">
-                @for (assign of paginatedAssignments(); track assign.id) {
+                @for (assign of filteredAssignments(); track assign.id) {
                   <tr class="hover:bg-[#F8FAFC] transition-colors">
                     <td class="py-3 px-4 font-bold text-slate-900">
                       {{ getStaffName(assign.staffMemberId, assign) }}
@@ -391,44 +353,6 @@
             </table>
           </div>
 
-          <app-pagination [page]="currentAssignmentPage()" [pageSize]="itemsPerPage" [totalItems]="filteredAssignments().length" [pageSizeOptions]="[10]" [disabled]="apiService.isLoading()" (pageChange)="currentAssignmentPage.set($event)" />
-          <!-- Legacy pagination kept hidden while the shared component is authoritative. -->
-          <div class="hidden flex items-center justify-between px-4 py-3 border-t border-surface-border bg-[#F8FAFC]">
-            <div class="text-xs text-secondary font-medium">
-              عرض {{ getAssignmentRangeStart() }} إلى {{ getAssignmentRangeEnd() }} من أصل {{ filteredAssignments().length }} تعيين
-            </div>
-            <div class="flex gap-1">
-              <button
-                [disabled]="currentAssignmentPage() === 1"
-                (click)="currentAssignmentPage.set(currentAssignmentPage() - 1)"
-                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
-              >
-                السابق
-              </button>
-              
-              @for (p of getPageNumbers(totalAssignmentPages()); track p) {
-                <button
-                  (click)="currentAssignmentPage.set(p)"
-                  [class.bg-[#00236f]]="currentAssignmentPage() === p"
-                  [class.text-white]="currentAssignmentPage() === p"
-                  [class.border-[#00236f]]="currentAssignmentPage() === p"
-                  [class.bg-white]="currentAssignmentPage() !== p"
-                  [class.text-secondary]="currentAssignmentPage() !== p"
-                  class="w-8 h-8 flex items-center justify-center border border-surface-border rounded-lg transition-all text-xs font-semibold"
-                >
-                  {{ p }}
-                </button>
-              }
-
-              <button
-                [disabled]="currentAssignmentPage() >= totalAssignmentPages()"
-                (click)="currentAssignmentPage.set(currentAssignmentPage() + 1)"
-                class="px-3 py-1 border border-surface-border rounded-lg text-secondary hover:bg-white bg-slate-50 transition-colors text-xs font-semibold disabled:opacity-50"
-              >
-                التالي
-              </button>
-            </div>
-          </div>
         </div>
       }
 

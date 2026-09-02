@@ -332,16 +332,6 @@
       </div>
     }
 
-    <app-pagination
-      [page]="currentPage()"
-      [pageSize]="pageSize()"
-      [totalItems]="totalCount()"
-      [totalPagesInput]="serverTotalPages()"
-      [pageSizeOptions]="[10, 25, 50, 100]"
-      [disabled]="false"
-      (pageChange)="pageChange.emit($event)"
-      (pageSizeChange)="pageSizeChange.emit($event)"
-    />
     </div>
 
   }

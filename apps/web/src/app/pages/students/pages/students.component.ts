@@ -44,8 +44,6 @@ export class StudentsComponent implements OnInit {
   genderFilter = signal<string>('');
   sortBy = signal<string>('nameAr');
   sortOrder = signal<'asc' | 'desc'>('asc');
-  currentPage = signal<number>(1);
-  pageSize = signal<number>(10);
 
   showModal = signal<boolean>(false);
   isEditing = signal<boolean>(false);
@@ -174,35 +172,27 @@ export class StudentsComponent implements OnInit {
     return list;
   });
 
-  paginatedStudents = computed(() => this.studentStateService.students());
-
   onSearchChange(term: string) {
     this.searchTerm.set(term);
-    this.currentPage.set(1);
-    this.loadCurrentPage();
+    this.loadStudents();
   }
 
-  onClassFilterChange(value: string) { this.classFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
-  onStatusFilterChange(value: string) { this.statusFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
-  onGenderFilterChange(value: string) { this.genderFilter.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
-  onSortByChange(value: string) { this.sortBy.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
-  onSortOrderChange(value: 'asc' | 'desc') { this.sortOrder.set(value); this.currentPage.set(1); this.loadCurrentPage(); }
-  onPageChange(page: number) { this.currentPage.set(page); this.loadCurrentPage(); }
-  onPageSizeChange(size: number) { this.pageSize.set(size); this.currentPage.set(1); this.loadCurrentPage(); }
+  onClassFilterChange(value: string) { this.classFilter.set(value); this.loadStudents(); }
+  onStatusFilterChange(value: string) { this.statusFilter.set(value); this.loadStudents(); }
+  onGenderFilterChange(value: string) { this.genderFilter.set(value); this.loadStudents(); }
+  onSortByChange(value: string) { this.sortBy.set(value); this.loadStudents(); }
+  onSortOrderChange(value: 'asc' | 'desc') { this.sortOrder.set(value); this.loadStudents(); }
   onClearFilters() {
     this.searchTerm.set('');
     this.classFilter.set('');
     this.statusFilter.set('');
     this.genderFilter.set('');
-    this.currentPage.set(1);
-    this.loadCurrentPage();
+    this.loadStudents();
   }
 
-  private loadCurrentPage() {
+  private loadStudents() {
     this.studentLoadError.set('');
     this.studentStateService.loadStudents(this.searchTerm(), false, {
-      page: this.currentPage(),
-      pageSize: this.pageSize(),
       classId: this.classFilter(),
       statusId: this.statusFilter(),
       genderId: this.genderFilter(),
@@ -220,7 +210,7 @@ export class StudentsComponent implements OnInit {
   });
 
   ngOnInit() {
-    this.loadCurrentPage();
+    this.loadStudents();
     this.apiService.loadClasses();
     this.apiService.loadInstitutions();
     // The student form uses the towns table directly. Load it when this page
@@ -548,31 +538,15 @@ export class StudentsComponent implements OnInit {
   }
 
   private async fetchAllStudentsForExport(): Promise<Student[]> {
-    const pageSize = 100;
-    const students: Student[] = [];
-    let totalPages = 1;
-
-    for (let page = 1; page <= totalPages; page++) {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(pageSize),
+    const params = new URLSearchParams({
         sortBy: 'nameAr',
         sortDirection: 'asc',
-      });
+    });
       const response = await this.apiService.apiFetch(`/api/students?${params.toString()}`, { headers: this.apiService.headers });
       const payload = await this.apiService.safeJson(response);
       if (!response.ok || !payload) throw new Error('تعذر جلب بيانات الطلاب للتصدير.');
 
-      const pageStudents = Array.isArray(payload)
-        ? payload
-        : (Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []));
-      students.push(...(pageStudents as Student[]));
-
-      const total = Number(payload.pagination?.total ?? payload.total ?? students.length);
-      totalPages = Math.max(1, Number(payload.pagination?.totalPages ?? Math.ceil(total / pageSize)));
-    }
-
-    return students;
+    return (Array.isArray(payload) ? payload : (Array.isArray(payload.data) ? payload.data : (Array.isArray(payload.students) ? payload.students : []))) as Student[];
   }
 
   async exportStudents(): Promise<void> {

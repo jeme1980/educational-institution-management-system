@@ -21,31 +21,27 @@ export class StudentsApiService extends BaseApiService {
     return fallback;
   }
 
-  private async loadStudentsPage(search = '', page = 1, limit = 25): Promise<{ list: Student[]; total: number; totalPages: number }> {
-    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  private async loadStudentsPage(search = ''): Promise<Student[]> {
+    const params = new URLSearchParams();
     if (search) params.set('search', search);
 
     const res = await this.apiFetch(`/api/students?${params.toString()}`, { headers: this.headers });
     const data = await this.safeJson(res);
-    if (!data) return { list: [], total: 0, totalPages: 0 };
+    if (!data) return [];
 
     if (Array.isArray(data)) {
-      return { list: data, total: data.length, totalPages: 1 };
+      return data;
     }
 
-    return {
-      list: Array.isArray(data.data) ? data.data : (Array.isArray(data.students) ? data.students : []),
-      total: Number(data.pagination?.total ?? data.pagination?.totalItems ?? data.total ?? data.totalItems ?? data.data?.length ?? data.students?.length ?? 0),
-      totalPages: Number(data.pagination?.totalPages ?? data.totalPages ?? 1),
-    };
+    return Array.isArray(data.data) ? data.data : (Array.isArray(data.students) ? data.students : []);
   }
 
   async loadStudents(search = '') {
     try {
       this.isLoading.set(true);
       const result = await this.loadStudentsPage(search);
-      this.students.set(result.list);
-      this.studentsTotal.set(result.total);
+      this.students.set(result);
+      this.studentsTotal.set(result.length);
     } catch (e) {
       console.error('Failed to load students', e);
     } finally {
@@ -56,17 +52,9 @@ export class StudentsApiService extends BaseApiService {
   async loadAllStudents(search = '') {
     try {
       this.isLoading.set(true);
-      const pageSize = 100;
-      const firstPage = await this.loadStudentsPage(search, 1, pageSize);
-      const allStudents = [...firstPage.list];
-
-      for (let page = 2; page <= firstPage.totalPages; page++) {
-        const nextPage = await this.loadStudentsPage(search, page, pageSize);
-        allStudents.push(...nextPage.list);
-      }
-
+      const allStudents = await this.loadStudentsPage(search);
       this.students.set(allStudents);
-      this.studentsTotal.set(firstPage.total || allStudents.length);
+      this.studentsTotal.set(allStudents.length);
     } catch (e) {
       console.error('Failed to load all students', e);
     } finally {

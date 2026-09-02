@@ -18,17 +18,14 @@
 
   <!-- Main Data Table Container Section -->
   <app-student-table
-    [students]="paginatedStudents()"
+    [students]="studentStateService.students()"
     [totalCount]="studentStateService.totalItems()"
-    [serverTotalPages]="studentStateService.totalPages()"
     [searchTerm]="searchTerm()"
     [classFilter]="classFilter()"
     [statusFilter]="statusFilter()"
     [genderFilter]="genderFilter()"
     [sortBy]="sortBy()"
     [sortOrder]="sortOrder()"
-    [currentPage]="currentPage()"
-    [pageSize]="pageSize()"
     [isLoading]="apiService.isLoading()"
     [loadError]="studentLoadError()"
     [canEdit]="canUpdateStudents()"
@@ -39,8 +36,6 @@
     (genderFilterChange)="onGenderFilterChange($event)"
     (sortByChange)="onSortByChange($event)"
     (sortOrderChange)="onSortOrderChange($event)"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
     (viewDetails)="viewStudentDetails($event)"
     (edit)="openEditModal($event)"
     (delete)="deleteStudent($event)"

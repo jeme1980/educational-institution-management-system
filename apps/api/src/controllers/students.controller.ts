@@ -55,13 +55,6 @@ export async function getStudents(req: ContextRequest, res: Response): Promise<a
   const genderId = String(req.query['genderId'] || '').trim();
   const sortBy = String(req.query['sortBy'] || 'createdAt');
   const sortDirection = String(req.query['sortDirection'] || 'desc') === 'asc' ? 'asc' : 'desc';
-  const requestedPage = Number.parseInt(String(req.query['page'] || '1'), 10);
-  const requestedLimit = Number.parseInt(String(req.query['limit'] || '25'), 10);
-  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const limit = Number.isFinite(requestedLimit)
-    ? Math.min(Math.max(requestedLimit, 1), 100)
-    : 25;
-  const offset = (page - 1) * limit;
   const guardianSearchIds = searchQuery
     ? (await prisma.guardian.findMany({
         where: {
@@ -112,10 +105,7 @@ export async function getStudents(req: ContextRequest, res: Response): Promise<a
   const studentsPage = await prisma.student.findMany({
     where,
     orderBy,
-    take: limit,
-    skip: offset,
   });
-  const total = await prisma.student.count({ where });
   const studentIds = studentsPage.map((student) => student.id);
   const [enrollments, guardianLinks, towns] = await Promise.all([
     prisma.studentEnrollment.findMany({
@@ -142,15 +132,7 @@ export async function getStudents(req: ContextRequest, res: Response): Promise<a
       townId: student.townId || null,
     };
   });
-  res.json({
-    data: students,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  });
+  res.json({ data: students });
 
 }
 

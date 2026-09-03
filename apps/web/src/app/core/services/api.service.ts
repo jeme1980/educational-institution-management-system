@@ -24,7 +24,6 @@ export class ApiService extends BaseApiService {
   get stats() { return this.settingsApi.stats; }
   get dashboardError() { return this.settingsApi.dashboardError; }
   get students() { return this.studentsApi.students; }
-  get studentsTotal() { return this.studentsApi.studentsTotal; }
   get staff() { return this.usersApi.staff; }
   get staffAssignments() { return this.usersApi.staffAssignments; }
   get staffDevelopments() { return this.usersApi.staffDevelopments; }

@@ -5,7 +5,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { ApiService, Student } from '../../../core/services/api.service';
 import { StudentStateService } from '../services/student-state.service';
 import { StudentHeader } from '../components/student-header';
-import { StudentMetrics } from '../components/student-metrics';
 import { StudentTable } from '../components/student-table';
 import { StudentDetailsModal } from '../components/student-details-modal';
 import { StudentFormModal } from '../components/student-form-modal';
@@ -23,7 +22,6 @@ import { AuthService } from '../../../core/services/auth.service';
     FormsModule,
     MatIconModule,
     StudentHeader,
-    StudentMetrics,
     StudentTable,
     StudentDetailsModal,
     StudentFormModal,
@@ -200,14 +198,6 @@ export class StudentsComponent implements OnInit {
       sortOrder: this.sortOrder(),
     }).subscribe({ error: (error) => this.studentLoadError.set(error.message || 'تعذر تحميل قائمة الطلاب.') });
   }
-
-  activeStudentsCount = computed(() => {
-    return this.studentStateService.students().filter(s => s.studentStatusId === 'student-status-active' || s.isActive).length;
-  });
-
-  studentsWithGuardiansCount = computed(() => {
-    return this.studentStateService.students().filter(s => !!s.guardian || !!s.relationTypeId).length;
-  });
 
   ngOnInit() {
     this.loadStudents();

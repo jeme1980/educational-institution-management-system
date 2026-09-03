@@ -70,7 +70,6 @@ export class StudentStateService {
       tap((data: Student[]) => {
         if (requestVersion !== this.studentsRequestVersion) return;
         this.students.set(data);
-        this.apiService.studentsTotal.set(this.filteredTotal());
         this.isLoading.set(false);
       }),
       catchError((error) => {

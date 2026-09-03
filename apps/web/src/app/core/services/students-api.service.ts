@@ -7,7 +7,6 @@ import { Student } from '../models/api.models';
 })
 export class StudentsApiService extends BaseApiService {
   public students = signal<Student[]>([]);
-  public studentsTotal = signal<number>(0);
   public enrollments = signal<any[]>([]);
 
   private apiErrorMessage(body: any, fallback: string): string {
@@ -41,7 +40,6 @@ export class StudentsApiService extends BaseApiService {
       this.isLoading.set(true);
       const result = await this.loadStudentsPage(search);
       this.students.set(result);
-      this.studentsTotal.set(result.length);
     } catch (e) {
       console.error('Failed to load students', e);
     } finally {
@@ -54,7 +52,6 @@ export class StudentsApiService extends BaseApiService {
       this.isLoading.set(true);
       const allStudents = await this.loadStudentsPage(search);
       this.students.set(allStudents);
-      this.studentsTotal.set(allStudents.length);
     } catch (e) {
       console.error('Failed to load all students', e);
     } finally {

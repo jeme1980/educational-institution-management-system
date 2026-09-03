@@ -8,14 +8,6 @@
     [canCreate]="canCreateStudents()"
   ></app-student-header>
 
-  <!-- Metrics Bento Grid -->
-  <app-student-metrics
-    [totalCount]="apiService.studentsTotal()"
-    [activeCount]="activeStudentsCount()"
-    [filteredCount]="studentStateService.filteredTotal()"
-    [guardiansCount]="studentsWithGuardiansCount()"
-  ></app-student-metrics>
-
   <!-- Main Data Table Container Section -->
   <app-student-table
     [students]="studentStateService.students()"

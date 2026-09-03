@@ -78,6 +78,9 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
     .ui-button--danger { background: var(--danger); color: var(--on-primary); }
     .ui-button--danger:hover:not(:disabled) { background: var(--color-danger-900); }
 
+    .ui-button--danger-ghost { background: transparent; color: var(--danger); }
+    .ui-button--danger-ghost:hover:not(:disabled) { background: var(--danger-container); color: var(--danger); }
+
     .ui-button--ghost { background: transparent; color: var(--text-secondary); }
     .ui-button--ghost:hover:not(:disabled) { background: var(--hover-surface); color: var(--on-surface); }
 
@@ -94,7 +97,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   `],
 })
 export class UiButtonComponent {
-  readonly variant = input<'primary' | 'secondary' | 'danger' | 'ghost'>('primary');
+  readonly variant = input<'primary' | 'secondary' | 'danger' | 'danger-ghost' | 'ghost'>('primary');
   readonly size = input<'sm' | 'md' | 'lg'>('md');
   readonly loading = input(false);
   readonly disabled = input(false);

@@ -41,9 +41,6 @@ export class StudentTable {
   viewDetails = output<Student>();
   edit = output<Student>();
   delete = output<string>();
-  viewMode = signal<'table' | 'cards'>('table');
-  actionMenuId = signal<string | null>(null);
-
   private searchTimeout: any;
 
   onSearchInput(event: Event) {
@@ -69,20 +66,8 @@ export class StudentTable {
     this.clearFiltersChange.emit();
   }
 
-  setViewMode(mode: 'table' | 'cards') {
-    this.viewMode.set(mode);
-  }
-
   rowNumber(rowIndex: number): number {
     return rowIndex + 1;
-  }
-
-  toggleActionMenu(studentId: string) {
-    this.actionMenuId.set(this.actionMenuId() === studentId ? null : studentId);
-  }
-
-  closeActionMenu() {
-    this.actionMenuId.set(null);
   }
 
   hasActiveFilters = computed(() => {
@@ -103,15 +88,6 @@ export class StudentTable {
     return 'غير محدد';
   }
 
-  formatDate(d?: string): string {
-    if (!d) return 'غير محدد';
-    try {
-      return new Date(d).toISOString().split('T')[0];
-    } catch {
-      return d;
-    }
-  }
-
   getClassName(classId?: string): string {
     if (!classId) return 'غير معين بشعبة';
     const found = this.apiService.classes().find((c) => c.id === classId);
@@ -128,30 +104,6 @@ export class StudentTable {
 
   getContactPhone(student: Student): string {
     return (student as any).guardian?.primaryPhoneNumber || student.phoneNumber || '-';
-  }
-
-  getClassSectionName(classId?: string): string {
-    if (!classId) return 'غير معين بشعبة';
-    const found = this.apiService.classes().find((c) => c.id === classId);
-    return found?.nameAr || 'شعبة مسجلة';
-  }
-
-  getStageName(classId?: string): string {
-    if (!classId) return 'غير محدد';
-    const found = this.apiService.classes().find((c) => c.id === classId);
-    return found?.stage?.nameAr || found?.stageId || 'غير محدد';
-  }
-
-  getGradeLevelName(classId?: string): string {
-    if (!classId) return 'غير محدد';
-    const found = this.apiService.classes().find((c) => c.id === classId);
-    return found?.gradeLevel || found?.gradeLevelInfo?.nameAr || found?.gradeLevelId || 'غير محدد';
-  }
-
-  getInstitutionName(instId?: string): string {
-    if (!instId) return 'المدرسة المركزية';
-    const found = this.apiService.institutions().find((i) => i.id === instId);
-    return found ? found.nameAr : 'المؤسسة التعليمية';
   }
 
   getStatusLabel(statusId?: string): string {

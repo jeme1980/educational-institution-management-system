@@ -18,7 +18,6 @@ export class StudentTable {
   apiService = inject(ApiService);
 
   students = input<Student[]>([]);
-  totalCount = input<number>(0);
   searchTerm = input<string>('');
   classFilter = input<string>('');
   statusFilter = input<string>('');

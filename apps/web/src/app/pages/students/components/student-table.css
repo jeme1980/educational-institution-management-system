@@ -17,5 +17,3 @@
   #student-table-scroll-container { overflow-x: auto; }
   #student-table-scroll-container .core-table { min-width: 64rem; }
 }
-
-#student-table-section > div:first-child h2 { color: var(--on-surface); font-size: var(--font-md); font-weight: var(--font-bold); }

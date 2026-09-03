@@ -11,7 +11,6 @@
   <!-- Main Data Table Container Section -->
   <app-student-table
     [students]="studentStateService.students()"
-    [totalCount]="studentStateService.filteredTotal()"
     [searchTerm]="searchTerm()"
     [classFilter]="classFilter()"
     [statusFilter]="statusFilter()"

@@ -49,8 +49,9 @@
         class="ui-form-control w-full pe-8 ps-3 text-sm font-semibold"
       >
         <option value="">جميع الأجناس</option>
-        <option value="gnd-male">ذكر</option>
-        <option value="gnd-female">أنثى</option>
+        @for (gender of apiService.lookups()?.genders || []; track gender.id) {
+          <option [value]="gender.id">{{ gender.nameAr }}</option>
+        }
       </select>
     </div>
 
@@ -73,50 +74,49 @@
 
   <!-- Active Applied Filter Tags/Chips -->
   @if (hasActiveFilters()) {
-    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-surface-border bg-surface-container-low px-5 py-2 text-xs" id="active-filters-chips">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-surface-border bg-surface-container-low px-5 py-2 text-xs" id="active-filters-chips">
+      <div class="flex flex-wrap items-center gap-2">
       <span class="text-on-surface-variant font-bold">التصفيات النشطة:</span>
       
       @if (searchTerm()) {
-        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
+        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-on-primary-container">
           <span>بحث: "{{ searchTerm() }}"</span>
-          <button (click)="searchChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button type="button" (click)="searchChange.emit('')" aria-label="إزالة فلتر البحث" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
       }
 
       @if (classFilter()) {
-        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
+        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-on-primary-container">
           <span>الشعبة: {{ getClassName(classFilter()) }}</span>
-          <button (click)="classFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button type="button" (click)="classFilterChange.emit('')" aria-label="إزالة فلتر الشعبة" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
       }
 
       @if (statusFilter()) {
-        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
+        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-on-primary-container">
           <span>الحالة: {{ getStatusLabel(statusFilter()) }}</span>
-          <button (click)="statusFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+          <button type="button" (click)="statusFilterChange.emit('')" aria-label="إزالة فلتر الحالة" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
       }
 
       @if (genderFilter()) {
-        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-primary">
-          <span>الجنس: {{ genderFilter() === 'gnd-male' ? 'ذكر' : 'أنثى' }}</span>
-          <button (click)="genderFilterChange.emit('')" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
+        <span class="inline-flex items-center gap-1.5 rounded-md border border-primary-container bg-primary-container px-2.5 py-1 text-[10px] font-bold text-on-primary-container">
+          <span>الجنس: {{ getGenderLabel(genderFilter()) }}</span>
+          <button type="button" (click)="genderFilterChange.emit('')" aria-label="إزالة فلتر الجنس" class="hover:text-error font-bold bg-transparent border-0 cursor-pointer p-0 leading-none flex items-center">
             <mat-icon class="text-sm scale-75 block">close</mat-icon>
           </button>
         </span>
       }
 
-      <button
-        (click)="clearFilters()"
-        class="mr-auto text-[10px] text-error hover:text-error font-black hover:underline bg-transparent border-0 cursor-pointer"
-      >
-        إعادة تعيين كافة المرشحات
+      </div>
+      <button type="button" (click)="clearFilters()" class="text-[10px] text-primary hover:bg-surface-container-high font-black rounded-md border-0 bg-transparent px-2 py-1 cursor-pointer">
+        مسح كل الفلاتر
       </button>
     </div>
   }

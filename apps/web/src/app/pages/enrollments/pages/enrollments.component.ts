@@ -27,7 +27,7 @@ export class EnrollmentsComponent implements OnInit {
   Math = Math;
 
   // Split-layout view signals
-  selectedYear = signal<string>('');
+  selectedYear = computed(() => this.apiService.selectedAcademicYearId() || '');
   loadError = signal('');
   canCreateEnrollments = computed(() => this.authService.hasPermission('students:create'));
   canUpdateEnrollments = computed(() => this.authService.hasPermission('students:update'));
@@ -91,7 +91,6 @@ export class EnrollmentsComponent implements OnInit {
     const selectedYearId = this.apiService.selectedAcademicYearId();
     const currentYear = years.find(y => y.id === selectedYearId) || years.find(y => y.isCurrent) || years[0];
     if (currentYear) {
-      this.selectedYear.set(currentYear.id);
       this.apiService.setSelectedAcademicYearId(currentYear.id);
     }
 
@@ -296,32 +295,6 @@ export class EnrollmentsComponent implements OnInit {
     if (matching.length > 0) {
       this.selectedClassroomId.set(matching[0].id);
     } else {
-      this.selectedClassroomId.set('');
-    }
-    this.selectedEnrolledIds.set(new Set());
-  }
-
-  async onYearChange(e: Event) {
-    const yearId = (e.target as HTMLSelectElement).value;
-    this.selectedYear.set(yearId);
-    this.apiService.setSelectedAcademicYearId(yearId || null);
-    await Promise.all([
-      this.apiService.loadEnrollments(),
-      this.apiService.loadClasses(),
-    ]);
-    
-    const classes = this.apiService.classes() || [];
-    const filteredByYear = classes.filter(c => c.academicYearId === yearId);
-    const grades = Array.from(new Set(filteredByYear.map(c => this.getClassGradeLabel(c)).filter(Boolean))).sort((a, b) => {
-      return a.localeCompare(b, undefined, { numeric: true });
-    });
-    
-    if (grades.length > 0) {
-      const currentGrade = this.selectedGrade();
-      const nextGrade = grades.includes(currentGrade) ? currentGrade : grades[0];
-      this.onGradeChange(nextGrade);
-    } else {
-      this.selectedGrade.set('');
       this.selectedClassroomId.set('');
     }
     this.selectedEnrolledIds.set(new Set());

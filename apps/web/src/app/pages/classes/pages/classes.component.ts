@@ -8,14 +8,13 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
-import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-classes',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiStatCardComponent, UiTableActionsComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiTableActionsComponent],
   templateUrl: './classes.component.html',
   styleUrl: './classes.component.css',
 })
@@ -58,11 +57,6 @@ export class ClassesComponent implements OnInit {
   readonly gradeLevels = computed(() => this.apiService.gradeLevels());
   readonly classTypes = computed(() => this.apiService.classTypes());
   readonly compositionTypes = computed(() => this.apiService.compositionTypes());
-  readonly activeContextLabel = computed(() => this.apiService.academicYears().find(y => y.id === this.academicYearId())?.yearLabel || 'السنة الحالية');
-  readonly totalClasses = computed(() => this.apiService.classes().length);
-  readonly regularClassesCount = computed(() => this.countClassesByType('عادي'));
-  readonly specialClassesCount = computed(() => this.countClassesByType('خاص'));
-  readonly parallelCount = computed(() => new Set(this.apiService.classes().map(item => `${item.gradeLevelId}:${item.parallelNumber}`)).size);
   readonly studentCountByClass = computed(() => {
     const counts = new Map<string, number>();
     for (const entry of this.apiService.enrollments() || []) {
@@ -121,12 +115,6 @@ export class ClassesComponent implements OnInit {
   getInstitutionLabel(id?: string): string { return this.apiService.institutions().find(institution => institution.id === id)?.nameAr || 'غير محددة'; }
   getStudentCount(item: ClassItem): number {
     return this.studentCountByClass().get(item.id) ?? item.studentCount ?? 0;
-  }
-  private countClassesByType(typeMarker: string): number {
-    const typeIds = new Set(this.classTypes()
-      .filter(type => String(type.nameAr || '').includes(typeMarker))
-      .map(type => type.id));
-    return this.apiService.classes().filter(item => typeIds.has(item.typeId)).length;
   }
   private findLookup(items: LookupItem[], id?: string): LookupItem | undefined { return id ? items.find(item => item.id === id) : undefined; }
   private firstId<T extends LookupItem>(items: T[]): string { return items.find(item => item.isActive !== false)?.id || items[0]?.id || ''; }

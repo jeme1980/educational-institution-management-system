@@ -275,6 +275,10 @@ model Institution {
   auditLogs               AuditLog[]
   subscriptions           InstitutionSubscription[]
   interventions           Intervention[]
+  annualSpecializations   AcademicYearSpecialization[]
+  rollovers               AcademicYearRollover[]
+  rolloverEntityMaps      AcademicYearRolloverEntityMap[]
+  rolloverDecisions       StudentRolloverDecision[]
 
   @@index([statusId])
   @@index([regionId])
@@ -325,6 +329,10 @@ model AcademicYear {
   exams               Exam[]
   institutionProfiles InstitutionProfile[]
   interventions       Intervention[]
+  annualSpecializations AcademicYearSpecialization[]
+  rolloversAsSource    AcademicYearRollover[] @relation("RolloverSourceYear")
+  rolloversAsTarget    AcademicYearRollover[] @relation("RolloverTargetYear")
+  rolloverTargetDecisions StudentRolloverDecision[]
 
   @@unique([institutionId, yearLabel])
   @@unique([institutionId, id])
@@ -392,6 +400,99 @@ model AcademicPeriod {
   @@unique([institutionId, academicYearId, id])
   @@index([institutionId, academicYearId, isActive])
   @@map("academic_periods")
+}
+
+model AcademicYearSpecialization {
+  id               String         @id @default(uuid()) @db.Uuid
+  institutionId    String         @db.Uuid
+  academicYearId   String         @db.Uuid
+  specializationId String         @db.Uuid
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear     AcademicYear   @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  specialization   Specialization @relation(fields: [institutionId, specializationId], references: [institutionId, id], onDelete: Restrict)
+
+  @@unique([institutionId, academicYearId, specializationId])
+  @@unique([institutionId, id])
+  @@index([institutionId, academicYearId, isActive])
+  @@index([institutionId, specializationId])
+  @@map("academic_year_specializations")
+}
+
+model AcademicYearRollover {
+  id                   String       @id @default(uuid()) @db.Uuid
+  institutionId        String       @db.Uuid
+  sourceAcademicYearId String       @db.Uuid
+  targetAcademicYearId String       @db.Uuid
+  status               String       @default("DRAFT") @db.VarChar(20)
+  createdByUserId      String?      @db.Uuid
+  startedAt            DateTime?
+  completedAt          DateTime?
+  summary              Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  institution          Institution  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  sourceAcademicYear   AcademicYear @relation("RolloverSourceYear", fields: [institutionId, sourceAcademicYearId], references: [institutionId, id], onDelete: Restrict)
+  targetAcademicYear   AcademicYear @relation("RolloverTargetYear", fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict)
+  entityMaps           AcademicYearRolloverEntityMap[]
+  studentDecisions     StudentRolloverDecision[]
+
+  @@unique([institutionId, id])
+  @@index([institutionId, status])
+  @@index([institutionId, sourceAcademicYearId])
+  @@index([institutionId, targetAcademicYearId])
+  @@map("academic_year_rollovers")
+}
+
+model AcademicYearRolloverEntityMap {
+  id             String                @id @default(uuid()) @db.Uuid
+  institutionId  String                @db.Uuid
+  rolloverId     String                @db.Uuid
+  entityType     String                @db.VarChar(32)
+  sourceEntityId String                @db.Uuid
+  targetEntityId String                @db.Uuid
+  createdAt      DateTime              @default(now())
+  institution    Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  rollover       AcademicYearRollover @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
+
+  @@unique([rolloverId, entityType, sourceEntityId])
+  @@unique([institutionId, id])
+  @@index([institutionId, rolloverId, entityType])
+  @@index([institutionId, entityType, sourceEntityId])
+  @@map("academic_year_rollover_entity_maps")
+}
+
+model StudentRolloverDecision {
+  id                   String                @id @default(uuid()) @db.Uuid
+  institutionId        String                @db.Uuid
+  rolloverId            String                @db.Uuid
+  studentId             String                @db.Uuid
+  sourceEnrollmentId    String                @db.Uuid
+  action               String                @db.VarChar(20)
+  targetGradeLevelId   String?               @db.Uuid
+  targetAcademicYearId String?               @db.Uuid
+  targetClassId        String?               @db.Uuid
+  targetEnrollmentId   String?               @db.Uuid
+  validationStatus     String                @default("UNRESOLVED") @db.VarChar(20)
+  warnings             Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  institution          Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  rollover             AcademicYearRollover  @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
+  student              Student               @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Restrict)
+  sourceEnrollment     StudentEnrollment    @relation("RolloverSourceEnrollment", fields: [institutionId, sourceEnrollmentId], references: [institutionId, id], onDelete: Restrict)
+  targetAcademicYear   AcademicYear?         @relation(fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_target_year_fkey")
+  targetClass          Class?                @relation(fields: [institutionId, targetAcademicYearId, targetClassId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_class_fkey")
+  targetEnrollment     StudentEnrollment?   @relation("RolloverTargetEnrollment", fields: [institutionId, targetAcademicYearId, targetEnrollmentId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_enrollment_fkey")
+
+  @@unique([rolloverId, studentId])
+  @@unique([institutionId, id])
+  @@index([institutionId, rolloverId, validationStatus])
+  @@index([institutionId, studentId])
+  @@index([institutionId, sourceEnrollmentId])
+  @@map("student_rollover_decisions")
 }
 
 model Gender {
@@ -464,6 +565,7 @@ model Student {
   studentMedicalProfile StudentMedicalProfile?
   studentGuardians      StudentGuardian[]
   studentEnrollments    StudentEnrollment[]
+  rolloverDecisions     StudentRolloverDecision[]
   examResults           StudentExamResult[]    @relation("StudentExamResults")
   questionScores        StudentQuestionScore[] @relation("StudentQuestionScores")
 
@@ -522,8 +624,10 @@ model Specialization {
 
   institution  Institution   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   staffMembers StaffMember[]
+  annualAssignments AcademicYearSpecialization[]
 
   @@unique([institutionId, nameAr])
+  @@unique([institutionId, id])
   @@index([institutionId, isActive, sortOrder])
   @@map("specializations")
 }
@@ -831,6 +935,7 @@ model Class {
   composition    CompositionType     @relation(fields: [compositionId], references: [id], onDelete: Restrict)
   enrollments    StudentEnrollment[]
   studyGroups    StudyGroup[]
+  rolloverTargetDecisions StudentRolloverDecision[]
 
   @@unique([institutionId, academicYearId, classCode])
   @@unique([institutionId, academicYearId, id])
@@ -886,9 +991,12 @@ model StudentEnrollment {
   studyGroupStudents StudyGroupStudent[]
   attendanceRecords  Attendance[]
   interventionStudents InterventionStudent[]
+  rolloverSourceDecisions StudentRolloverDecision[] @relation("RolloverSourceEnrollment")
+  rolloverTargetDecisions StudentRolloverDecision[] @relation("RolloverTargetEnrollment")
 
   @@unique([institutionId, academicYearId, studentId])
   @@unique([institutionId, id])
+  @@unique([institutionId, academicYearId, id])
   @@index([institutionId, academicYearId, studentId, isActive, isDeleted])
   @@index([enrollmentStatusId])
   @@index([studentFeatureId])

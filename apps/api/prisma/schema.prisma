@@ -153,32 +153,34 @@ model EducationType {
 }
 
 model EducationStage {
-  id        String   @id @default(uuid()) @db.Uuid
-  nameAr    String
-  nameHe    String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  isSystem  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  classes   Class[]
+  id                     String                             @id @default(uuid()) @db.Uuid
+  nameAr                 String
+  nameHe                 String?
+  sortOrder              Int                                @default(0)
+  isActive               Boolean                            @default(true)
+  isSystem               Boolean                            @default(false)
+  createdAt              DateTime                           @default(now())
+  updatedAt              DateTime                           @updatedAt
+  classes                Class[]
+  rolloverTargetMappings AcademicYearRolloverClassMapping[]
 
   @@index([isActive, sortOrder])
   @@map("education_stages")
 }
 
 model GradeLevel {
-  id         String   @id @default(uuid()) @db.Uuid
-  codeNumber Int      @unique
-  nameAr     String   @db.VarChar(50)
-  nameHe     String?  @db.VarChar(10)
-  sortOrder  Int      @default(0)
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  classes    Class[]
-  topics     Topic[]
-  skills     Skill[]
+  id                     String                             @id @default(uuid()) @db.Uuid
+  codeNumber             Int                                @unique
+  nameAr                 String                             @db.VarChar(50)
+  nameHe                 String?                            @db.VarChar(10)
+  sortOrder              Int                                @default(0)
+  isActive               Boolean                            @default(true)
+  createdAt              DateTime                           @default(now())
+  updatedAt              DateTime                           @updatedAt
+  classes                Class[]
+  topics                 Topic[]
+  skills                 Skill[]
+  rolloverTargetMappings AcademicYearRolloverClassMapping[]
 
   @@index([isActive, sortOrder])
   @@map("grade_levels")
@@ -215,30 +217,30 @@ model CompositionType {
 }
 
 model Institution {
-  id                      String                    @id @default(uuid()) @db.Uuid
-  schoolCode              String                    @unique @db.VarChar(20)
-  slug                    String                    @unique @db.VarChar(80)
+  id                      String                             @id @default(uuid()) @db.Uuid
+  schoolCode              String                             @unique @db.VarChar(20)
+  slug                    String                             @unique @db.VarChar(80)
   nameAr                  String
   nameHe                  String?
-  phoneNumber             String?                   @db.VarChar(50)
-  email                   String?                   @db.VarChar(250)
-  typeId                  String                    @db.Uuid
-  regionId                String                    @db.Uuid
-  townId                  String?                   @db.Uuid
-  statusId                String                    @db.Uuid
-  defaultLanguageId       String                    @db.Uuid
+  phoneNumber             String?                            @db.VarChar(50)
+  email                   String?                            @db.VarChar(250)
+  typeId                  String                             @db.Uuid
+  regionId                String                             @db.Uuid
+  townId                  String?                            @db.Uuid
+  statusId                String                             @db.Uuid
+  defaultLanguageId       String                             @db.Uuid
   logoUrl                 String?
   brandingSettings        Json?
-  createdAt               DateTime                  @default(now())
-  updatedAt               DateTime                  @updatedAt
+  createdAt               DateTime                           @default(now())
+  updatedAt               DateTime                           @updatedAt
   archivedAt              DateTime?
-  createdBy               String?                   @db.Uuid
-  updatedBy               String?                   @db.Uuid
-  type                    EducationType             @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  region                  Region                    @relation(fields: [regionId], references: [id], onDelete: Restrict)
-  town                    Town?                     @relation(fields: [townId], references: [id], onDelete: SetNull)
-  status                  InstitutionStatus         @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  defaultLanguage         Language                  @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
+  createdBy               String?                            @db.Uuid
+  updatedBy               String?                            @db.Uuid
+  type                    EducationType                      @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  region                  Region                             @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  town                    Town?                              @relation(fields: [townId], references: [id], onDelete: SetNull)
+  status                  InstitutionStatus                  @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  defaultLanguage         Language                           @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
   academicYears           AcademicYear[]
   academicPeriods         AcademicPeriod[]
   students                Student[]
@@ -279,6 +281,7 @@ model Institution {
   rollovers               AcademicYearRollover[]
   rolloverEntityMaps      AcademicYearRolloverEntityMap[]
   rolloverDecisions       StudentRolloverDecision[]
+  rolloverClassMappings   AcademicYearRolloverClassMapping[]
 
   @@index([statusId])
   @@index([regionId])
@@ -305,33 +308,33 @@ model AuditLog {
 }
 
 model AcademicYear {
-  id                  String               @id @default(uuid()) @db.Uuid
-  institutionId       String               @db.Uuid
-  yearLabel           String
-  startDate           DateTime
-  endDate             DateTime
-  isCurrent           Boolean              @default(false)
-  isClosed            Boolean              @default(false)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  archivedAt          DateTime?
-  createdBy           String?              @db.Uuid
-  updatedBy           String?              @db.Uuid
-  institution         Institution          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  periods             AcademicPeriod[]
-  classes             Class[]
-  subjects            Subject[]
-  topics              Topic[]
-  skills              Skill[]
-  enrollments         StudentEnrollment[]
-  staffAssignments    StaffAssignment[]
-  studyGroups         StudyGroup[]
-  exams               Exam[]
-  institutionProfiles InstitutionProfile[]
-  interventions       Intervention[]
-  annualSpecializations AcademicYearSpecialization[]
-  rolloversAsSource    AcademicYearRollover[] @relation("RolloverSourceYear")
-  rolloversAsTarget    AcademicYearRollover[] @relation("RolloverTargetYear")
+  id                      String                       @id @default(uuid()) @db.Uuid
+  institutionId           String                       @db.Uuid
+  yearLabel               String
+  startDate               DateTime
+  endDate                 DateTime
+  isCurrent               Boolean                      @default(false)
+  isClosed                Boolean                      @default(false)
+  createdAt               DateTime                     @default(now())
+  updatedAt               DateTime                     @updatedAt
+  archivedAt              DateTime?
+  createdBy               String?                      @db.Uuid
+  updatedBy               String?                      @db.Uuid
+  institution             Institution                  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  periods                 AcademicPeriod[]
+  classes                 Class[]
+  subjects                Subject[]
+  topics                  Topic[]
+  skills                  Skill[]
+  enrollments             StudentEnrollment[]
+  staffAssignments        StaffAssignment[]
+  studyGroups             StudyGroup[]
+  exams                   Exam[]
+  institutionProfiles     InstitutionProfile[]
+  interventions           Intervention[]
+  annualSpecializations   AcademicYearSpecialization[]
+  rolloversAsSource       AcademicYearRollover[]       @relation("RolloverSourceYear")
+  rolloversAsTarget       AcademicYearRollover[]       @relation("RolloverTargetYear")
   rolloverTargetDecisions StudentRolloverDecision[]
 
   @@unique([institutionId, yearLabel])
@@ -422,21 +425,22 @@ model AcademicYearSpecialization {
 }
 
 model AcademicYearRollover {
-  id                   String       @id @default(uuid()) @db.Uuid
-  institutionId        String       @db.Uuid
-  sourceAcademicYearId String       @db.Uuid
-  targetAcademicYearId String       @db.Uuid
-  status               String       @default("DRAFT") @db.VarChar(20)
-  createdByUserId      String?      @db.Uuid
+  id                   String                             @id @default(uuid()) @db.Uuid
+  institutionId        String                             @db.Uuid
+  sourceAcademicYearId String                             @db.Uuid
+  targetAcademicYearId String                             @db.Uuid
+  status               String                             @default("DRAFT") @db.VarChar(20)
+  createdByUserId      String?                            @db.Uuid
   startedAt            DateTime?
   completedAt          DateTime?
   summary              Json?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  institution          Institution  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  sourceAcademicYear   AcademicYear @relation("RolloverSourceYear", fields: [institutionId, sourceAcademicYearId], references: [institutionId, id], onDelete: Restrict)
-  targetAcademicYear   AcademicYear @relation("RolloverTargetYear", fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict)
+  createdAt            DateTime                           @default(now())
+  updatedAt            DateTime                           @updatedAt
+  institution          Institution                        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  sourceAcademicYear   AcademicYear                       @relation("RolloverSourceYear", fields: [institutionId, sourceAcademicYearId], references: [institutionId, id], onDelete: Restrict)
+  targetAcademicYear   AcademicYear                       @relation("RolloverTargetYear", fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict)
   entityMaps           AcademicYearRolloverEntityMap[]
+  classMappings        AcademicYearRolloverClassMapping[]
   studentDecisions     StudentRolloverDecision[]
 
   @@unique([institutionId, id])
@@ -446,15 +450,43 @@ model AcademicYearRollover {
   @@map("academic_year_rollovers")
 }
 
+model AcademicYearRolloverClassMapping {
+  id                   String                    @id @default(uuid()) @db.Uuid
+  institutionId        String                    @db.Uuid
+  rolloverId           String                    @db.Uuid
+  sourceClassId        String                    @db.Uuid
+  action               String                    @default("SKIP") @db.VarChar(20)
+  validationStatus     String                    @default("UNRESOLVED") @db.VarChar(20)
+  targetStageId        String?                   @db.Uuid
+  targetGradeLevelId   String?                   @db.Uuid
+  targetClassId        String?                   @db.Uuid
+  targetParallelNumber Int?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  institution          Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  rollover             AcademicYearRollover      @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
+  sourceClass          Class                     @relation("RolloverSourceClassMapping", fields: [institutionId, sourceClassId], references: [institutionId, id], onDelete: Restrict)
+  targetClass          Class?                    @relation("RolloverTargetClassMapping", fields: [institutionId, targetClassId], references: [institutionId, id], onDelete: Restrict)
+  targetStage          EducationStage?           @relation(fields: [targetStageId], references: [id], onDelete: Restrict)
+  targetGradeLevel     GradeLevel?               @relation(fields: [targetGradeLevelId], references: [id], onDelete: Restrict)
+  studentDecisions     StudentRolloverDecision[]
+
+  @@unique([rolloverId, sourceClassId])
+  @@unique([institutionId, id])
+  @@index([institutionId, rolloverId, validationStatus])
+  @@index([institutionId, sourceClassId])
+  @@map("academic_year_rollover_class_mappings")
+}
+
 model AcademicYearRolloverEntityMap {
-  id             String                @id @default(uuid()) @db.Uuid
-  institutionId  String                @db.Uuid
-  rolloverId     String                @db.Uuid
-  entityType     String                @db.VarChar(32)
-  sourceEntityId String                @db.Uuid
-  targetEntityId String                @db.Uuid
-  createdAt      DateTime              @default(now())
-  institution    Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  id             String               @id @default(uuid()) @db.Uuid
+  institutionId  String               @db.Uuid
+  rolloverId     String               @db.Uuid
+  entityType     String               @db.VarChar(32)
+  sourceEntityId String               @db.Uuid
+  targetEntityId String               @db.Uuid
+  createdAt      DateTime             @default(now())
+  institution    Institution          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   rollover       AcademicYearRollover @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
 
   @@unique([rolloverId, entityType, sourceEntityId])
@@ -465,33 +497,36 @@ model AcademicYearRolloverEntityMap {
 }
 
 model StudentRolloverDecision {
-  id                   String                @id @default(uuid()) @db.Uuid
-  institutionId        String                @db.Uuid
-  rolloverId            String                @db.Uuid
-  studentId             String                @db.Uuid
-  sourceEnrollmentId    String                @db.Uuid
-  action               String                @db.VarChar(20)
-  targetGradeLevelId   String?               @db.Uuid
-  targetAcademicYearId String?               @db.Uuid
-  targetClassId        String?               @db.Uuid
-  targetEnrollmentId   String?               @db.Uuid
-  validationStatus     String                @default("UNRESOLVED") @db.VarChar(20)
+  id                   String                            @id @default(uuid()) @db.Uuid
+  institutionId        String                            @db.Uuid
+  rolloverId           String                            @db.Uuid
+  studentId            String                            @db.Uuid
+  sourceEnrollmentId   String                            @db.Uuid
+  action               String?                           @db.VarChar(20)
+  targetGradeLevelId   String?                           @db.Uuid
+  targetAcademicYearId String?                           @db.Uuid
+  targetClassId        String?                           @db.Uuid
+  targetEnrollmentId   String?                           @db.Uuid
+  targetClassMappingId String?                           @db.Uuid
+  validationStatus     String                            @default("UNRESOLVED") @db.VarChar(20)
   warnings             Json?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  institution          Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  rollover             AcademicYearRollover  @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
-  student              Student               @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Restrict)
-  sourceEnrollment     StudentEnrollment    @relation("RolloverSourceEnrollment", fields: [institutionId, sourceEnrollmentId], references: [institutionId, id], onDelete: Restrict)
-  targetAcademicYear   AcademicYear?         @relation(fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_target_year_fkey")
-  targetClass          Class?                @relation(fields: [institutionId, targetAcademicYearId, targetClassId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_class_fkey")
-  targetEnrollment     StudentEnrollment?   @relation("RolloverTargetEnrollment", fields: [institutionId, targetAcademicYearId, targetEnrollmentId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_enrollment_fkey")
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  institution          Institution                       @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  rollover             AcademicYearRollover              @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
+  student              Student                           @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Restrict)
+  sourceEnrollment     StudentEnrollment                 @relation("RolloverSourceEnrollment", fields: [institutionId, sourceEnrollmentId], references: [institutionId, id], onDelete: Restrict)
+  targetAcademicYear   AcademicYear?                     @relation(fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_target_year_fkey")
+  targetClass          Class?                            @relation(fields: [institutionId, targetAcademicYearId, targetClassId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_class_fkey")
+  targetEnrollment     StudentEnrollment?                @relation("RolloverTargetEnrollment", fields: [institutionId, targetAcademicYearId, targetEnrollmentId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_enrollment_fkey")
+  targetClassMapping   AcademicYearRolloverClassMapping? @relation(fields: [institutionId, targetClassMappingId], references: [institutionId, id], onDelete: Restrict)
 
   @@unique([rolloverId, studentId])
   @@unique([institutionId, id])
   @@index([institutionId, rolloverId, validationStatus])
   @@index([institutionId, studentId])
   @@index([institutionId, sourceEnrollmentId])
+  @@index([institutionId, targetClassMappingId])
   @@map("student_rollover_decisions")
 }
 
@@ -558,16 +593,16 @@ model Student {
   updatedAt     DateTime @updatedAt
   versionNumber Int      @default(1)
 
-  institution           Institution            @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  gender                Gender?                @relation(fields: [genderId], references: [id], onDelete: Restrict)
-  studentStatus         StudentStatus          @relation(fields: [studentStatusId], references: [id], onDelete: Restrict)
-  town                  Town?                  @relation(fields: [townId], references: [id], onDelete: SetNull)
+  institution           Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  gender                Gender?                   @relation(fields: [genderId], references: [id], onDelete: Restrict)
+  studentStatus         StudentStatus             @relation(fields: [studentStatusId], references: [id], onDelete: Restrict)
+  town                  Town?                     @relation(fields: [townId], references: [id], onDelete: SetNull)
   studentMedicalProfile StudentMedicalProfile?
   studentGuardians      StudentGuardian[]
   studentEnrollments    StudentEnrollment[]
   rolloverDecisions     StudentRolloverDecision[]
-  examResults           StudentExamResult[]    @relation("StudentExamResults")
-  questionScores        StudentQuestionScore[] @relation("StudentQuestionScores")
+  examResults           StudentExamResult[]       @relation("StudentExamResults")
+  questionScores        StudentQuestionScore[]    @relation("StudentQuestionScores")
 
   @@unique([institutionId, id])
   @@index([genderId])
@@ -622,8 +657,8 @@ model Specialization {
   createdBy String?  @db.Uuid
   updatedBy String?  @db.Uuid
 
-  institution  Institution   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  staffMembers StaffMember[]
+  institution       Institution                  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  staffMembers      StaffMember[]
   annualAssignments AcademicYearSpecialization[]
 
   @@unique([institutionId, nameAr])
@@ -911,33 +946,36 @@ model InstitutionUserRole {
 }
 
 model Class {
-  id             String              @id @default(uuid()) @db.Uuid
-  institutionId  String              @db.Uuid
-  academicYearId String              @db.Uuid
-  stageId        String              @db.Uuid
-  gradeLevelId   String              @db.Uuid
-  parallelNumber Int                 @default(1)
-  classCode      String?             @db.VarChar(20)
-  nameAr         String
-  nameHe         String?
-  typeId         String              @db.Uuid
-  compositionId  String              @db.Uuid
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  archivedAt     DateTime?
-  createdBy      String?             @db.Uuid
-  updatedBy      String?             @db.Uuid
-  institution    Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear   AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  stage          EducationStage      @relation(fields: [stageId], references: [id], onDelete: Restrict)
-  gradeLevel     GradeLevel          @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
-  type           ClassType           @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  composition    CompositionType     @relation(fields: [compositionId], references: [id], onDelete: Restrict)
-  enrollments    StudentEnrollment[]
-  studyGroups    StudyGroup[]
+  id                      String                             @id @default(uuid()) @db.Uuid
+  institutionId           String                             @db.Uuid
+  academicYearId          String                             @db.Uuid
+  stageId                 String                             @db.Uuid
+  gradeLevelId            String                             @db.Uuid
+  parallelNumber          Int                                @default(1)
+  classCode               String?                            @db.VarChar(20)
+  nameAr                  String
+  nameHe                  String?
+  typeId                  String                             @db.Uuid
+  compositionId           String                             @db.Uuid
+  createdAt               DateTime                           @default(now())
+  updatedAt               DateTime                           @updatedAt
+  archivedAt              DateTime?
+  createdBy               String?                            @db.Uuid
+  updatedBy               String?                            @db.Uuid
+  institution             Institution                        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear            AcademicYear                       @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  stage                   EducationStage                     @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  gradeLevel              GradeLevel                         @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  type                    ClassType                          @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  composition             CompositionType                    @relation(fields: [compositionId], references: [id], onDelete: Restrict)
+  enrollments             StudentEnrollment[]
+  studyGroups             StudyGroup[]
   rolloverTargetDecisions StudentRolloverDecision[]
+  rolloverSourceMappings  AcademicYearRolloverClassMapping[] @relation("RolloverSourceClassMapping")
+  rolloverTargetMappings  AcademicYearRolloverClassMapping[] @relation("RolloverTargetClassMapping")
 
   @@unique([institutionId, academicYearId, classCode])
+  @@unique([institutionId, id])
   @@unique([institutionId, academicYearId, id])
   @@unique([institutionId, academicYearId, stageId, gradeLevelId, parallelNumber])
   @@index([stageId])
@@ -964,33 +1002,33 @@ model EnrollmentStatus {
 }
 
 model StudentEnrollment {
-  id                 String              @id @default(uuid()) @db.Uuid
-  institutionId      String              @db.Uuid
-  academicYearId     String              @db.Uuid
-  studentId          String              @db.Uuid
-  classId            String              @db.Uuid
-  enrollmentStatusId String              @db.Uuid
-  studentFeatureId   String?             @db.Uuid
-  enrollmentNumber   String?             @db.VarChar(50)
-  startDate          DateTime            @db.Date
-  endDate            DateTime?           @db.Date
-  isActive           Boolean             @default(true)
-  notes              String?             @db.Text
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  versionNumber      Int                 @default(1)
-  isDeleted          Boolean             @default(false)
-  deletedAt          DateTime?
-  deletedByUserId    String?             @db.Uuid
-  institution        Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear       AcademicYear        @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  student            Student             @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade)
-  classRoom          Class               @relation(fields: [institutionId, academicYearId, classId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  enrollmentStatus   EnrollmentStatus    @relation(fields: [enrollmentStatusId], references: [id], onDelete: Restrict)
-  studentFeature     StudentFeature?     @relation(fields: [studentFeatureId], references: [id], onDelete: Restrict)
-  studyGroupStudents StudyGroupStudent[]
-  attendanceRecords  Attendance[]
-  interventionStudents InterventionStudent[]
+  id                      String                    @id @default(uuid()) @db.Uuid
+  institutionId           String                    @db.Uuid
+  academicYearId          String                    @db.Uuid
+  studentId               String                    @db.Uuid
+  classId                 String                    @db.Uuid
+  enrollmentStatusId      String                    @db.Uuid
+  studentFeatureId        String?                   @db.Uuid
+  enrollmentNumber        String?                   @db.VarChar(50)
+  startDate               DateTime                  @db.Date
+  endDate                 DateTime?                 @db.Date
+  isActive                Boolean                   @default(true)
+  notes                   String?                   @db.Text
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  versionNumber           Int                       @default(1)
+  isDeleted               Boolean                   @default(false)
+  deletedAt               DateTime?
+  deletedByUserId         String?                   @db.Uuid
+  institution             Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear            AcademicYear              @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  student                 Student                   @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade)
+  classRoom               Class                     @relation(fields: [institutionId, academicYearId, classId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  enrollmentStatus        EnrollmentStatus          @relation(fields: [enrollmentStatusId], references: [id], onDelete: Restrict)
+  studentFeature          StudentFeature?           @relation(fields: [studentFeatureId], references: [id], onDelete: Restrict)
+  studyGroupStudents      StudyGroupStudent[]
+  attendanceRecords       Attendance[]
+  interventionStudents    InterventionStudent[]
   rolloverSourceDecisions StudentRolloverDecision[] @relation("RolloverSourceEnrollment")
   rolloverTargetDecisions StudentRolloverDecision[] @relation("RolloverTargetEnrollment")
 
@@ -1184,24 +1222,24 @@ model Topic {
 }
 
 model Skill {
-  id             String         @id @default(uuid()) @db.Uuid
-  institutionId  String         @db.Uuid
-  academicYearId String         @db.Uuid
-  subjectId      String         @db.Uuid
-  gradeLevelId   String         @db.Uuid
-  nameAr         String
-  nameHe         String?
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  archivedAt     DateTime?
-  createdBy      String?        @db.Uuid
-  updatedBy      String?        @db.Uuid
-  institution    Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  gradeLevel     GradeLevel     @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
-  examQuestions  ExamQuestion[]
+  id                 String              @id @default(uuid()) @db.Uuid
+  institutionId      String              @db.Uuid
+  academicYearId     String              @db.Uuid
+  subjectId          String              @db.Uuid
+  gradeLevelId       String              @db.Uuid
+  nameAr             String
+  nameHe             String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  archivedAt         DateTime?
+  createdBy          String?             @db.Uuid
+  updatedBy          String?             @db.Uuid
+  institution        Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  subject            Subject             @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  gradeLevel         GradeLevel          @relation(fields: [gradeLevelId], references: [id], onDelete: Restrict)
+  examQuestions      ExamQuestion[]
   interventionSkills InterventionSkill[]
 
   @@unique([institutionId, id])
@@ -1290,33 +1328,33 @@ model StudyGroupStudent {
 }
 
 model Exam {
-  id                 String              @id @default(uuid()) @db.Uuid
-  institutionId      String              @db.Uuid
-  academicYearId     String              @db.Uuid
-  academicPeriodId   String              @db.Uuid
-  subjectId          String              @db.Uuid
-  examTypeId         String              @db.Uuid
-  titleAr            String
-  titleHe            String?
-  examDate           DateTime            @db.Date
-  maxScore           Decimal             @db.Decimal(5, 2)
-  weight             Decimal?            @db.Decimal(5, 2)
-  isPublished        Boolean             @default(false)
-  notes              String?             @db.Text
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  archivedAt         DateTime?
-  createdBy          String?             @db.Uuid
-  updatedBy          String?             @db.Uuid
-  institution        Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear       AcademicYear        @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  academicPeriod     AcademicPeriod      @relation(fields: [institutionId, academicYearId, academicPeriodId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  subject            Subject             @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  examType           ExamType            @relation(fields: [institutionId, examTypeId], references: [institutionId, id], onDelete: Restrict)
-  examGroups         ExamStudyGroup[]
-  examQuestions      ExamQuestion[]
-  studentExamResults StudentExamResult[]
-  baselineInterventions Intervention[] @relation("InterventionBaselineExam")
+  id                    String              @id @default(uuid()) @db.Uuid
+  institutionId         String              @db.Uuid
+  academicYearId        String              @db.Uuid
+  academicPeriodId      String              @db.Uuid
+  subjectId             String              @db.Uuid
+  examTypeId            String              @db.Uuid
+  titleAr               String
+  titleHe               String?
+  examDate              DateTime            @db.Date
+  maxScore              Decimal             @db.Decimal(5, 2)
+  weight                Decimal?            @db.Decimal(5, 2)
+  isPublished           Boolean             @default(false)
+  notes                 String?             @db.Text
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  archivedAt            DateTime?
+  createdBy             String?             @db.Uuid
+  updatedBy             String?             @db.Uuid
+  institution           Institution         @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear          AcademicYear        @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  academicPeriod        AcademicPeriod      @relation(fields: [institutionId, academicYearId, academicPeriodId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  subject               Subject             @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  examType              ExamType            @relation(fields: [institutionId, examTypeId], references: [institutionId, id], onDelete: Restrict)
+  examGroups            ExamStudyGroup[]
+  examQuestions         ExamQuestion[]
+  studentExamResults    StudentExamResult[]
+  baselineInterventions Intervention[]      @relation("InterventionBaselineExam")
 
   @@unique([institutionId, id])
   @@index([institutionId, academicYearId, academicPeriodId])
@@ -1326,31 +1364,31 @@ model Exam {
 }
 
 model Intervention {
-  id                String   @id @default(uuid()) @db.Uuid
-  institutionId     String   @db.Uuid
-  academicYearId    String   @db.Uuid
-  subjectId         String   @db.Uuid
-  studyGroupId      String   @db.Uuid
-  baselineExamId    String   @db.Uuid
-  title             String
-  activity          String?  @db.Text
-  plannedDuration   String?  @db.VarChar(120)
-  startDate         DateTime @db.Date
-  endDate           DateTime? @db.Date
-  successCriterion  Json?
-  status            String   @default("planned") @db.VarChar(20)
-  createdBy         String?  @db.Uuid
-  updatedBy         String?  @db.Uuid
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  archivedAt        DateTime?
-  institution       Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear      AcademicYear @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  subject           Subject @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  studyGroup        StudyGroup @relation(fields: [institutionId, studyGroupId], references: [institutionId, id], onDelete: Restrict)
-  baselineExam      Exam @relation("InterventionBaselineExam", fields: [institutionId, baselineExamId], references: [institutionId, id], onDelete: Restrict)
-  students          InterventionStudent[]
-  skills            InterventionSkill[]
+  id               String                @id @default(uuid()) @db.Uuid
+  institutionId    String                @db.Uuid
+  academicYearId   String                @db.Uuid
+  subjectId        String                @db.Uuid
+  studyGroupId     String                @db.Uuid
+  baselineExamId   String                @db.Uuid
+  title            String
+  activity         String?               @db.Text
+  plannedDuration  String?               @db.VarChar(120)
+  startDate        DateTime              @db.Date
+  endDate          DateTime?             @db.Date
+  successCriterion Json?
+  status           String                @default("planned") @db.VarChar(20)
+  createdBy        String?               @db.Uuid
+  updatedBy        String?               @db.Uuid
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  archivedAt       DateTime?
+  institution      Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear     AcademicYear          @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  subject          Subject               @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  studyGroup       StudyGroup            @relation(fields: [institutionId, studyGroupId], references: [institutionId, id], onDelete: Restrict)
+  baselineExam     Exam                  @relation("InterventionBaselineExam", fields: [institutionId, baselineExamId], references: [institutionId, id], onDelete: Restrict)
+  students         InterventionStudent[]
+  skills           InterventionSkill[]
 
   @@unique([institutionId, id])
   @@index([institutionId, academicYearId, subjectId, studyGroupId])
@@ -1360,12 +1398,12 @@ model Intervention {
 }
 
 model InterventionStudent {
-  id                  String @id @default(uuid()) @db.Uuid
-  institutionId       String @db.Uuid
-  interventionId      String @db.Uuid
-  studentEnrollmentId String @db.Uuid
-  createdAt           DateTime @default(now())
-  intervention        Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
+  id                  String            @id @default(uuid()) @db.Uuid
+  institutionId       String            @db.Uuid
+  interventionId      String            @db.Uuid
+  studentEnrollmentId String            @db.Uuid
+  createdAt           DateTime          @default(now())
+  intervention        Intervention      @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
   studentEnrollment   StudentEnrollment @relation(fields: [institutionId, studentEnrollmentId], references: [institutionId, id], onDelete: Restrict)
 
   @@unique([interventionId, studentEnrollmentId])
@@ -1375,15 +1413,15 @@ model InterventionStudent {
 }
 
 model InterventionSkill {
-  id                String @id @default(uuid()) @db.Uuid
-  institutionId     String @db.Uuid
-  interventionId    String @db.Uuid
-  skillId           String @db.Uuid
-  baselineMastery   Decimal? @db.Decimal(5, 2)
-  targetMastery     Decimal? @db.Decimal(5, 2)
-  createdAt         DateTime @default(now())
-  intervention      Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
-  skill             Skill @relation(fields: [institutionId, skillId], references: [institutionId, id], onDelete: Restrict)
+  id              String       @id @default(uuid()) @db.Uuid
+  institutionId   String       @db.Uuid
+  interventionId  String       @db.Uuid
+  skillId         String       @db.Uuid
+  baselineMastery Decimal?     @db.Decimal(5, 2)
+  targetMastery   Decimal?     @db.Decimal(5, 2)
+  createdAt       DateTime     @default(now())
+  intervention    Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
+  skill           Skill        @relation(fields: [institutionId, skillId], references: [institutionId, id], onDelete: Restrict)
 
   @@unique([interventionId, skillId])
   @@index([institutionId, interventionId])

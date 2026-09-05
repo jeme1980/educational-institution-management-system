@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { nextGradeBySortOrder } from './academic-year-rollover-preview.service';
+import { classifyStudentRollover, nextGradeBySortOrder, studentSummary } from './academic-year-rollover-preview.service';
 import { academicYearRolloverPreviewSchema } from '../validation/academic-year-rollover.schemas';
 
 const grades = [{ id: 'a', sortOrder: 1 }, { id: 'b', sortOrder: 2 }, { id: 'c', sortOrder: 3 }];
@@ -25,6 +25,29 @@ test('grade progression is deterministic when sortOrder ties', () => {
 
 test('terminal grade has no automatic promotion candidate', () => {
   assert.equal(nextGradeBySortOrder(grades[2], grades), null);
+});
+
+test('a CREATE target class keeps a regular-grade student promotable and valid', () => {
+  const result = classifyStudentRollover({ nextGrade: grades[1], targetClassAction: 'CREATE', targetClass: {}, targetEnrollment: null });
+  assert.equal(result.suggestedAction, 'PROMOTE');
+  assert.equal(result.validationStatus, 'VALID');
+  assert.deepEqual(result.warnings, []);
+});
+
+test('a terminal-grade student requires a decision and is not promoted', () => {
+  const result = classifyStudentRollover({ nextGrade: null, targetClassAction: 'UNRESOLVED', targetClass: null, targetEnrollment: null });
+  assert.equal(result.suggestedAction, null);
+  assert.equal(result.validationStatus, 'UNRESOLVED');
+  assert.deepEqual(result.warnings, ['TERMINAL_GRADE_DECISION_REQUIRED']);
+});
+
+test('student summary counts terminal and general unresolved rows independently', () => {
+  const result = studentSummary([
+    { suggestedAction: 'PROMOTE', validationStatus: 'VALID', targetEnrollmentExists: 'NONE', warnings: [] },
+    { suggestedAction: null, validationStatus: 'UNRESOLVED', targetEnrollmentExists: 'NONE', warnings: ['TERMINAL_GRADE_DECISION_REQUIRED'] },
+    { suggestedAction: 'PROMOTE', validationStatus: 'UNRESOLVED', targetEnrollmentExists: 'NONE', warnings: [] },
+  ]);
+  assert.deepEqual(result, { total: 3, promoteSuggested: 2, terminalUnresolved: 1, existingTargetEnrollments: 0, conflicts: 0, unresolved: 2 });
 });
 
 test('preview service has no write-capable Prisma operations', () => {

@@ -15,6 +15,39 @@ export function nextGradeBySortOrder(source: { id: string; sortOrder: number }, 
   return index >= 0 && index < ordered.length - 1 ? ordered[index + 1] : null;
 }
 
+export function classifyStudentRollover(input: {
+  nextGrade: { id: string } | null;
+  targetClassAction?: 'CREATE' | 'EXISTS' | 'CONFLICT' | 'UNRESOLVED';
+  targetClass: { id?: string } | null;
+  targetEnrollment?: { classId: string } | null;
+}) {
+  const terminal = !input.nextGrade;
+  const suggestedAction = terminal ? null : 'PROMOTE';
+  const hasUsableClassMapping = input.targetClassAction === 'CREATE' || input.targetClassAction === 'EXISTS';
+  const validationStatus = terminal
+    ? 'UNRESOLVED'
+    : input.targetEnrollment
+      ? input.targetClassAction === 'EXISTS' && input.targetEnrollment.classId === input.targetClass?.id ? 'VALID' : 'CONFLICT'
+      : hasUsableClassMapping ? 'VALID' : 'UNRESOLVED';
+
+  return {
+    suggestedAction,
+    validationStatus,
+    warnings: terminal ? ['TERMINAL_GRADE_DECISION_REQUIRED'] : [],
+  };
+}
+
+export function studentSummary(students: Array<{ suggestedAction: string | null; validationStatus: string; targetEnrollmentExists: string; warnings: string[] }>) {
+  return {
+    total: students.length,
+    promoteSuggested: students.filter((row) => row.suggestedAction === 'PROMOTE').length,
+    terminalUnresolved: students.filter((row) => row.warnings.includes('TERMINAL_GRADE_DECISION_REQUIRED')).length,
+    existingTargetEnrollments: students.filter((row) => row.targetEnrollmentExists === 'EXISTS').length,
+    conflicts: students.filter((row) => row.validationStatus === 'CONFLICT').length,
+    unresolved: students.filter((row) => row.validationStatus === 'UNRESOLVED').length,
+  };
+}
+
 const summary = (items: Array<{ action: string }>) => ({
   total: items.length,
   create: items.filter((item) => item.action === 'CREATE').length,
@@ -82,22 +115,27 @@ export async function previewAcademicYearRollover(institutionId: string, input: 
     return { source: item, action: !target ? 'CREATE' : same ? 'EXISTS' : 'CONFLICT', target: target || null, reason: target && !same ? 'TARGET_STAFF_ASSIGNMENT_CONFLICT' : null, subjectCount: item.subjects.length, unresolvedSubjectMappings: item.subjects.filter((link: any) => subjectMap.get(link.subjectId)?.action !== 'EXISTS').length };
   });
   const targetEnrollmentByStudent = new Map<string, any>(targetEnrollments.map((item: any) => [item.studentId, item] as [string, any]));
+  const classPreviewBySourceId = new Map<string, any>(classes.map((row: any) => [row.source.id, row]));
   const students = sourceEnrollments.map((item: any) => {
     const target = targetEnrollmentByStudent.get(item.studentId);
     const sourceClass = item.classRoom;
     const next = nextGradeBySortOrder(sourceClass.gradeLevel, orderedGrades);
-    const targetClass = next && targetClasses.find((candidate: any) => targetClassKey(next.id, candidate) === targetClassKey(next.id, sourceClass));
-    const terminal = !next;
-    const suggestedAction = terminal ? null : 'PROMOTE';
-    const validationStatus = terminal ? 'UNRESOLVED' : target && targetClass && target.classId === targetClass.id ? 'VALID' : target ? 'CONFLICT' : targetClass ? 'VALID' : 'UNRESOLVED';
-    return { studentId: item.studentId, studentName: `${item.student.firstNameAr} ${item.student.lastNameAr}`.trim(), sourceEnrollmentId: item.id, sourceGrade: sourceClass.gradeLevel, sourceClass, sourceEnrollmentStatus: item.enrollmentStatus, suggestedAction, suggestedTargetGrade: next, suggestedTargetClass: targetClass || null, targetEnrollmentExists: target ? (validationStatus === 'VALID' ? 'EXISTS' : 'CONFLICT') : 'NONE', validationStatus, warnings: terminal ? ['TERMINAL_GRADE_DECISION_REQUIRED'] : [] };
+    const classPreview = classPreviewBySourceId.get(sourceClass.id);
+    const targetClass = classPreview?.target || null;
+    const classification = classifyStudentRollover({
+      nextGrade: next,
+      targetClassAction: classPreview?.action,
+      targetClass,
+      targetEnrollment: target,
+    });
+    return { studentId: item.studentId, studentName: `${item.student.firstNameAr} ${item.student.lastNameAr}`.trim(), sourceEnrollmentId: item.id, sourceGrade: sourceClass.gradeLevel, sourceClass, sourceEnrollmentStatus: item.enrollmentStatus, suggestedAction: classification.suggestedAction, suggestedTargetGrade: next, suggestedTargetClass: targetClass, targetEnrollmentExists: target ? (classification.validationStatus === 'VALID' ? 'EXISTS' : 'CONFLICT') : 'NONE', validationStatus: classification.validationStatus, warnings: classification.warnings };
   });
   const buildContentPreview = (rows: any[], targetRows: any[], key: string) => rows.map((row: any) => ({ source: row, targetAction: targetRows.some((target: any) => clean(target.nameAr) === clean(row.nameAr)) ? 'EXISTS' : 'CREATE', target: targetRows.filter((target: any) => clean(target.nameAr) === clean(row.nameAr)) }));
   const specializations = sourceAnnualSpecs.length ? sourceAnnualSpecs.map((row: any) => ({ specializationId: row.specializationId, name: row.specialization.nameAr, sourceIncluded: true, targetAnnualRelationExists: targetAnnualSpecs.some((target: any) => target.specializationId === row.specializationId), targetAction: targetAnnualSpecs.some((target: any) => target.specializationId === row.specializationId) ? 'EXISTS' : 'CREATE_RELATION' })) : [...new Map(inferredSpecs.map((row: any) => [row.staffMember.specializationId, row.staffMember.specialization])).values()].map((spec: any) => ({ specializationId: spec.id, name: spec.nameAr, sourceIncluded: true, targetAnnualRelationExists: targetAnnualSpecs.some((target: any) => target.specializationId === spec.id), targetAction: targetAnnualSpecs.some((target: any) => target.specializationId === spec.id) ? 'EXISTS' : 'CREATE_RELATION' })) ;
-  const terminalUnresolved = students.filter((row: any) => row.validationStatus === 'UNRESOLVED').length;
+  const studentsSummary = studentSummary(students);
   return {
     sourceYear: source, targetYear: target,
-    readiness: { canProceedToDecisions: blockers.length === 0 && terminalUnresolved === 0, blockers, warnings },
+    readiness: { canProceedToDecisions: blockers.length === 0 && studentsSummary.terminalUnresolved === 0, blockers, warnings },
     gradeMappings,
     periods: { count: periods.length, ready: periods.length > 0, warnings: [] },
     classes: { summary: summary(classes), items: classes },
@@ -106,7 +144,7 @@ export async function previewAcademicYearRollover(institutionId: string, input: 
     skills: { sourceCount: skillRows.length, targetExistingCount: 0, copyCandidates: skillRows.length, conflicts: 0, subjectDependencies: skillRows.map((row: any) => subjectMap.get(row.subjectId)?.action !== 'EXISTS' ? row.subjectId : null).filter(Boolean) },
     specializations: { sourceBasis: sourceAnnualSpecs.length ? 'ANNUAL_RELATION' : 'INFERRED_FROM_STAFF_ASSIGNMENTS', summary: { total: specializations.length, createRelation: specializations.filter((row: any) => row.targetAction === 'CREATE_RELATION').length, exists: specializations.filter((row: any) => row.targetAction === 'EXISTS').length }, items: specializations },
     staffAssignments: { summary: summary(staffAssignments), items: staffAssignments },
-    students: { summary: { total: students.length, promoteSuggested: students.filter((row: any) => row.suggestedAction === 'PROMOTE').length, terminalUnresolved, existingTargetEnrollments: students.filter((row: any) => row.targetEnrollmentExists === 'EXISTS').length, conflicts: students.filter((row: any) => row.validationStatus === 'CONFLICT').length, unresolved: terminalUnresolved }, items: students },
+    students: { summary: studentsSummary, items: students },
     studyGroups: { sourceCount: sourceGroups.length, eligibleForFutureCopy: sourceGroups.length, dependencyWarnings: [] },
     policy: { sourceMutated: false, currentYearChanged: false, historicalRecordsCopied: false },
   };

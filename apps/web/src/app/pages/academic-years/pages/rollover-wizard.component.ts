@@ -22,9 +22,23 @@ export class RolloverWizardComponent implements OnInit {
   }) || []);
   readonly gradeOptions = computed(() => this.unique(this.draft()?.studentDecisions.items.map(row => ({ id: row.sourceEnrollment.classRoom.gradeLevelId, label: row.sourceEnrollment.classRoom.gradeLevel.nameAr })) || []));
   readonly classOptions = computed(() => [...new Set(this.draft()?.studentDecisions.items.map(row => row.sourceEnrollment.classRoom.nameAr) || [])]);
-  async ngOnInit() { await this.api.loadAcademicYears(); const id = this.route.snapshot.paramMap.get('rolloverId'); if (id) await this.loadDraft(id); else { const current = this.years().find(y => y.isCurrent); this.sourceId.set(current?.id || ''); this.targetId.set(this.targets()[0]?.id || ''); } }
+  async ngOnInit() { await this.api.loadAcademicYears(); const id = this.route.snapshot.paramMap.get('rolloverId'); if (id) { await this.loadDraft(id); if (this.route.snapshot.queryParamMap.get('resumed') === '1') this.notice.set('يوجد إعداد ترفيع محفوظ بالفعل لهذا الزوج، تم فتحه.'); } else { const current = this.years().find(y => y.isCurrent); this.sourceId.set(current?.id || ''); this.targetId.set(this.targets()[0]?.id || ''); } }
   async runPreview() { if (!this.sourceId() || !this.targetId()) return; this.loading.set(true); this.error.set(''); const result = await this.rolloverApi.preview(this.sourceId(), this.targetId()); this.loading.set(false); if (result.status === 200 && result.body) { this.preview.set(result.body); this.step.set(2); } else this.error.set('تعذر تحميل معاينة الترفيع.'); }
-  async startDraft(): Promise<void> { const result = await this.rolloverApi.createDraft(this.sourceId(), this.targetId()); if (result.status === 201 && result.body?.operation.id) { await this.router.navigate(['/academic-years/rollover', result.body.operation.id]); return; } if (result.status === 409 && result.body?.existingRolloverId) { this.notice.set('يوجد إعداد محفوظ بالفعل لهذا الزوج، تم فتحه.'); await this.router.navigate(['/academic-years/rollover', result.body.existingRolloverId]); return; } this.error.set('تعذر بدء إعداد الترفيع.'); }
+  async startDraft(): Promise<void> {
+    this.loading.set(true); this.error.set(''); this.notice.set('');
+    try {
+      const result = await this.rolloverApi.createDraft(this.sourceId(), this.targetId());
+      if (result.status === 201 && result.body?.operation?.id) { await this.router.navigate(['/academic-years/rollover', result.body.operation.id]); return; }
+      if (result.status === 409 && result.body?.code === 'ACTIVE_DRAFT_EXISTS' && result.body.existingRolloverId) {
+        await this.loadDraft(result.body.existingRolloverId);
+        this.notice.set('يوجد إعداد ترفيع محفوظ بالفعل لهذا الزوج، تم فتحه.');
+        await this.router.navigate(['/academic-years/rollover', result.body.existingRolloverId], { queryParams: { resumed: '1' } });
+        return;
+      }
+      this.error.set('تعذر بدء إعداد الترفيع.');
+    } catch { this.error.set('تعذر بدء إعداد الترفيع.'); }
+    finally { this.loading.set(false); }
+  }
   async loadDraft(id: string) { this.loading.set(true); const result = await this.rolloverApi.getDraft(id); this.loading.set(false); if (result.status === 200 && result.body) { this.draft.set(result.body); this.sourceId.set(result.body.sourceYear.id); this.targetId.set(result.body.targetYear.id); this.step.set(2); } else this.error.set('تعذر فتح إعداد الترفيع.'); }
   actionLabel(action: string | null) { return ({ PROMOTE: 'ترفيع', REPEAT: 'إعادة', GRADUATE: 'متخرج', SKIP: 'عدم الترحيل', CREATE: 'إنشاء شعبة', USE_EXISTING: 'استخدام شعبة', null: 'غير محسوم' } as Record<string, string>)[String(action)] || 'غير محسوم'; }
   statusLabel(status: string) { return ({ VALID: 'جاهز', WARNING: 'تحذير', CONFLICT: 'تعارض', UNRESOLVED: 'غير محسوم' } as Record<string, string>)[status] || status; }

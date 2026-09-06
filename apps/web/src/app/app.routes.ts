@@ -172,6 +172,20 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/interventions/pages/interventions').then(m => m.InterventionsComponent),
   },
   {
+    path: 'academic-years/rollover/:rolloverId',
+    title: 'ترفيع السنة الدراسية',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'settings:read' },
+    loadComponent: () => import('./pages/academic-years/pages/rollover-wizard.component').then(m => m.RolloverWizardComponent),
+  },
+  {
+    path: 'academic-years/rollover',
+    title: 'ترفيع السنة الدراسية',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'settings:read' },
+    loadComponent: () => import('./pages/academic-years/pages/rollover-wizard.component').then(m => m.RolloverWizardComponent),
+  },
+  {
     path: 'academic-years',
     title: 'السنوات الدراسية',
     canActivate: [authGuard, permissionGuard],

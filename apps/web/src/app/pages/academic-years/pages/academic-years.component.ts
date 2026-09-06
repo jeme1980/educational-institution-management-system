@@ -2,16 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } 
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { Router } from '@angular/router';
 import { ApiService, AcademicYear, AcademicPeriod } from '../../../core/services/api.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-academic-years',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiModalComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent, HasPermissionDirective],
   styles: ['#academic-years-container > .academic-years-legacy-header, #academic-years-container > .academic-years-legacy-metrics { display: none; }'],
   templateUrl: './academic-years.component.html',
   styleUrl: './academic-years.component.css'
@@ -19,6 +21,7 @@ import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-
 export class AcademicYearsComponent implements OnInit {
   apiService = inject(ApiService);
   fb = inject(FormBuilder);
+  router = inject(Router);
 
   // State Signals
   selectedYear = signal<AcademicYear | null>(null);
@@ -70,6 +73,8 @@ export class AcademicYearsComponent implements OnInit {
     this.initForms();
     void this.loadAcademicData();
   }
+
+  openRollover(): void { void this.router.navigate(['/academic-years/rollover']); }
 
   private async loadAcademicData(): Promise<void> {
     this.yearsLoading.set(true);

@@ -32,6 +32,7 @@ describe('RolloverWizardComponent startDraft', () => {
   });
 
   it('resumes only an ACTIVE_DRAFT_EXISTS response and loads the stored draft', async () => {
+    vi.useFakeTimers();
     createDraft.mockResolvedValue({ status: 409, body: { code: 'ACTIVE_DRAFT_EXISTS', existingRolloverId: draftId } });
     await component.startDraft();
     expect(getDraft).toHaveBeenCalledWith(draftId);
@@ -40,6 +41,9 @@ describe('RolloverWizardComponent startDraft', () => {
     expect(component.notice()).toBe('يوجد إعداد ترفيع محفوظ بالفعل لهذا الزوج، تم فتحه.');
     expect(component.error()).toBe('');
     expect(component.loading()).toBe(false);
+    vi.advanceTimersByTime(3500);
+    expect(component.notice()).toBe('');
+    vi.useRealTimers();
   });
 
   it.each([{ status: 409, body: { code: 'OTHER_CONFLICT', existingRolloverId: draftId } }, { status: 500, body: { error: 'failed' } }])('keeps generic feedback for an unhandled response', async response => {
@@ -48,5 +52,40 @@ describe('RolloverWizardComponent startDraft', () => {
     expect(getDraft).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
     expect(component.error()).toBe('تعذر بدء إعداد الترفيع.');
+  });
+
+  it('navigates blockers to class and unresolved student review', () => {
+    component.step.set(5);
+    component.blockerAction('CLASS_MAPPING_CONFLICTS');
+    expect(component.step()).toBe(2);
+    component.blockerAction('UNRESOLVED_STUDENT_DECISIONS');
+    expect(component.step()).toBe(4);
+    expect(component.statusFilter()).toBe('UNRESOLVED');
+  });
+
+  it('maps semantic labels and human-readable target classes', () => {
+    const decision = { action: 'PROMOTE', targetClassMapping: { targetParallelNumber: 3 } } as unknown as RolloverDraft['studentDecisions']['items'][number];
+    expect(component.statusLabel('VALID')).toBe('جاهز');
+    expect(component.statusLabel('CONFLICT')).toBe('تعارض');
+    expect(component.targetClassLabel(decision)).toBe('شعبة 3');
+    decision.action = 'SKIP';
+    expect(component.targetClassLabel(decision)).toBe('غير مطلوب');
+    const mapping = { id: 'mapping-1', action: 'SKIP', validationStatus: 'UNRESOLVED' } as RolloverDraft['classMappings'][number];
+    expect(component.classStatusLabel(mapping)).toBe('يحتاج معالجة الطلاب');
+  });
+
+  it('tracks filtered selection for the conditional bulk toolbar', () => {
+    component.toggle('student-1', true);
+    expect(component.selected().size).toBe(1);
+    component.clearSelection();
+    expect(component.selected().size).toBe(0);
+  });
+
+  it('stops next-step navigation at step 5 and exposes no execute action', () => {
+    component.step.set(4);
+    expect(component.canGoNext()).toBe(true);
+    component.step.set(5);
+    expect(component.canGoNext()).toBe(false);
+    expect(component.executeAvailable).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import { RolloverWizardComponent } from './rollover-wizard.component';
 const draftId = '04bbfa30-051e-4bf7-a388-1b7eedc8b179';
 const draft = {
   operation: { id: draftId, status: 'DRAFT' }, sourceYear: { id: 'source', yearLabel: '2025-2026', isCurrent: true, isClosed: false, startDate: '2025-09-01' }, targetYear: { id: 'target', yearLabel: '2026-2027', isCurrent: false, isClosed: false, startDate: '2026-09-01' }, classMappings: [],
+  executionPlanFingerprint: 'a'.repeat(64),
   dependencies: { subjects: { summary: {} }, specializations: { summary: {}, sourceBasis: '' }, staffAssignments: { summary: {} }, topics: { sourceCount: 0 }, skills: { sourceCount: 0 }, studyGroups: { sourceCount: 0 } },
   studentDecisions: { summary: { total: 401, promote: 401 }, items: [] }, readiness: { canExecute: false, blockers: ['MISSING_TARGET_PERIODS'], warnings: [], targetPeriodsReady: false },
 } satisfies RolloverDraft;
@@ -17,13 +18,14 @@ describe('RolloverWizardComponent startDraft', () => {
   const navigate = vi.fn(async () => true);
   const createDraft = vi.fn();
   const getDraft = vi.fn(async () => ({ status: 200, body: draft }));
+  const executeAcademicYearRollover = vi.fn();
   let component: RolloverWizardComponent;
 
   beforeEach(() => {
-    navigate.mockClear(); createDraft.mockReset(); getDraft.mockClear();
+    navigate.mockClear(); createDraft.mockReset(); getDraft.mockClear(); executeAcademicYearRollover.mockReset();
     TestBed.configureTestingModule({ providers: [
       { provide: ApiService, useValue: { academicYears: signal([]), loadAcademicYears: vi.fn() } },
-      { provide: RolloverApiService, useValue: { createDraft, getDraft } },
+      { provide: RolloverApiService, useValue: { createDraft, getDraft, executeAcademicYearRollover } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } } } },
       { provide: Router, useValue: { navigate } },
       { provide: ConfirmDialogService, useValue: {} },
@@ -81,11 +83,53 @@ describe('RolloverWizardComponent startDraft', () => {
     expect(component.selected().size).toBe(0);
   });
 
-  it('stops next-step navigation at step 5 and exposes no execute action', () => {
+  it('exposes execute only for a ready draft on step 5 with a valid fingerprint', () => {
     component.step.set(4);
     expect(component.canGoNext()).toBe(true);
     component.step.set(5);
     expect(component.canGoNext()).toBe(false);
-    expect(component.executeAvailable).toBe(false);
+    component.draft.set(draft);
+    expect(component.executeAvailable()).toBe(false);
+    component.draft.set({ ...draft, readiness: { ...draft.readiness, canExecute: true, blockers: [] } });
+    expect(component.executeAvailable()).toBe(true);
+  });
+
+  it('requires an exact target-year confirmation before executing once', async () => {
+    component.step.set(5);
+    component.draft.set({ ...draft, readiness: { ...draft.readiness, canExecute: true, blockers: [] } });
+    component.openExecuteConfirmation();
+    expect(executeAcademicYearRollover).not.toHaveBeenCalled();
+    component.executeConfirmation.set('2026-2027 ');
+    expect(component.confirmationMatches()).toBe(true);
+    executeAcademicYearRollover.mockResolvedValue({ status: 200, body: {
+      rolloverId: draftId, status: 'COMPLETED', alreadyCompleted: false,
+      sourceYear: draft.sourceYear, targetYear: draft.targetYear,
+      result: { classes: { created: 1, reused: 0 }, subjects: { created: 1, reused: 0 }, topics: { created: 0, reused: 0 }, skills: { created: 0, reused: 0 }, specializations: { relationsCreated: 0, reused: 0 }, staffAssignments: { created: 0, reused: 0 }, enrollments: { created: 401, reused: 0 }, decisions: { promoted: 401, repeated: 0, graduated: 0, skipped: 0 } },
+      policy: { sourceMutated: false, currentYearChanged: false, historicalRecordsCopied: false, studyGroupsCopied: false },
+    } });
+    const first = component.executeRollover();
+    const second = component.executeRollover();
+    await Promise.all([first, second]);
+    expect(executeAcademicYearRollover).toHaveBeenCalledTimes(1);
+    expect(executeAcademicYearRollover).toHaveBeenCalledWith(draftId, 'a'.repeat(64));
+    expect(component.completed()).toBe(true);
+    expect(component.executeConfirmationOpen()).toBe(false);
+  });
+
+  it('refreshes a changed plan and asks for manual status refresh when execution is uncertain', async () => {
+    component.step.set(5);
+    component.draft.set({ ...draft, readiness: { ...draft.readiness, canExecute: true, blockers: [] } });
+    component.executeConfirmation.set('2026-2027');
+    executeAcademicYearRollover.mockResolvedValueOnce({ status: 409, body: { code: 'ROLLOVER_PLAN_CHANGED' } });
+    await component.executeRollover();
+    expect(getDraft).toHaveBeenCalledWith(draftId);
+    expect(component.error()).toContain('تغيرت بيانات');
+
+    component.draft.set({ ...draft, readiness: { ...draft.readiness, canExecute: true, blockers: [] } });
+    component.executeConfirmation.set('2026-2027');
+    executeAcademicYearRollover.mockRejectedValueOnce(new Error('network'));
+    await component.executeRollover();
+    expect(component.executionNeedsRefresh()).toBe(true);
+    expect(component.error()).toContain('حدّث حالة العملية');
   });
 });

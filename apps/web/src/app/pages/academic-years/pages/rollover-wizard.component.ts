@@ -9,7 +9,7 @@ import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header
 import { UiSectionCardComponent } from '../../../shared/components/ui-section-card/ui-section-card.component';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
-import { ClassMapping, PreviewResult, RolloverAction, RolloverApiService, RolloverDraft, StudentDecision } from '../services/rollover-api.service';
+import { ClassMapping, PreviewResult, RolloverAction, RolloverApiError, RolloverApiService, RolloverDraft, RolloverExecuteResponse, RolloverExecuteResult, RolloverPolicy, StudentDecision } from '../services/rollover-api.service';
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error';
 type BulkAction = Exclude<RolloverAction, null> | '';
@@ -46,7 +46,14 @@ export class RolloverWizardComponent implements OnInit {
   readonly mappingParallel = signal<number | null>(null);
   readonly mappingNameAr = signal('');
   readonly mappingNameHe = signal('');
-  readonly executeAvailable = false;
+  readonly executeConfirmationOpen = signal(false);
+  readonly executeConfirmation = signal('');
+  readonly executing = signal(false);
+  readonly executeResult = signal<RolloverExecuteResult | null>(null);
+  readonly executePolicy = signal<RolloverPolicy | null>(null);
+  readonly executionNeedsRefresh = signal(false);
+  readonly executeAvailable = computed(() => this.step() === 5 && this.draft()?.operation.status === 'DRAFT' && this.draft()?.readiness.canExecute === true && /^[a-f0-9]{64}$/i.test(this.draft()?.executionPlanFingerprint || ''));
+  readonly completed = computed(() => this.draft()?.operation.status === 'COMPLETED' || !!this.executeResult());
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
   readonly years = computed(() => this.api.academicYears());
@@ -102,7 +109,7 @@ export class RolloverWizardComponent implements OnInit {
     this.loading.set(true);
     const result = await this.rolloverApi.getDraft(id);
     this.loading.set(false);
-    if (result.status === 200 && result.body) { this.draft.set(result.body); this.sourceId.set(result.body.sourceYear.id); this.targetId.set(result.body.targetYear.id); if (this.step() === 1) this.step.set(2); }
+    if (result.status === 200 && result.body) { this.draft.set(result.body); this.sourceId.set(result.body.sourceYear.id); this.targetId.set(result.body.targetYear.id); if (result.body.operation.status === 'COMPLETED') { this.executeResult.set(result.body.operation.summary?.result || null); this.executePolicy.set(result.body.operation.summary?.policy || null); this.step.set(5); } else if (this.step() === 1) this.step.set(2); }
     else this.error.set('تعذر فتح إعداد الترفيع.');
   }
 
@@ -116,8 +123,36 @@ export class RolloverWizardComponent implements OnInit {
   blockerAction(code: string) { if (code === 'UNRESOLVED_STUDENT_DECISIONS') this.showUnresolved(); else if (code === 'CLASS_MAPPING_CONFLICTS') this.reviewClasses(); else if (code === 'MISSING_TARGET_PERIODS') void this.openTargetPeriods(); }
   blockerActionLabel(code: string) { return ({ MISSING_TARGET_PERIODS: 'إعداد الفترات الدراسية', UNRESOLVED_STUDENT_DECISIONS: 'مراجعة الطلاب', CLASS_MAPPING_CONFLICTS: 'مراجعة الصفوف والشعب' } as Record<string, string>)[code] || ''; }
 
-  markMappingDirty(id: string) { this.setMappingState(id, 'dirty'); }
+  openExecuteConfirmation() { if (!this.executeAvailable()) return; this.executeConfirmation.set(''); this.executionNeedsRefresh.set(false); this.executeConfirmationOpen.set(true); }
+  closeExecuteConfirmation() { if (!this.executing()) { this.executeConfirmationOpen.set(false); this.executeConfirmation.set(''); } }
+  confirmationMatches() { return this.executeConfirmation().trim() === this.draft()?.targetYear.yearLabel; }
+  async refreshExecutionStatus() { const id = this.draft()?.operation.id; if (!id || this.executing()) return; this.executionNeedsRefresh.set(false); await this.loadDraft(id); }
+  async executeRollover() {
+    const draft = this.draft();
+    if (!draft || !this.executeAvailable() || !this.confirmationMatches() || this.executing() || !draft.executionPlanFingerprint) return;
+    this.executing.set(true); this.error.set(''); this.executionNeedsRefresh.set(false);
+    try {
+      const response = await this.rolloverApi.executeAcademicYearRollover(draft.operation.id, draft.executionPlanFingerprint);
+      const body = response.body;
+      if (response.status === 200 && body && 'status' in body && body.status === 'COMPLETED') {
+        const completed = body as RolloverExecuteResponse;
+        this.executeResult.set(completed.result); this.executePolicy.set(completed.policy); this.executeConfirmationOpen.set(false); this.executeConfirmation.set('');
+        this.draft.update(current => current ? { ...current, operation: { ...current.operation, status: 'COMPLETED', summary: { result: completed.result, policy: completed.policy } }, readiness: { ...current.readiness, canExecute: false } } : current);
+        this.showNotice(completed.alreadyCompleted ? 'تم تنفيذ هذه العملية مسبقًا.' : 'تم تنفيذ ترفيع السنة بنجاح.');
+        return;
+      }
+      const apiError = body as RolloverApiError | null;
+      if (apiError?.code === 'ROLLOVER_PLAN_CHANGED') { this.executeConfirmationOpen.set(false); this.executeConfirmation.set(''); this.error.set('تغيرت بيانات إعداد الترفيع منذ آخر مراجعة. أعد مراجعة الخطة قبل التنفيذ.'); await this.loadDraft(draft.operation.id); }
+      else if (apiError?.code === 'ROLLOVER_NOT_READY') { this.executeConfirmationOpen.set(false); this.executeConfirmation.set(''); this.error.set('لم يعد الترفيع جاهزًا للتنفيذ.'); await this.loadDraft(draft.operation.id); }
+      else if (apiError?.code === 'ROLLOVER_EXECUTION_IN_PROGRESS') { this.executeConfirmationOpen.set(false); this.error.set('تنفيذ الترفيع جارٍ بالفعل.'); this.executionNeedsRefresh.set(true); }
+      else { this.executeConfirmationOpen.set(false); this.error.set('تعذر تأكيد نتيجة تنفيذ الترفيع. حدّث حالة العملية قبل إعادة المحاولة.'); this.executionNeedsRefresh.set(true); }
+    } catch { this.executeConfirmationOpen.set(false); this.error.set('تعذر تأكيد نتيجة تنفيذ الترفيع. حدّث حالة العملية قبل إعادة المحاولة.'); this.executionNeedsRefresh.set(true); }
+    finally { this.executing.set(false); }
+  }
+
+  markMappingDirty(id: string) { if (this.completed()) return; this.setMappingState(id, 'dirty'); }
   openMappingEditor(mapping: ClassMapping) {
+    if (this.completed()) return;
     this.editingMapping.set(mapping);
     this.mappingAction.set(mapping.action);
     this.mappingParallel.set(mapping.targetParallelNumber || null);
@@ -132,7 +167,7 @@ export class RolloverWizardComponent implements OnInit {
     if (!['error', 'dirty'].includes(this.mappingSaveStates()[mapping.id] || '')) this.closeMappingEditor();
   }
   async saveMapping(mapping: ClassMapping, actionValue: string, parallelValue: string, targetNameAr = '', targetNameHe = '') {
-    const draft = this.draft(); if (!draft || !['CREATE', 'USE_EXISTING', 'SKIP'].includes(actionValue)) return;
+    const draft = this.draft(); if (!draft || this.completed() || !['CREATE', 'USE_EXISTING', 'SKIP'].includes(actionValue)) return;
     const action = actionValue as 'CREATE' | 'USE_EXISTING' | 'SKIP';
     const body = action === 'SKIP' ? { action } : action === 'USE_EXISTING' ? { action, targetClassId: mapping.targetClassId } : { action, targetStageId: mapping.targetStageId, targetGradeLevelId: mapping.targetGradeLevelId, targetParallelNumber: Number(parallelValue), targetNameAr: targetNameAr.trim(), targetNameHe: targetNameHe.trim() || null };
     if (action === 'USE_EXISTING' && !mapping.targetClassId) { this.setMappingState(mapping.id, 'error'); this.error.set('اختر شعبة هدف موجودة قبل الحفظ.'); return; }
@@ -143,13 +178,13 @@ export class RolloverWizardComponent implements OnInit {
     else { this.setMappingState(mapping.id, 'error'); this.error.set('تعذر حفظ ربط الصف. راجع بيانات المرحلة والطبقة والشعبة.'); }
   }
 
-  toggle(id: string, checked: boolean) { const next = new Set(this.selected()); if (checked) next.add(id); else next.delete(id); this.selected.set(next); }
+  toggle(id: string, checked: boolean) { if (this.completed()) return; const next = new Set(this.selected()); if (checked) next.add(id); else next.delete(id); this.selected.set(next); }
   toggleFromEvent(id: string, event: Event) { this.toggle(id, (event.target as HTMLInputElement).checked); }
-  toggleAll(event: Event) { const checked = (event.target as HTMLInputElement).checked; this.selected.set(checked ? new Set(this.filteredDecisions().map(row => row.id)) : new Set()); }
+  toggleAll(event: Event) { if (this.completed()) return; const checked = (event.target as HTMLInputElement).checked; this.selected.set(checked ? new Set(this.filteredDecisions().map(row => row.id)) : new Set()); }
   clearSelection() { this.selected.set(new Set()); this.bulkAction.set(''); }
 
   async changeDecision(item: StudentDecision, actionValue: string) {
-    const draft = this.draft(); if (!draft || !['PROMOTE', 'REPEAT', 'GRADUATE', 'SKIP'].includes(actionValue)) return;
+    const draft = this.draft(); if (!draft || this.completed() || !['PROMOTE', 'REPEAT', 'GRADUATE', 'SKIP'].includes(actionValue)) return;
     const action = actionValue as Exclude<RolloverAction, null>;
     if ((action === 'GRADUATE' || action === 'SKIP') && !await this.confirmDialog.confirm({ title: 'تأكيد القرار', message: `سيتم تطبيق قرار ${this.actionLabel(action)} على الطالب المحدد.`, confirmText: 'تأكيد', variant: 'warning' })) return;
     const mapping = action === 'REPEAT' ? draft.classMappings.find(row => row.targetGradeLevelId === item.sourceEnrollment.classRoom.gradeLevelId && row.validationStatus === 'VALID') : item.targetClassMapping;
@@ -161,7 +196,7 @@ export class RolloverWizardComponent implements OnInit {
 
   async applyBulk() { if (this.bulkAction()) await this.bulk(this.bulkAction() as Exclude<BulkAction, ''>); }
   async bulk(action: Exclude<BulkAction, ''>) {
-    const draft = this.draft(); const ids = [...this.selected()]; if (!draft || !ids.length) return;
+    const draft = this.draft(); const ids = [...this.selected()]; if (!draft || this.completed() || !ids.length) return;
     const needsConfirm = action === 'GRADUATE' || action === 'SKIP' || (action === 'REPEAT' && ids.length >= 20);
     if (needsConfirm && !await this.confirmDialog.confirm({ title: 'تأكيد التعديل الجماعي', message: `سيتم تطبيق قرار ${this.actionLabel(action)} على ${ids.length} طالبًا.`, confirmText: 'تأكيد', variant: 'warning' })) return;
     const rows = draft.studentDecisions.items.filter(row => ids.includes(row.id));

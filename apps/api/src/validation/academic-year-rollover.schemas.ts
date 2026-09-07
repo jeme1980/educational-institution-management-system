@@ -9,6 +9,10 @@ export type AcademicYearRolloverPreviewInput = z.infer<typeof academicYearRollov
 
 export const academicYearRolloverDraftSchema = academicYearRolloverPreviewSchema;
 
+export const academicYearRolloverExecuteSchema = z.object({
+  executionPlanFingerprint: z.string().regex(/^[a-f0-9]{64}$/i),
+}).strict();
+
 const mappingFields = z.object({
   action: z.enum(['CREATE', 'USE_EXISTING', 'SKIP']),
   targetStageId: z.string().uuid().nullable().optional(),

@@ -2,6 +2,7 @@ import { prisma } from '../db/prisma';
 import { recordAuditEvent } from './audit.service';
 import { previewAcademicYearRollover } from './academic-year-rollover-preview.service';
 import { classMappingValidationStatus } from './academic-year-rollover-contracts';
+import { getExecutionPlanFingerprint } from './academic-year-rollover-execution.service';
 
 const db = prisma as any;
 const activeStatuses = ['DRAFT', 'READY', 'RUNNING'];
@@ -69,5 +70,6 @@ export async function getRolloverDraft(institutionId: string, rolloverId: string
     ...(operation.targetAcademicYear.isClosed ? ['TARGET_CLOSED'] : []),
   ];
   const warnings = operation.sourceAcademicYear.isClosed ? [] : ['SOURCE_YEAR_NOT_CLOSED'];
-  return { operation, sourceYear: operation.sourceAcademicYear, targetYear: operation.targetAcademicYear, classMappings, dependencies: { subjects: preview.subjects, specializations: preview.specializations, staffAssignments: preview.staffAssignments, topics: preview.topics, skills: preview.skills, studyGroups: preview.studyGroups }, studentDecisions: { summary: { total: derivedDecisions.length, promote: derivedDecisions.filter((row: any) => row.action === 'PROMOTE').length, repeat: derivedDecisions.filter((row: any) => row.action === 'REPEAT').length, graduate: derivedDecisions.filter((row: any) => row.action === 'GRADUATE').length, skip: derivedDecisions.filter((row: any) => row.action === 'SKIP').length, unresolved: unresolvedStudentDecisions }, items: derivedDecisions }, readiness: { canExecute: operation.status === 'DRAFT' && blockers.length === 0, blockers, warnings, unresolvedStudentDecisions, classMappingConflicts, targetPeriodsReady: targetPeriods > 0, sourceClosed: operation.sourceAcademicYear.isClosed } };
+  const executionPlanFingerprint = await getExecutionPlanFingerprint(db, institutionId, rolloverId);
+  return { operation, executionPlanFingerprint, sourceYear: operation.sourceAcademicYear, targetYear: operation.targetAcademicYear, classMappings, dependencies: { subjects: preview.subjects, specializations: preview.specializations, staffAssignments: preview.staffAssignments, topics: preview.topics, skills: preview.skills, studyGroups: preview.studyGroups }, studentDecisions: { summary: { total: derivedDecisions.length, promote: derivedDecisions.filter((row: any) => row.action === 'PROMOTE').length, repeat: derivedDecisions.filter((row: any) => row.action === 'REPEAT').length, graduate: derivedDecisions.filter((row: any) => row.action === 'GRADUATE').length, skip: derivedDecisions.filter((row: any) => row.action === 'SKIP').length, unresolved: unresolvedStudentDecisions }, items: derivedDecisions }, readiness: { canExecute: operation.status === 'DRAFT' && blockers.length === 0, blockers, warnings, unresolvedStudentDecisions, classMappingConflicts, targetPeriodsReady: targetPeriods > 0, sourceClosed: operation.sourceAcademicYear.isClosed } };
 }

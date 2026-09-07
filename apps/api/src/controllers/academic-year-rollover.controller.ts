@@ -5,6 +5,7 @@ import { createRolloverDraft, getRolloverDraft, RolloverDraftError } from '../se
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
 import { classMappingPatchData, classMappingValidationStatus } from '../services/academic-year-rollover-contracts';
+import { executeAcademicYearRollover, RolloverExecutionError } from '../services/academic-year-rollover-execution.service';
 
 export async function previewAcademicYearRolloverController(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId || '';
@@ -33,6 +34,16 @@ export async function createAcademicYearRolloverDraftController(req: ContextRequ
 export async function getAcademicYearRolloverDraftController(req: ContextRequest, res: Response): Promise<any> {
   try { return res.json(await getRolloverDraft(req.context?.institutionId || '', String(req.params['rolloverId']))); }
   catch (error) { return draftError(res, error); }
+}
+
+export async function executeAcademicYearRolloverController(req: ContextRequest, res: Response): Promise<any> {
+  try {
+    const result = await executeAcademicYearRollover(req.context?.institutionId || '', String(req.params['rolloverId']), req.body.executionPlanFingerprint, req.user?.uid, { db: req.db || prisma });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof RolloverExecutionError) return res.status(error.status).json({ error: error.message, code: error.code, ...error.metadata });
+    throw error;
+  }
 }
 
 export async function patchAcademicYearRolloverClassMappingController(req: ContextRequest, res: Response): Promise<any> {

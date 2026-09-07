@@ -10,6 +10,7 @@ const router = Router();
 router.get('/settings/institution-profile', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getInstitutionProfile));
 router.patch('/settings/institution-profile', requireAuth, requirePermission('settings', 'update'), validateRequest(institutionSettingsUpdateSchema), asyncHandler(controller.updateInstitutionProfile));
 router.patch('/settings/academic-years/:id/current', requireAuth, requirePermission('settings', 'update'), asyncHandler(controller.setCurrentAcademicYear));
+router.patch('/settings/academic-years/:id/close', requireAuth, requirePermission('settings', 'update'), asyncHandler(controller.closeAcademicYear));
 router.get('/institutions', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getInstitutions));
 router.get('/academic-years', requireAuth, requirePermission('settings', 'read'), asyncHandler(controller.getAcademicYears));
 router.post('/academic-years', requireAuth, requirePermission('settings', 'create'), asyncHandler(controller.createAcademicYears));

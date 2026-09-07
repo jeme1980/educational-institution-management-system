@@ -75,6 +75,7 @@ export async function setCurrentAcademicYear(req: ContextRequest, res: Response)
       // The authenticated request may already be inside the RLS transaction.
       // Serialize switches per institution in either case.
       await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', institutionId);
+      await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))", institutionId, id);
       const selected = await tx.academicYear.findFirst({
         where: { id, institutionId, archivedAt: null, isClosed: false },
         select: { id: true },
@@ -89,6 +90,43 @@ export async function setCurrentAcademicYear(req: ContextRequest, res: Response)
     return res.json(updated);
   } catch (error: any) {
     if (error?.code === 'P2034' || error?.code === 'P2002') return res.status(409).json({ error: 'The current academic year changed concurrently. Please retry.' });
+    throw error;
+  }
+}
+
+export async function closeAcademicYear(req: ContextRequest, res: Response): Promise<any> {
+  const institutionId = req.context?.institutionId || '';
+  const id = String(req.params['id'] || '');
+  if (!institutionId || !isUuid(id)) return res.status(400).json({ error: 'Invalid academic year.', code: 'INVALID_ACADEMIC_YEAR' });
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', institutionId);
+      await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))", institutionId, id);
+      const academicYear = await tx.academicYear.findFirst({ where: { id, institutionId } });
+      if (!academicYear) return { kind: 'missing' } as const;
+      if (academicYear.archivedAt) return { kind: 'archived' } as const;
+      if (academicYear.isCurrent) return { kind: 'current' } as const;
+      if (academicYear.isClosed) return { kind: 'success', academicYear, alreadyClosed: true } as const;
+
+      const updated = await tx.academicYear.update({ where: { id: academicYear.id }, data: { isClosed: true, updatedAt: new Date() } });
+      await recordAuditEvent(tx, {
+        institutionId,
+        actorUserId: req.user?.uid,
+        action: 'ACADEMIC_YEAR_CLOSED',
+        entityType: 'AcademicYear',
+        entityId: academicYear.id,
+        metadata: { academicYearId: academicYear.id, yearLabel: academicYear.yearLabel, previousIsClosed: false, newIsClosed: true },
+      });
+      return { kind: 'success', academicYear: updated, alreadyClosed: false } as const;
+    }, { isolationLevel: 'Serializable' });
+
+    if (result.kind === 'missing') return res.status(404).json({ error: 'Academic year not found.', code: 'ACADEMIC_YEAR_NOT_FOUND' });
+    if (result.kind === 'archived') return res.status(409).json({ error: 'Archived academic years cannot be closed.', code: 'ACADEMIC_YEAR_ARCHIVED' });
+    if (result.kind === 'current') return res.status(409).json({ error: 'لا يمكن إغلاق السنة الدراسية الحالية. عيّن سنة أخرى كسنة حالية أولًا.', code: 'ACADEMIC_YEAR_IS_CURRENT' });
+    return res.json({ academicYear: result.academicYear, alreadyClosed: result.alreadyClosed });
+  } catch (error: any) {
+    if (error?.code === 'P2034') return res.status(409).json({ error: 'Academic year state changed concurrently. Please retry.', code: 'ACADEMIC_YEAR_STATE_CONFLICT' });
     throw error;
   }
 }
@@ -247,31 +285,24 @@ export async function createAcademicYears(req: ContextRequest, res: Response): P
 export async function updateAcademicYearsById(req: ContextRequest, res: Response): Promise<any> {
   
   const { id } = req.params;
-  const { yearLabel, startDate, endDate, isCurrent, isClosed } = req.body;
+  const { yearLabel, startDate, endDate } = req.body;
   const instId = req.context!.institutionId;
+
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, 'isCurrent') || Object.prototype.hasOwnProperty.call(req.body || {}, 'isClosed') || Object.prototype.hasOwnProperty.call(req.body || {}, 'archivedAt')) {
+    return res.status(400).json({ error: 'Academic year state must be changed through its dedicated action.', code: 'ACADEMIC_YEAR_STATE_ACTION_REQUIRED' });
+  }
 
   const existing = await prisma.academicYear.findFirst({ where: { id: id as string, institutionId: instId } });
   if (!existing) {
     return res.status(404).json({ error: 'Academic year not found or unauthorized' });
   }
-  if (isCurrent && (existing.archivedAt || existing.isClosed)) {
-    return res.status(400).json({ error: 'Closed or archived academic years cannot become current.' });
-  }
   const updated = await prisma.$transaction(async (tx) => {
-    if (isCurrent) {
-      await tx.academicYear.updateMany({
-        where: { institutionId: instId },
-        data: { isCurrent: false },
-      });
-    }
     return tx.academicYear.update({
       where: { id: existing.id },
       data: {
         yearLabel,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        isCurrent: isCurrent || false,
-        isClosed: isClosed || false,
         updatedAt: new Date(),
       },
     });

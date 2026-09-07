@@ -3,3 +3,4 @@
 @media(max-width:767px){.rollover-page{padding:var(--space-3)}.year-grid,.filters,.review-grid{grid-template-columns:1fr}.search-field{grid-column:auto}.steps{justify-content:center}.steps li:not(.active) small{display:none}.steps li:not(:last-child)::after{inline-size:var(--space-3)}.compact-warning,.readiness-header{align-items:flex-start;flex-direction:column}.requirement-row{grid-template-columns:auto minmax(0,1fr)}.requirement-row ui-button{grid-column:2}.year-flow{font-size:var(--font-lg)}.toast{inset-inline:var(--space-3);inset-block-end:var(--space-3)}}
 .mapping-status{display:flex;align-items:center;justify-content:space-between;gap:var(--space-1)}.mapping-table select{min-width:11rem}.is-hidden{display:none}
 .badge[data-tone=success]{color:var(--success)}.badge[data-tone=warning]{color:var(--warning)}.badge[data-tone=danger]{color:var(--danger)}.info-callout{color:var(--on-surface)}
+.mapping-editor{display:grid;gap:var(--space-4)}

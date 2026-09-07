@@ -28,7 +28,7 @@
         <div class="summary-strip" aria-label="ملخص ربط الشعب"><span><strong>{{ classSummary().total }}</strong> شعبة</span><span><strong>{{ classSummary().ready }}</strong> جاهزة</span><span><strong>{{ classSummary().review }}</strong> تحتاج مراجعة</span></div>
         <div class="table-wrap"><table class="mapping-table"><thead><tr><th>الشعبة الحالية</th><th>الطبقة الحالية</th><th>الإجراء</th><th>الطبقة المستهدفة</th><th class="parallel-column">رقم / شعبة الهدف</th><th>الحالة</th></tr></thead><tbody>
           @for (item of draft()!.classMappings; track item.id) {
-            <tr><td>{{ item.sourceClass.nameAr }}</td><td>{{ item.sourceClass.gradeLevel.nameAr }}</td><td><select #mappingAction [value]="item.action" (change)="markMappingDirty(item.id)" [attr.aria-label]="'إجراء ' + item.sourceClass.nameAr"><option value="CREATE">إنشاء شعبة</option><option value="USE_EXISTING">استخدام شعبة موجودة</option><option value="SKIP">تخطي</option></select></td><td>@if (mappingAction.value === 'SKIP') { <span class="muted">غير مطلوب</span> } @else { {{ item.targetGradeLevel?.nameAr || 'غير محدد' }} }</td><td class="parallel-column"><input #parallel type="number" min="1" [value]="item.targetParallelNumber || ''" (input)="markMappingDirty(item.id)" [class.is-hidden]="mappingAction.value === 'SKIP'" [disabled]="mappingAction.value !== 'CREATE'" [attr.aria-label]="'رقم الشعبة الهدف لـ ' + item.sourceClass.nameAr" />@if (mappingAction.value === 'SKIP') { <span class="muted">غير مطلوب</span> }</td><td><div class="mapping-status"><span class="badge" [attr.data-tone]="statusTone(mappingSaveStates()[item.id] || item.validationStatus)">{{ classStatusLabel(item) }}</span><ui-button size="sm" variant="ghost" [iconOnly]="true" [ariaLabel]="'حفظ ربط ' + item.sourceClass.nameAr" (activated)="saveMapping(item, mappingAction.value, parallel.value)"><mat-icon aria-hidden="true">save</mat-icon></ui-button></div></td></tr>
+            <tr><td>{{ item.sourceClass.nameAr }}</td><td>{{ item.sourceClass.gradeLevel.nameAr }}</td><td>{{ actionLabel(item.action) }}</td><td>{{ item.action === 'SKIP' ? 'غير مطلوب' : (item.targetGradeLevel?.nameAr || 'غير محدد') }}</td><td class="parallel-column">{{ item.action === 'SKIP' ? 'غير مطلوب' : (item.targetParallelNumber || 'غير محدد') }}</td><td><div class="mapping-status"><span class="badge" [attr.data-tone]="statusTone(mappingSaveStates()[item.id] || item.validationStatus)">{{ item.action === 'CREATE' && !item.targetNameAr ? 'يحتاج تحديد اسم الشعبة' : classStatusLabel(item) }}</span><ui-button size="sm" variant="ghost" [iconOnly]="true" [ariaLabel]="'تعديل ربط ' + item.sourceClass.nameAr" (activated)="openMappingEditor(item)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></div></td></tr>
           }
         </tbody></table></div>
         <p class="section-note">يُحفظ التعديل بعد اكتمال القيم المطلوبة. اختيار «تخطي» يجعل طلاب الشعبة بحاجة إلى معالجة منفصلة.</p>
@@ -72,4 +72,16 @@
       </ui-section-card>
     }
   }
+  <ui-modal [open]="!!editingMapping()" title="تعديل هوية الشعبة الهدف" description="أدخل الاسم المعتمد للشعبة قبل اعتماد إنشاء الشعبة في السنة الهدف." size="sm" (closed)="closeMappingEditor()">
+    <div ui-modal-body class="mapping-editor">
+      <label>الإجراء<select [ngModel]="mappingAction()" (ngModelChange)="mappingAction.set($event)"><option value="CREATE">إنشاء شعبة</option><option value="USE_EXISTING">استخدام شعبة موجودة</option><option value="SKIP">تخطي</option></select></label>
+      @if (mappingAction() === 'CREATE') {
+        <label>الطبقة المستهدفة<input [value]="editingMapping()?.targetGradeLevel?.nameAr || 'غير محددة'" disabled /></label>
+        <label>رقم الشعبة<input type="number" min="1" [ngModel]="mappingParallel()" (ngModelChange)="mappingParallel.set($event)" /></label>
+        <label>اسم الشعبة بالعربية<input autofocus maxlength="120" [ngModel]="mappingNameAr()" (ngModelChange)="mappingNameAr.set($event)" required /></label>
+        <label>اسم الشعبة بالعبرية (اختياري)<input maxlength="120" dir="rtl" [ngModel]="mappingNameHe()" (ngModelChange)="mappingNameHe.set($event)" /></label>
+      }
+    </div>
+    <div ui-modal-footer><ui-button variant="primary" [disabled]="mappingAction() === 'CREATE' && (!mappingNameAr().trim() || !mappingParallel())" (activated)="saveMappingEditor()">حفظ</ui-button><ui-button variant="ghost" (activated)="closeMappingEditor()">إلغاء</ui-button></div>
+  </ui-modal>
 </main>

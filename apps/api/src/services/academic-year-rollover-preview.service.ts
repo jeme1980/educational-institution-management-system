@@ -100,7 +100,7 @@ export async function previewAcademicYearRollover(institutionId: string, input: 
     const next = nextGradeBySortOrder(item.gradeLevel, orderedGrades);
     if (!next) return { source: item, action: 'UNRESOLVED', target: null, reason: 'TERMINAL_GRADE_DECISION_REQUIRED' };
     const match = targetClasses.find((candidate: any) => targetClassKey(next.id, candidate) === targetClassKey(next.id, item));
-    if (!match) return { source: item, action: 'CREATE', target: { academicYearId: target.id, stageId: item.stageId, gradeLevelId: next.id, parallelNumber: item.parallelNumber, typeId: item.typeId, compositionId: item.compositionId, nameAr: item.nameAr }, reason: null };
+    if (!match) return { source: item, action: 'CREATE', target: { academicYearId: target.id, stageId: item.stageId, gradeLevelId: next.id, parallelNumber: item.parallelNumber, typeId: item.typeId, compositionId: item.compositionId }, reason: null };
     const sameShape = match.typeId === item.typeId && match.compositionId === item.compositionId;
     return { source: item, action: sameShape ? 'EXISTS' : 'CONFLICT', target: match, reason: sameShape ? null : 'TARGET_CLASS_IDENTITY_CONFLICT' };
   });

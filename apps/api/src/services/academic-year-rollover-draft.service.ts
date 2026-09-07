@@ -1,6 +1,7 @@
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from './audit.service';
 import { previewAcademicYearRollover } from './academic-year-rollover-preview.service';
+import { classMappingValidationStatus } from './academic-year-rollover-contracts';
 
 const db = prisma as any;
 const activeStatuses = ['DRAFT', 'READY', 'RUNNING'];
@@ -20,10 +21,10 @@ export async function createRolloverDraft(institutionId: string, actorUserId: st
     const mappings = preview.classes.items.map((row: any) => ({
       institutionId, rolloverId: rollover.id, sourceClassId: row.source.id,
       action: row.action === 'CREATE' ? 'CREATE' : row.action === 'EXISTS' ? 'USE_EXISTING' : 'SKIP',
-      validationStatus: row.action === 'CREATE' || row.action === 'EXISTS' ? 'VALID' : 'UNRESOLVED',
+      validationStatus: row.action === 'EXISTS' ? 'VALID' : 'UNRESOLVED',
       targetStageId: row.target?.stageId || null, targetGradeLevelId: row.target?.gradeLevelId || null,
       targetClassId: row.action === 'EXISTS' ? row.target?.id || null : null,
-      targetParallelNumber: row.target?.parallelNumber || null,
+      targetParallelNumber: row.target?.parallelNumber || null, targetNameAr: null, targetNameHe: null,
     }));
     await tx.academicYearRolloverClassMapping.createMany({ data: mappings });
     const storedMappings = await tx.academicYearRolloverClassMapping.findMany({ where: { institutionId, rolloverId: rollover.id }, select: { id: true, sourceClassId: true, action: true, targetClassId: true } });
@@ -49,14 +50,17 @@ export async function getRolloverDraft(institutionId: string, rolloverId: string
     db.academicPeriod.count({ where: { institutionId, academicYearId: operation.targetAcademicYearId, archivedAt: null, isActive: true } }),
     previewAcademicYearRollover(institutionId, { sourceAcademicYearId: operation.sourceAcademicYearId, targetAcademicYearId: operation.targetAcademicYearId }),
   ]);
+  const classMappings = operation.classMappings.map((mapping: any) => ({ ...mapping, validationStatus: classMappingValidationStatus(mapping) }));
+  const mappingById = new Map<string, any>(classMappings.map((mapping: any) => [mapping.id, mapping]));
   const derivedDecisions = operation.studentDecisions.map((decision: any) => {
-    const mappingUsable = decision.targetClassMapping && ['CREATE', 'USE_EXISTING'].includes(decision.targetClassMapping.action) && decision.targetClassMapping.validationStatus === 'VALID';
+    const derivedMapping = decision.targetClassMappingId ? mappingById.get(decision.targetClassMappingId) : null;
+    const mappingUsable = derivedMapping && ['CREATE', 'USE_EXISTING'].includes(derivedMapping.action) && derivedMapping.validationStatus === 'VALID';
     const requiresTarget = ['PROMOTE', 'REPEAT'].includes(decision.action || '');
     const validationStatus = requiresTarget && !mappingUsable ? 'UNRESOLVED' : decision.validationStatus;
-    return { ...decision, validationStatus };
+    return { ...decision, targetClassMapping: derivedMapping || decision.targetClassMapping, validationStatus };
   });
   const unresolvedStudentDecisions = derivedDecisions.filter((row: any) => row.validationStatus === 'UNRESOLVED' || row.validationStatus === 'CONFLICT').length;
-  const classMappingConflicts = operation.classMappings.filter((row: any) => row.validationStatus !== 'VALID').length;
+  const classMappingConflicts = classMappings.filter((row: any) => row.validationStatus !== 'VALID').length;
   const blockers = [
     ...(targetPeriods ? [] : ['MISSING_TARGET_PERIODS']),
     ...(unresolvedStudentDecisions ? ['UNRESOLVED_STUDENT_DECISIONS'] : []),
@@ -65,5 +69,5 @@ export async function getRolloverDraft(institutionId: string, rolloverId: string
     ...(operation.targetAcademicYear.isClosed ? ['TARGET_CLOSED'] : []),
   ];
   const warnings = operation.sourceAcademicYear.isClosed ? [] : ['SOURCE_YEAR_NOT_CLOSED'];
-  return { operation, sourceYear: operation.sourceAcademicYear, targetYear: operation.targetAcademicYear, classMappings: operation.classMappings, dependencies: { subjects: preview.subjects, specializations: preview.specializations, staffAssignments: preview.staffAssignments, topics: preview.topics, skills: preview.skills, studyGroups: preview.studyGroups }, studentDecisions: { summary: { total: derivedDecisions.length, promote: derivedDecisions.filter((row: any) => row.action === 'PROMOTE').length, repeat: derivedDecisions.filter((row: any) => row.action === 'REPEAT').length, graduate: derivedDecisions.filter((row: any) => row.action === 'GRADUATE').length, skip: derivedDecisions.filter((row: any) => row.action === 'SKIP').length, unresolved: unresolvedStudentDecisions }, items: derivedDecisions }, readiness: { canExecute: operation.status === 'DRAFT' && blockers.length === 0, blockers, warnings, unresolvedStudentDecisions, classMappingConflicts, targetPeriodsReady: targetPeriods > 0, sourceClosed: operation.sourceAcademicYear.isClosed } };
+  return { operation, sourceYear: operation.sourceAcademicYear, targetYear: operation.targetAcademicYear, classMappings, dependencies: { subjects: preview.subjects, specializations: preview.specializations, staffAssignments: preview.staffAssignments, topics: preview.topics, skills: preview.skills, studyGroups: preview.studyGroups }, studentDecisions: { summary: { total: derivedDecisions.length, promote: derivedDecisions.filter((row: any) => row.action === 'PROMOTE').length, repeat: derivedDecisions.filter((row: any) => row.action === 'REPEAT').length, graduate: derivedDecisions.filter((row: any) => row.action === 'GRADUATE').length, skip: derivedDecisions.filter((row: any) => row.action === 'SKIP').length, unresolved: unresolvedStudentDecisions }, items: derivedDecisions }, readiness: { canExecute: operation.status === 'DRAFT' && blockers.length === 0, blockers, warnings, unresolvedStudentDecisions, classMappingConflicts, targetPeriodsReady: targetPeriods > 0, sourceClosed: operation.sourceAcademicYear.isClosed } };
 }

@@ -461,6 +461,8 @@ model AcademicYearRolloverClassMapping {
   targetGradeLevelId   String?                   @db.Uuid
   targetClassId        String?                   @db.Uuid
   targetParallelNumber Int?
+  targetNameAr         String?
+  targetNameHe         String?
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
   institution          Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)

@@ -7,6 +7,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiSectionCardComponent } from '../../../shared/components/ui-section-card/ui-section-card.component';
+import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { ClassMapping, PreviewResult, RolloverAction, RolloverApiService, RolloverDraft, StudentDecision } from '../services/rollover-api.service';
 
@@ -15,7 +16,7 @@ type BulkAction = Exclude<RolloverAction, null> | '';
 
 @Component({
   selector: 'app-rollover-wizard', standalone: true, changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, UiButtonComponent, UiPageHeaderComponent, UiSectionCardComponent],
+  imports: [CommonModule, FormsModule, MatIconModule, RouterLink, UiButtonComponent, UiPageHeaderComponent, UiSectionCardComponent, UiModalComponent],
   templateUrl: './rollover-wizard.component.html', styleUrl: './rollover-wizard.component.css',
 })
 export class RolloverWizardComponent implements OnInit {
@@ -40,6 +41,11 @@ export class RolloverWizardComponent implements OnInit {
   readonly bulkAction = signal<BulkAction>('');
   readonly selected = signal<Set<string>>(new Set());
   readonly mappingSaveStates = signal<Record<string, SaveState>>({});
+  readonly editingMapping = signal<ClassMapping | null>(null);
+  readonly mappingAction = signal<'CREATE' | 'USE_EXISTING' | 'SKIP'>('CREATE');
+  readonly mappingParallel = signal<number | null>(null);
+  readonly mappingNameAr = signal('');
+  readonly mappingNameHe = signal('');
   readonly executeAvailable = false;
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
@@ -111,12 +117,26 @@ export class RolloverWizardComponent implements OnInit {
   blockerActionLabel(code: string) { return ({ MISSING_TARGET_PERIODS: 'إعداد الفترات الدراسية', UNRESOLVED_STUDENT_DECISIONS: 'مراجعة الطلاب', CLASS_MAPPING_CONFLICTS: 'مراجعة الصفوف والشعب' } as Record<string, string>)[code] || ''; }
 
   markMappingDirty(id: string) { this.setMappingState(id, 'dirty'); }
-  async saveMapping(mapping: ClassMapping, actionValue: string, parallelValue: string) {
+  openMappingEditor(mapping: ClassMapping) {
+    this.editingMapping.set(mapping);
+    this.mappingAction.set(mapping.action);
+    this.mappingParallel.set(mapping.targetParallelNumber || null);
+    this.mappingNameAr.set(mapping.targetNameAr || '');
+    this.mappingNameHe.set(mapping.targetNameHe || '');
+  }
+  closeMappingEditor() { this.editingMapping.set(null); }
+  async saveMappingEditor() {
+    const mapping = this.editingMapping();
+    if (!mapping) return;
+    await this.saveMapping(mapping, this.mappingAction(), String(this.mappingParallel() || ''), this.mappingNameAr(), this.mappingNameHe());
+    if (!['error', 'dirty'].includes(this.mappingSaveStates()[mapping.id] || '')) this.closeMappingEditor();
+  }
+  async saveMapping(mapping: ClassMapping, actionValue: string, parallelValue: string, targetNameAr = '', targetNameHe = '') {
     const draft = this.draft(); if (!draft || !['CREATE', 'USE_EXISTING', 'SKIP'].includes(actionValue)) return;
     const action = actionValue as 'CREATE' | 'USE_EXISTING' | 'SKIP';
-    const body = action === 'SKIP' ? { action } : action === 'USE_EXISTING' ? { action, targetClassId: mapping.targetClassId } : { action, targetStageId: mapping.targetStageId, targetGradeLevelId: mapping.targetGradeLevelId, targetParallelNumber: Number(parallelValue) };
+    const body = action === 'SKIP' ? { action } : action === 'USE_EXISTING' ? { action, targetClassId: mapping.targetClassId } : { action, targetStageId: mapping.targetStageId, targetGradeLevelId: mapping.targetGradeLevelId, targetParallelNumber: Number(parallelValue), targetNameAr: targetNameAr.trim(), targetNameHe: targetNameHe.trim() || null };
     if (action === 'USE_EXISTING' && !mapping.targetClassId) { this.setMappingState(mapping.id, 'error'); this.error.set('اختر شعبة هدف موجودة قبل الحفظ.'); return; }
-    if (action === 'CREATE' && (!mapping.targetStageId || !mapping.targetGradeLevelId || !Number(parallelValue))) { this.setMappingState(mapping.id, 'dirty'); return; }
+    if (action === 'CREATE' && (!mapping.targetStageId || !mapping.targetGradeLevelId || !Number(parallelValue) || !targetNameAr.trim())) { this.setMappingState(mapping.id, 'dirty'); return; }
     this.setMappingState(mapping.id, 'saving');
     const result = await this.rolloverApi.patchMapping(draft.operation.id, mapping.id, body);
     if (result.status === 200) { await this.loadDraft(draft.operation.id); this.setMappingState(mapping.id, 'saved'); setTimeout(() => this.setMappingState(mapping.id, 'idle'), 2200); }

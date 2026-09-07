@@ -4,6 +4,7 @@ import { previewAcademicYearRollover, RolloverPreviewError } from '../services/a
 import { createRolloverDraft, getRolloverDraft, RolloverDraftError } from '../services/academic-year-rollover-draft.service';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
+import { classMappingPatchData, classMappingValidationStatus } from '../services/academic-year-rollover-contracts';
 
 export async function previewAcademicYearRolloverController(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId || '';
@@ -38,13 +39,20 @@ export async function patchAcademicYearRolloverClassMappingController(req: Conte
   const institutionId = req.context?.institutionId || ''; const rolloverId = String(req.params['rolloverId']); const mappingId = String(req.params['mappingId']); const body = req.body;
   const mapping: any = await prisma.academicYearRolloverClassMapping.findFirst({ where: { id: mappingId, rolloverId, institutionId }, include: { rollover: true } });
   if (!mapping) return res.status(404).json({ error: 'Class mapping was not found.', code: 'CLASS_MAPPING_NOT_FOUND' });
-  if (body.action === 'CREATE' && (!body.targetStageId || !body.targetGradeLevelId || !body.targetParallelNumber || body.targetClassId)) return res.status(400).json({ error: 'CREATE requires stage, grade, and parallel number, with no target class.', code: 'INVALID_CLASS_MAPPING' });
+  if (body.action === 'CREATE') {
+    if (classMappingValidationStatus(body) !== 'VALID') return res.status(400).json({ error: 'CREATE requires a valid stage, grade, parallel number, and Arabic class name, with no target class.', code: 'INVALID_CLASS_MAPPING' });
+    const [stage, grade] = await Promise.all([
+      prisma.educationStage.findFirst({ where: { id: body.targetStageId, isActive: true }, select: { id: true } }),
+      prisma.gradeLevel.findFirst({ where: { id: body.targetGradeLevelId, isActive: true }, select: { id: true } }),
+    ]);
+    if (!stage || !grade) return res.status(400).json({ error: 'Target stage and grade must be active.', code: 'INVALID_CLASS_MAPPING' });
+  }
   if (body.action === 'USE_EXISTING') {
     const target = body.targetClassId && await prisma.class.findFirst({ where: { id: body.targetClassId, institutionId, academicYearId: mapping.rollover.targetAcademicYearId, archivedAt: null } });
     if (!target) return res.status(400).json({ error: 'Target class must belong to this institution and target academic year.', code: 'INVALID_TARGET_CLASS' });
   }
   const updated = await prisma.$transaction(async (tx) => {
-    const data = body.action === 'SKIP' ? { action: 'SKIP', validationStatus: 'UNRESOLVED', targetStageId: null, targetGradeLevelId: null, targetClassId: null, targetParallelNumber: null } : { ...body, validationStatus: 'VALID' };
+    const data = classMappingPatchData(body);
     const row = await tx.academicYearRolloverClassMapping.update({ where: { id: mapping.id }, data });
     await recordAuditEvent(tx, { institutionId, actorUserId: req.user?.uid, action: 'ROLLOVER_CLASS_MAPPING_UPDATED', entityType: 'AcademicYearRolloverClassMapping', entityId: row.id, metadata: { rolloverId, sourceYearId: mapping.rollover.sourceAcademicYearId, targetYearId: mapping.rollover.targetAcademicYearId } });
     return row;
@@ -59,7 +67,7 @@ async function updateDecision(institutionId: string, rolloverId: string, decisio
   if (['PROMOTE', 'REPEAT'].includes(action)) {
     if (!body.targetClassMappingId || !body.targetGradeLevelId) throw new RolloverDraftError(400, 'INVALID_STUDENT_DECISION', 'Promotion and repeat decisions require a target grade and class mapping.');
     mapping = await prisma.academicYearRolloverClassMapping.findFirst({ where: { id: body.targetClassMappingId, rolloverId, institutionId } });
-    if (!mapping || !['CREATE', 'USE_EXISTING'].includes(mapping.action) || mapping.validationStatus !== 'VALID') throw new RolloverDraftError(400, 'INVALID_CLASS_MAPPING', 'Student decision requires a valid class mapping from this rollover.');
+    if (!mapping || !['CREATE', 'USE_EXISTING'].includes(mapping.action) || classMappingValidationStatus(mapping) !== 'VALID') throw new RolloverDraftError(400, 'INVALID_CLASS_MAPPING', 'Student decision requires a valid class mapping from this rollover.');
     if (action === 'REPEAT' && body.targetGradeLevelId !== decision.sourceEnrollment.classRoom.gradeLevelId) throw new RolloverDraftError(400, 'INVALID_REPEAT_GRADE', 'Repeat decisions must use the source grade.');
   }
   return prisma.$transaction(async (tx) => {

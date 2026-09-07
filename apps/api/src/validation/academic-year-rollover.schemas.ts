@@ -15,6 +15,8 @@ const mappingFields = z.object({
   targetGradeLevelId: z.string().uuid().nullable().optional(),
   targetClassId: z.string().uuid().nullable().optional(),
   targetParallelNumber: z.number().int().positive().nullable().optional(),
+  targetNameAr: z.string().trim().min(1).max(120).nullable().optional(),
+  targetNameHe: z.string().trim().min(1).max(120).nullable().optional(),
 }).strict();
 export const academicYearRolloverClassMappingPatchSchema = mappingFields;
 

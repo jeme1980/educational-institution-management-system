@@ -1,7 +1,7 @@
 import { Town } from '../../pages/towns/models/town.model';
-import type { AcademicYear, AcademicPeriod } from '../../pages/academic-years/models/academic-year.model';
+import type { AcademicYear, AcademicPeriod, AcademicYearUpdatePayload, CloseAcademicYearResponse, AcademicYearActionResult, SetCurrentAcademicYearResponse } from '../../pages/academic-years/models/academic-year.model';
 export type { Town };
-export type { AcademicYear, AcademicPeriod };
+export type { AcademicYear, AcademicPeriod, AcademicYearUpdatePayload, CloseAcademicYearResponse, AcademicYearActionResult, SetCurrentAcademicYearResponse };
 
 export interface DashboardStats {
   institutionId: string;

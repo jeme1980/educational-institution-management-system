@@ -52,8 +52,13 @@ export class RolloverWizardComponent implements OnInit {
   readonly executeResult = signal<RolloverExecuteResult | null>(null);
   readonly executePolicy = signal<RolloverPolicy | null>(null);
   readonly executionNeedsRefresh = signal(false);
+  readonly closingSourceYear = signal(false);
+  readonly settingTargetCurrent = signal(false);
+  readonly transitionError = signal('');
   readonly executeAvailable = computed(() => this.step() === 5 && this.draft()?.operation.status === 'DRAFT' && this.draft()?.readiness.canExecute === true && /^[a-f0-9]{64}$/i.test(this.draft()?.executionPlanFingerprint || ''));
   readonly completed = computed(() => this.draft()?.operation.status === 'COMPLETED' || !!this.executeResult());
+  readonly canCloseSource = computed(() => { const year = this.draft()?.sourceYear; return this.completed() && !!year && !year.isClosed && !year.isCurrent && !year.archivedAt; });
+  readonly canSetTargetCurrent = computed(() => { const year = this.draft()?.targetYear; return this.completed() && !!year && !year.isClosed && !year.isCurrent && !year.archivedAt; });
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
   readonly years = computed(() => this.api.academicYears());
@@ -148,6 +153,40 @@ export class RolloverWizardComponent implements OnInit {
       else { this.executeConfirmationOpen.set(false); this.error.set('تعذر تأكيد نتيجة تنفيذ الترفيع. حدّث حالة العملية قبل إعادة المحاولة.'); this.executionNeedsRefresh.set(true); }
     } catch { this.executeConfirmationOpen.set(false); this.error.set('تعذر تأكيد نتيجة تنفيذ الترفيع. حدّث حالة العملية قبل إعادة المحاولة.'); this.executionNeedsRefresh.set(true); }
     finally { this.executing.set(false); }
+  }
+
+  yearState(year: RolloverDraft['sourceYear'], target = false) { if (year.isClosed) return 'مغلقة'; if (year.isCurrent) return 'السنة الحالية'; return target ? 'غير حالية' : 'مفتوحة'; }
+  yearStateTone(year: RolloverDraft['sourceYear']) { return year.isClosed ? 'neutral' : year.isCurrent ? 'success' : 'warning'; }
+  async makeTargetCurrent() {
+    const draft = this.draft();
+    if (!draft || !this.canSetTargetCurrent() || this.settingTargetCurrent()) return;
+    if (!await this.confirmDialog.confirm({ title: `جعل ${draft.targetYear.yearLabel} السنة الدراسية الحالية؟`, message: 'ستصبح هذه السنة الافتراضية في النظام، ولن تبقى السنة الحالية السابقة محددة كسنة حالية. لن يتم حذف بيانات أي سنة.', confirmText: 'جعلها السنة الحالية', variant: 'default' })) return;
+    this.settingTargetCurrent.set(true); this.transitionError.set('');
+    try {
+      const result = await this.api.setCurrentAcademicYear(draft.targetYear.id);
+      if (result.success) { await this.refreshTransitionYears(); this.showNotice('تم تغيير السنة الدراسية الحالية.'); }
+      else this.transitionError.set(result.error || 'تعذر جعل السنة الهدف هي السنة الحالية.');
+    } finally { this.settingTargetCurrent.set(false); }
+  }
+  async closeSourceYear() {
+    const draft = this.draft();
+    if (!draft || !this.canCloseSource() || this.closingSourceYear()) return;
+    if (!await this.confirmDialog.confirm({ title: `إغلاق السنة الدراسية ${draft.sourceYear.yearLabel}`, message: 'سيتم إغلاق السنة الدراسية ولن يتم حذف بياناتها أو أرشفتها.', confirmText: 'إغلاق السنة', variant: 'warning' })) return;
+    this.closingSourceYear.set(true); this.transitionError.set('');
+    try {
+      const result = await this.api.closeAcademicYear(draft.sourceYear.id);
+      if (result.success) { await this.refreshTransitionYears(); this.showNotice(result.data.alreadyClosed ? 'السنة مغلقة بالفعل.' : 'تم إغلاق السنة الدراسية.'); }
+      else this.transitionError.set(result.code === 'ACADEMIC_YEAR_IS_CURRENT' ? 'لا يمكن إغلاق السنة الحالية. عيّن سنة أخرى كسنة حالية أولًا.' : result.code === 'ACADEMIC_YEAR_ARCHIVED' ? 'لا يمكن إغلاق سنة مؤرشفة.' : (result.error || 'تعذر إغلاق السنة المصدر.'));
+    } finally { this.closingSourceYear.set(false); }
+  }
+  private async refreshTransitionYears() {
+    await this.api.loadAcademicYears();
+    this.draft.update(current => {
+      if (!current) return current;
+      const source = this.api.academicYears().find(year => year.id === current.sourceYear.id);
+      const target = this.api.academicYears().find(year => year.id === current.targetYear.id);
+      return { ...current, sourceYear: source ? { ...current.sourceYear, ...source } : current.sourceYear, targetYear: target ? { ...current.targetYear, ...target } : current.targetYear };
+    });
   }
 
   markMappingDirty(id: string) { if (this.completed()) return; this.setMappingState(id, 'dirty'); }

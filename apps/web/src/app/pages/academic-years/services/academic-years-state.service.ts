@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../../core/services/api.service';
-import { AcademicYear, AcademicPeriod } from '../models/academic-year.model';
+import { AcademicYear, AcademicPeriod, AcademicYearUpdatePayload } from '../models/academic-year.model';
 
 @Injectable({ providedIn: 'root' })
 export class AcademicYearsStateService {
@@ -21,7 +21,7 @@ export class AcademicYearsStateService {
     return this.apiService.createAcademicYear(data);
   }
 
-  async updateAcademicYear(id: string, data: any) {
+  async updateAcademicYear(id: string, data: AcademicYearUpdatePayload) {
     return this.apiService.updateAcademicYear(id, data);
   }
 

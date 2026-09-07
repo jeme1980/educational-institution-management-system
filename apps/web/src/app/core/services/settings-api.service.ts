@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import { DashboardStats, AcademicYear, AcademicPeriod, Town, LookupItem, GradeLevel } from '../models/api.models';
+import { DashboardStats, AcademicYear, AcademicPeriod, AcademicYearActionResult, AcademicYearUpdatePayload, CloseAcademicYearResponse, SetCurrentAcademicYearResponse, Town, LookupItem, GradeLevel } from '../models/api.models';
 
 @Injectable({
   providedIn: 'root',
@@ -169,12 +169,13 @@ export class SettingsApiService extends BaseApiService {
     }
   }
 
-  async updateAcademicYear(id: string, data: any): Promise<{ success: boolean; error?: string }> {
+  async updateAcademicYear(id: string, data: AcademicYearUpdatePayload): Promise<{ success: boolean; error?: string }> {
     try {
+      const payload: AcademicYearUpdatePayload = { yearLabel: data.yearLabel, startDate: data.startDate, endDate: data.endDate };
       const res = await this.apiFetch(`/api/academic-years/${id}`, {
         method: 'PUT',
         headers: this.headers,
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         await this.loadAcademicYears();
@@ -529,15 +530,27 @@ export class SettingsApiService extends BaseApiService {
     }
   }
 
-  async setCurrentAcademicYear(id: string): Promise<{ success: boolean; error?: string }> {
+  async closeAcademicYear(id: string): Promise<AcademicYearActionResult<CloseAcademicYearResponse>> {
+    try {
+      const res = await this.apiFetch(`/api/settings/academic-years/${id}/close`, { method: 'PATCH', headers: this.headers });
+      const body = await res.json().catch(() => null) as (CloseAcademicYearResponse & { code?: string; error?: string }) | null;
+      if (!res.ok || !body?.academicYear) return { success: false, error: body?.error || 'تعذر إغلاق السنة الدراسية.', code: body?.code };
+      await this.loadAcademicYears();
+      return { success: true, data: body };
+    } catch (e: any) {
+      return { success: false, error: e?.message || 'تعذر إغلاق السنة الدراسية.' };
+    }
+  }
+
+  async setCurrentAcademicYear(id: string): Promise<AcademicYearActionResult<SetCurrentAcademicYearResponse>> {
     try {
       const res = await this.apiFetch(`/api/settings/academic-years/${id}/current`, { method: 'PATCH', headers: this.headers });
-      if (res.ok) {
+      const body = await res.json().catch(() => null) as (SetCurrentAcademicYearResponse & { code?: string; error?: string }) | null;
+      if (res.ok && body?.id) {
         await this.loadAcademicYears();
-        return { success: true };
+        return { success: true, data: body };
       }
-      const err = await res.json().catch(() => ({}));
-      return { success: false, error: err.error || 'تعذر تغيير العام الدراسي الحالي.' };
+      return { success: false, error: body?.error || 'تعذر تغيير العام الدراسي الحالي.', code: body?.code };
     } catch (e: any) {
       return { success: false, error: e?.message || 'تعذر تغيير العام الدراسي الحالي.' };
     }

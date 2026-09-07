@@ -6,6 +6,7 @@ import { UsersApiService } from './users-api.service';
 import { ClassesApiService } from './classes-api.service';
 import { SubjectsApiService } from './subjects-api.service';
 import { SettingsApiService } from './settings-api.service';
+import type { AcademicYearUpdatePayload } from '../models/api.models';
 
 export * from '../models/api.models';
 
@@ -135,7 +136,7 @@ export class ApiService extends BaseApiService {
   // Academic Years & Periods
   loadAcademicYears() { return this.settingsApi.loadAcademicYears(); }
   createAcademicYear(data: any) { return this.settingsApi.createAcademicYear(data); }
-  updateAcademicYear(id: string, data: any) { return this.settingsApi.updateAcademicYear(id, data); }
+  updateAcademicYear(id: string, data: AcademicYearUpdatePayload) { return this.settingsApi.updateAcademicYear(id, data); }
   deleteAcademicYear(id: string) { return this.settingsApi.deleteAcademicYear(id); }
   archiveAcademicYear(id: string) { return this.settingsApi.archiveAcademicYear(id); }
   loadAcademicPeriods() { return this.settingsApi.loadAcademicPeriods(); }
@@ -226,6 +227,7 @@ export class ApiService extends BaseApiService {
   loadInstitutionProfile() { return this.settingsApi.loadInstitutionProfile(); }
   updateInstitutionProfile(data: Record<string, unknown>) { return this.settingsApi.updateInstitutionProfile(data); }
   setCurrentAcademicYear(id: string) { return this.settingsApi.setCurrentAcademicYear(id); }
+  closeAcademicYear(id: string) { return this.settingsApi.closeAcademicYear(id); }
   createInstitution(instData: any) { return this.settingsApi.createInstitution(instData); }
   updateInstitution(id: string, instData: any) { return this.settingsApi.updateInstitution(id, instData); }
   deleteInstitution(id: string) { return this.settingsApi.deleteInstitution(id); }

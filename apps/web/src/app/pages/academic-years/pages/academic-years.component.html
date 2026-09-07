@@ -147,8 +147,8 @@
                 </div>
 
                 <div class="flex items-center gap-1">
-                  <span [class]="year.isClosed ? 'bg-slate-200/20 text-slate-400' : 'bg-emerald-500/10 text-emerald-600'" class="px-2 py-0.5 rounded-md text-[10px] font-bold">
-                    {{ year.isClosed ? 'مغلق' : 'نشط' }}
+                  <span [class]="year.isClosed || year.archivedAt ? 'bg-slate-200/20 text-slate-400' : 'bg-emerald-500/10 text-emerald-600'" class="px-2 py-0.5 rounded-md text-[10px] font-bold">
+                    {{ year.archivedAt ? 'مؤرشفة' : (year.isClosed ? 'مغلقة' : 'مفتوحة') }}
                   </span>
                   
                   <button
@@ -161,19 +161,6 @@
                   >
                     <mat-icon class="text-base block">edit</mat-icon>
                   </button>
-
-                  @if (!year.isCurrent && !year.isClosed) {
-                    <button
-                      type="button"
-                      (click)="$event.stopPropagation(); makeCurrent(year)"
-                      aria-label="تعيين {{ year.yearLabel }} كعام دراسي حالي"
-                      title="تعيين كعام دراسي حالي"
-                      [class]="isSelected ? 'text-amber-300 hover:text-amber-100 hover:bg-white/10' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'"
-                      class="p-1 rounded-lg transition-all cursor-pointer"
-                    >
-                      <mat-icon class="text-base block">star</mat-icon>
-                    </button>
-                  }
 
                   <button
                     type="button"
@@ -200,6 +187,12 @@
                   <span>{{ formatDate(year.endDate) }}</span>
                 </div>
               </div>
+              @if (canSetCurrent(year) || canCloseYear(year)) {
+                <ng-container *appHasPermission="'settings:update'"><div class="flex flex-wrap gap-2" (click)="$event.stopPropagation()">
+                  @if (canSetCurrent(year)) { <ui-button size="sm" variant="secondary" [loading]="settingCurrentYearId() === year.id" [disabled]="!!settingCurrentYearId()" (activated)="makeCurrent(year)">جعل السنة الحالية</ui-button> }
+                  @if (canCloseYear(year)) { <ui-button size="sm" variant="ghost" [loading]="closingYearId() === year.id" [disabled]="!!closingYearId()" (activated)="closeAcademicYear(year)">إغلاق السنة</ui-button> }
+                </div></ng-container>
+              }
             </div>
           } @empty {
             <div class="p-8 text-center text-slate-400 font-bold text-xs space-y-2">
@@ -384,41 +377,6 @@
               @if (yearForm.get('endDate')?.touched && yearForm.get('endDate')?.invalid) {
                 <p class="text-[10px] text-rose-500 font-bold mt-1 mr-1">تاريخ الانتهاء مطلوب.</p>
               }
-            </div>
-          </div>
-
-          <!-- Options Stylized Switches -->
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs font-extrabold text-slate-700">تعيين كعام دراسي نشط وحالي</span>
-                <span class="text-[10px] text-slate-400 font-normal">اعتماد هذا العام الدراسي كمرجع أساسي للنظام</span>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  formControlName="isCurrent"
-                  class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
-              </label>
-            </div>
-
-            <div class="h-px bg-slate-200"></div>
-
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-xs font-extrabold text-slate-700">إغلاق العام الدراسي وأرشفته</span>
-                <span class="text-[10px] text-slate-400 font-normal">تجميد البيانات السنوية لحماية السجلات</span>
-              </div>
-              <label class="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  formControlName="isClosed"
-                  class="sr-only peer"
-                />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#00236f]/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00236f] peer-checked:after:border-transparent"></div>
-              </label>
             </div>
           </div>
 

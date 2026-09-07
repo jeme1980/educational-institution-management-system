@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { ApiService, AcademicYear, AcademicPeriod } from '../../../core/services/api.service';
+import { ApiService, AcademicYear, AcademicPeriod, AcademicYearUpdatePayload } from '../../../core/services/api.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -22,11 +23,14 @@ export class AcademicYearsComponent implements OnInit {
   apiService = inject(ApiService);
   fb = inject(FormBuilder);
   router = inject(Router);
+  confirmDialog = inject(ConfirmDialogService);
 
   // State Signals
   selectedYear = signal<AcademicYear | null>(null);
   searchQuery = signal<string>('');
   isProcessing = signal<boolean>(false);
+  closingYearId = signal<string | null>(null);
+  settingCurrentYearId = signal<string | null>(null);
   yearsLoading = signal<boolean>(false);
   periodsLoading = signal<boolean>(false);
   yearsLoadError = signal<string | null>(null);
@@ -97,8 +101,6 @@ export class AcademicYearsComponent implements OnInit {
       yearLabel: ['', [Validators.required]],
       startDate: ['', [Validators.required]],
       endDate: ['', [Validators.required]],
-      isCurrent: [false],
-      isClosed: [false],
     });
 
     this.periodForm = this.fb.group({
@@ -144,6 +146,8 @@ export class AcademicYearsComponent implements OnInit {
   selectYear(year: AcademicYear) {
     this.selectedYear.set(year);
   }
+  canSetCurrent(year: AcademicYear) { return !year.isCurrent && !year.isClosed && !year.archivedAt; }
+  canCloseYear(year: AcademicYear) { return !year.isCurrent && !year.isClosed && !year.archivedAt; }
 
   formatDate(dateStr: string | null | undefined): string {
     if (!dateStr) return '';
@@ -160,8 +164,6 @@ export class AcademicYearsComponent implements OnInit {
         yearLabel: year.yearLabel,
         startDate: year.startDate ? new Date(year.startDate).toISOString().split('T')[0] : '',
         endDate: year.endDate ? new Date(year.endDate).toISOString().split('T')[0] : '',
-        isCurrent: year.isCurrent,
-        isClosed: year.isClosed,
       });
     } else {
       this.editingYear.set(null);
@@ -169,8 +171,6 @@ export class AcademicYearsComponent implements OnInit {
         yearLabel: '',
         startDate: '',
         endDate: '',
-        isCurrent: false,
-        isClosed: false,
       });
     }
     this.showYearModal.set(true);
@@ -188,17 +188,21 @@ export class AcademicYearsComponent implements OnInit {
       return;
     }
     this.isProcessing.set(true);
-    const val = this.yearForm.value;
+    const val: AcademicYearUpdatePayload = {
+      yearLabel: String(this.yearForm.value.yearLabel),
+      startDate: String(this.yearForm.value.startDate),
+      endDate: String(this.yearForm.value.endDate),
+    };
 
+    const editing = this.editingYear();
     try {
-      if (this.editingYear()) {
-        const res = await this.apiService.updateAcademicYear(this.editingYear()!.id, val);
+      if (editing) {
+        const res = await this.apiService.updateAcademicYear(editing.id, val);
         if (res.success) {
           this.closeYearModal();
           this.showToast('تم تعديل بيانات العام الدراسي بنجاح.', 'success');
-          if (this.selectedYear()?.id === this.editingYear()!.id) {
-            // Refresh details
-            const updated = this.apiService.academicYears().find(y => y.id === this.editingYear()!.id);
+          if (this.selectedYear()?.id === editing.id) {
+            const updated = this.apiService.academicYears().find(y => y.id === editing.id);
             if (updated) this.selectedYear.set(updated);
           }
         } else {
@@ -221,15 +225,36 @@ export class AcademicYearsComponent implements OnInit {
   }
 
   async makeCurrent(year: AcademicYear) {
-    if (year.isCurrent || year.isClosed) return;
-    this.isProcessing.set(true);
+    if (year.isCurrent || year.isClosed || year.archivedAt || this.settingCurrentYearId()) return;
+    if (!await this.confirmDialog.confirm({ title: `جعل ${year.yearLabel} السنة الدراسية الحالية؟`, message: 'ستصبح هذه السنة الافتراضية في النظام، ولن تبقى السنة الحالية السابقة محددة كسنة حالية. لن يتم حذف بيانات أي سنة.', confirmText: 'جعلها السنة الحالية', variant: 'default' })) return;
+    this.settingCurrentYearId.set(year.id);
     try {
       const res = await this.apiService.setCurrentAcademicYear(year.id);
+      if (res.success) this.refreshSelectedYear();
       this.showToast(res.success ? 'تم تغيير العام الدراسي الحالي بنجاح.' : (res.error || 'تعذر تغيير العام الدراسي الحالي.'), res.success ? 'success' : 'error');
     } finally {
-      this.isProcessing.set(false);
+      this.settingCurrentYearId.set(null);
     }
   }
+
+  async closeAcademicYear(year: AcademicYear) {
+    if (year.isClosed || year.isCurrent || year.archivedAt || this.closingYearId()) return;
+    if (!await this.confirmDialog.confirm({ title: `إغلاق السنة الدراسية ${year.yearLabel}`, message: 'سيتم إغلاق السنة الدراسية ولن يتم حذف بياناتها أو أرشفتها.', confirmText: 'إغلاق السنة', variant: 'warning' })) return;
+    this.closingYearId.set(year.id);
+    try {
+      const res = await this.apiService.closeAcademicYear(year.id);
+      if (res.success) { this.refreshSelectedYear(); this.showToast(res.data.alreadyClosed ? 'السنة مغلقة بالفعل.' : 'تم إغلاق السنة الدراسية.', 'success'); }
+      else this.showToast(this.closeError(res.code, res.error), 'error');
+    } finally { this.closingYearId.set(null); }
+  }
+
+  private closeError(code: string | undefined, fallback: string) {
+    if (code === 'ACADEMIC_YEAR_IS_CURRENT') return 'لا يمكن إغلاق السنة الحالية. عيّن سنة أخرى كسنة حالية أولًا.';
+    if (code === 'ACADEMIC_YEAR_ARCHIVED') return 'لا يمكن إغلاق سنة مؤرشفة.';
+    if (code === 'ACADEMIC_YEAR_STATE_ACTION_REQUIRED') return 'يجب تغيير حالة السنة من الإجراء المخصص.';
+    return fallback || 'تعذر إغلاق السنة الدراسية.';
+  }
+  private refreshSelectedYear() { const id = this.selectedYear()?.id; if (id) this.selectedYear.set(this.apiService.academicYears().find(year => year.id === id) || null); }
 
   // Periods Actions
   openPeriodModal(period?: AcademicPeriod) {

@@ -19,16 +19,19 @@ describe('RolloverWizardComponent startDraft', () => {
   const createDraft = vi.fn();
   const getDraft = vi.fn(async () => ({ status: 200, body: draft }));
   const executeAcademicYearRollover = vi.fn();
+  const closeAcademicYear = vi.fn();
+  const setCurrentAcademicYear = vi.fn();
+  const confirm = vi.fn();
   let component: RolloverWizardComponent;
 
   beforeEach(() => {
-    navigate.mockClear(); createDraft.mockReset(); getDraft.mockClear(); executeAcademicYearRollover.mockReset();
+    navigate.mockClear(); createDraft.mockReset(); getDraft.mockClear(); executeAcademicYearRollover.mockReset(); closeAcademicYear.mockReset(); setCurrentAcademicYear.mockReset(); confirm.mockReset();
     TestBed.configureTestingModule({ providers: [
-      { provide: ApiService, useValue: { academicYears: signal([]), loadAcademicYears: vi.fn() } },
+      { provide: ApiService, useValue: { academicYears: signal([]), loadAcademicYears: vi.fn(), closeAcademicYear, setCurrentAcademicYear } },
       { provide: RolloverApiService, useValue: { createDraft, getDraft, executeAcademicYearRollover } },
       { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => null }, queryParamMap: { get: () => null } } } },
       { provide: Router, useValue: { navigate } },
-      { provide: ConfirmDialogService, useValue: {} },
+      { provide: ConfirmDialogService, useValue: { confirm } },
     ] });
     component = TestBed.runInInjectionContext(() => new RolloverWizardComponent());
   });
@@ -131,5 +134,20 @@ describe('RolloverWizardComponent startDraft', () => {
     await component.executeRollover();
     expect(component.executionNeedsRefresh()).toBe(true);
     expect(component.error()).toContain('حدّث حالة العملية');
+  });
+
+  it('shows independent follow-up actions only after completion', () => {
+    component.draft.set(draft); expect(component.canSetTargetCurrent()).toBe(false); expect(component.canCloseSource()).toBe(false);
+    component.draft.set({ ...draft, operation: { ...draft.operation, status: 'COMPLETED' } });
+    expect(component.canSetTargetCurrent()).toBe(true); expect(component.canCloseSource()).toBe(false);
+    component.draft.set({ ...draft, operation: { ...draft.operation, status: 'COMPLETED' }, sourceYear: { ...draft.sourceYear, isCurrent: false } });
+    expect(component.canCloseSource()).toBe(true);
+  });
+
+  it('keeps a completed rollover completed when a transition action fails', async () => {
+    component.draft.set({ ...draft, operation: { ...draft.operation, status: 'COMPLETED' }, sourceYear: { ...draft.sourceYear, isCurrent: false } });
+    confirm.mockResolvedValue(true); closeAcademicYear.mockResolvedValue({ success: false, code: 'ACADEMIC_YEAR_ARCHIVED', error: 'failed' });
+    await component.closeSourceYear();
+    expect(component.completed()).toBe(true); expect(component.transitionError()).toBe('لا يمكن إغلاق سنة مؤرشفة.'); expect(executeAcademicYearRollover).not.toHaveBeenCalled();
   });
 });

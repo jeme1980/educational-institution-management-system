@@ -8,6 +8,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { SETTINGS_NAV_ITEMS, filterSettingsNavItems } from './settings-navigation';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,15 +22,11 @@ export class SettingsComponent implements OnInit {
   authService = inject(AuthService);
   confirmDialog = inject(ConfirmDialogService);
   fb = inject(FormBuilder);
-  readonly settingsNavItems = [
-    { path: '/settings', label: 'إعدادات المؤسسة', icon: 'domain', permission: 'settings:read' },
-    { path: '/settings/users', label: 'المستخدمون', icon: 'manage_accounts', permission: 'settings:create' },
-    { path: '/settings/roles', label: 'الأدوار والصلاحيات', icon: 'admin_panel_settings', permission: 'settings:create' },
-    { path: '/settings/subscription', label: 'الاشتراك', icon: 'card_membership', permission: 'subscription:read' },
-    { path: '/settings/lookup-tables', label: 'الجداول المساعدة', icon: 'table_rows', permission: 'settings:create' },
-    { path: '/settings/audit-log', label: 'سجل التدقيق', icon: 'history', permission: 'audit:read' },
-  ];
-  readonly visibleSettingsNavItems = computed(() => this.settingsNavItems.filter((item) => this.authService.hasPermission(item.permission)));
+  readonly settingsNavItems = SETTINGS_NAV_ITEMS;
+  readonly visibleSettingsNavItems = computed(() => filterSettingsNavItems(
+    this.settingsNavItems,
+    (permission) => this.authService.hasPermission(permission),
+  ));
 
   isEditing = signal<boolean>(false);
   showLangModal = signal<boolean>(false);

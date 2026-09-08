@@ -2,10 +2,8 @@
 .staff-development-page { display: grid; max-width: 90rem; gap: var(--space-5); min-width: 0; margin-inline: auto; padding: var(--space-4); }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .metrics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
-.development-filters { display: grid; grid-template-columns: minmax(0, 3fr) minmax(12rem, 1fr); align-items: end; gap: var(--space-3); }
+.development-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(10rem, 1fr)); align-items: end; gap: var(--space-3); }
 .development-filters label { display: grid; gap: var(--space-1); min-width: 0; color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
-.development-search { position: relative; }
-.development-search .search-icon { position: absolute; z-index: 1; inset-inline-start: var(--space-3); bottom: var(--space-2); color: var(--on-surface-variant); pointer-events: none; }
 .development-table-card { overflow: hidden; border: 1px solid var(--surface-border); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
 .development-table-scroll { overflow-x: auto; }
 table { width: 100%; min-width: 52rem; border-collapse: collapse; color: var(--on-surface); text-align: right; }
@@ -24,5 +22,6 @@ tbody tr:hover { background: var(--surface-container-low); }
 .feedback { padding: var(--space-3) var(--space-4); border: 1px solid; border-radius: var(--radius-md); font-size: var(--font-sm); }
 .feedback--success { border-color: var(--success); background: var(--success-container); color: var(--success); }
 .feedback--error { border-color: var(--danger); background: var(--danger-container); color: var(--danger); }
+@media (max-width: 64rem) { .development-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .staff-development-page { padding: var(--space-3); }.metrics-grid { grid-template-columns: 1fr; }.development-filters { grid-template-columns: 1fr; }.page-actions { width: 100%; }.page-actions ui-button { flex: 1 1 auto; }.course-name { max-width: 14rem; } }
 @media (prefers-reduced-motion: reduce) { .staff-development-page *, .staff-development-page *::before, .staff-development-page *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }

@@ -13,7 +13,7 @@ export class HasPermissionDirective {
   private permissionCodeValue = '';
   private hasView = false;
 
-  @Input() set hasPermission(permissionCode: string) {
+  @Input() set appHasPermission(permissionCode: string) {
     this.permissionCodeValue = permissionCode;
     this.updateView();
   }

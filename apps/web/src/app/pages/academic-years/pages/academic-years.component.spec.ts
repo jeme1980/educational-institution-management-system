@@ -1,8 +1,9 @@
 import { signal } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { ApiService, AcademicPeriod, AcademicYear } from '../../../core/services/api.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AcademicYearsComponent } from './academic-years.component';
 
@@ -79,5 +80,71 @@ describe('AcademicYearsComponent state actions', () => {
     createAcademicPeriod.mockResolvedValueOnce({ success: false, error: '' });
     await component.savePeriod();
     expect(component.toast()?.message).toBe('تعذر حفظ الفترة الدراسية.');
+  });
+});
+
+describe('AcademicYearsComponent academic period modal template', () => {
+  let fixture: ComponentFixture<AcademicYearsComponent>;
+  let component: AcademicYearsComponent;
+  let consoleError: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(async () => {
+    consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await TestBed.configureTestingModule({
+      imports: [AcademicYearsComponent],
+      providers: [
+        {
+          provide: ApiService,
+          useValue: {
+            academicYears: signal<AcademicYear[]>([openYear]),
+            academicPeriods: signal<AcademicPeriod[]>([createdPeriod]),
+            loadAcademicYears: vi.fn().mockResolvedValue(undefined),
+            loadAcademicPeriods: vi.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: AuthService,
+          useValue: {
+            currentContext: signal({ permissions: ['settings:update'] }),
+            hasPermission: vi.fn((permission: string) => permission === 'settings:update'),
+          },
+        },
+        { provide: Router, useValue: { navigate: vi.fn() } },
+        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(AcademicYearsComponent);
+    component = fixture.componentInstance;
+    component.selectYear(openYear);
+    fixture.detectChanges();
+    await fixture.whenStable();
+  });
+
+  afterEach(() => consoleError.mockRestore());
+
+  const consoleErrors = () => consoleError.mock.calls.flat().join(' ');
+
+  it('keeps the permission directive wired into the rendered template', () => {
+    expect(fixture.nativeElement.textContent).toContain('ترفيع السنة');
+    expect(consoleErrors()).not.toContain('NG0303');
+  });
+
+  it('creates the Add Academic Period modal without an unknown directive error', () => {
+    component.openPeriodModal();
+    fixture.detectChanges();
+
+    expect(component.editingPeriod()).toBeNull();
+    expect(fixture.nativeElement.querySelector('ui-modal form[ui-modal-body]')).not.toBeNull();
+    expect(consoleErrors()).not.toContain('NG0303');
+  });
+
+  it('creates the Edit Academic Period modal without an unknown directive error', () => {
+    component.openPeriodModal(createdPeriod);
+    fixture.detectChanges();
+
+    expect(component.editingPeriod()).toEqual(createdPeriod);
+    expect(fixture.nativeElement.querySelector('ui-modal form[ui-modal-body]')).not.toBeNull();
+    expect(consoleErrors()).not.toContain('NG0303');
   });
 });

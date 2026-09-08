@@ -21,7 +21,7 @@ describe('App', () => {
     expect(visible.map((item) => item.path)).toEqual([
       '/dashboard', '/students', '/registered-students', '/classes', '/study-groups', '/subjects', '/academic-years', '/settings',
     ]);
-    expect(visible.some((item) => item.path === '/platform')).toBeFalse();
+    expect(visible.some((item) => item.path === '/platform')).toBe(false);
   });
 
   it('keeps a single-institution identity stable and selects only a valid academic year', () => {
@@ -35,8 +35,8 @@ describe('App', () => {
 
   it('keeps one canonical platform route with platform guard', () => {
     const platformRoutes = routes.filter((route) => route.path === 'platform');
-    expect(platformRoutes).toHaveSize(1);
+    expect(platformRoutes.length).toBe(1);
     expect(platformRoutes[0].children).toBeDefined();
-    expect(platformRoutes[0].canActivate).toHaveSize(2);
+    expect(platformRoutes[0].canActivate?.length).toBe(2);
   });
 });

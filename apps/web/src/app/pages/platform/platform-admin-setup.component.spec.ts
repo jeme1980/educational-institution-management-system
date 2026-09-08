@@ -44,7 +44,7 @@ describe('PlatformAdminSetupComponent', () => {
     shouldFail = true;
     await fixture.componentInstance.load();
     fixture.detectChanges();
-    expect(fixture.componentInstance.loading()).toBeFalse();
+    expect(fixture.componentInstance.loading()).toBe(false);
     expect(fixture.componentInstance.error()).toContain('تعذر تحميل');
   });
 

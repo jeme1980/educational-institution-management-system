@@ -2,7 +2,7 @@ import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis } from '../models/exam-analysis.model';
+import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis, StudentAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
 import { buildInterventionGroups, countFollowUpStudents, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
 import { performanceDonutData } from '../components/performance-donut-chart.component';

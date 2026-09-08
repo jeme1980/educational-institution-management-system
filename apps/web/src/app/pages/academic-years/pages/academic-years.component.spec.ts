@@ -2,24 +2,28 @@ import { signal } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, AcademicYear } from '../../../core/services/api.service';
+import { ApiService, AcademicPeriod, AcademicYear } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { AcademicYearsComponent } from './academic-years.component';
 
 const openYear: AcademicYear = { id: 'open', institutionId: 'school', yearLabel: '2026-2027', startDate: '2026-09-01', endDate: '2027-06-30', isCurrent: false, isClosed: false };
+const createdPeriod: AcademicPeriod = { id: 'period-1', institutionId: 'school', academicYearId: openYear.id, nameAr: 'فصل 01', nameHe: null, startDate: '2026-09-01', endDate: '2026-12-31', sortOrder: 1, isActive: true };
 
 describe('AcademicYearsComponent state actions', () => {
   const years = signal<AcademicYear[]>([openYear]);
+  const periods = signal<AcademicPeriod[]>([]);
   const updateAcademicYear = vi.fn();
+  const createAcademicPeriod = vi.fn();
+  const loadAcademicPeriods = vi.fn();
   const closeAcademicYear = vi.fn();
   const setCurrentAcademicYear = vi.fn();
   const confirm = vi.fn();
   let component: AcademicYearsComponent;
 
   beforeEach(() => {
-    years.set([openYear]); updateAcademicYear.mockReset(); closeAcademicYear.mockReset(); setCurrentAcademicYear.mockReset(); confirm.mockReset();
+    years.set([openYear]); periods.set([]); updateAcademicYear.mockReset(); createAcademicPeriod.mockReset(); loadAcademicPeriods.mockReset(); closeAcademicYear.mockReset(); setCurrentAcademicYear.mockReset(); confirm.mockReset();
     TestBed.configureTestingModule({ providers: [FormBuilder,
-      { provide: ApiService, useValue: { academicYears: years, academicPeriods: signal([]), updateAcademicYear, closeAcademicYear, setCurrentAcademicYear, loadAcademicYears: vi.fn(), loadAcademicPeriods: vi.fn(), createAcademicYear: vi.fn() } },
+      { provide: ApiService, useValue: { academicYears: years, academicPeriods: periods, updateAcademicYear, createAcademicPeriod, closeAcademicYear, setCurrentAcademicYear, loadAcademicYears: vi.fn(), loadAcademicPeriods, createAcademicYear: vi.fn() } },
       { provide: Router, useValue: { navigate: vi.fn() } },
       { provide: ConfirmDialogService, useValue: { confirm } },
     ] });
@@ -41,5 +45,39 @@ describe('AcademicYearsComponent state actions', () => {
     confirm.mockResolvedValueOnce(false); await component.closeAcademicYear(openYear); expect(closeAcademicYear).not.toHaveBeenCalled();
     confirm.mockResolvedValueOnce(true); closeAcademicYear.mockResolvedValue({ success: true, data: { academicYear: { ...openYear, isClosed: true }, alreadyClosed: false } }); await component.closeAcademicYear(openYear); expect(closeAcademicYear).toHaveBeenCalledWith(openYear.id); expect(updateAcademicYear).not.toHaveBeenCalled();
     confirm.mockResolvedValueOnce(true); setCurrentAcademicYear.mockResolvedValue({ success: true, data: { ...openYear, isCurrent: true } }); await component.makeCurrent(openYear); expect(setCurrentAcademicYear).toHaveBeenCalledWith(openYear.id);
+  });
+
+  it('sends the selected academic year and date-only values, then shows the created period', async () => {
+    component.selectedYear.set(openYear);
+    component.showPeriodModal.set(true);
+    component.periodForm.setValue({ nameAr: 'فصل 01', nameHe: '', startDate: '2026-09-01', endDate: '2026-12-31', sortOrder: 1, isActive: true });
+    createAcademicPeriod.mockImplementation(async () => {
+      periods.update((items) => [...items, createdPeriod]);
+      return { success: true, data: createdPeriod };
+    });
+
+    await component.savePeriod();
+
+    expect(createAcademicPeriod).toHaveBeenCalledWith({ nameAr: 'فصل 01', nameHe: '', startDate: '2026-09-01', endDate: '2026-12-31', sortOrder: 1, isActive: true, academicYearId: openYear.id });
+    expect(component.selectedYearPeriods()).toContainEqual(createdPeriod);
+    expect(component.showPeriodModal()).toBe(false);
+    expect(component.toast()).toEqual({ message: 'تم إضافة الفترة الدراسية بنجاح.', type: 'success' });
+  });
+
+  it('loads periods for the selected academic year', () => {
+    component.selectYear(openYear);
+    expect(loadAcademicPeriods).toHaveBeenCalledWith(openYear.id);
+  });
+
+  it('renders known and generic create errors as readable Arabic', async () => {
+    component.selectedYear.set(openYear);
+    component.periodForm.setValue({ nameAr: 'فصل 01', nameHe: '', startDate: '2026-09-01', endDate: '2026-12-31', sortOrder: 1, isActive: true });
+    createAcademicPeriod.mockResolvedValueOnce({ success: false, code: 'ACADEMIC_PERIOD_OUTSIDE_YEAR_RANGE', error: 'corrupted server text' });
+    await component.savePeriod();
+    expect(component.toast()?.message).toBe('يجب أن تقع تواريخ الفترة الدراسية ضمن نطاق السنة الأكاديمية.');
+
+    createAcademicPeriod.mockResolvedValueOnce({ success: false, error: '' });
+    await component.savePeriod();
+    expect(component.toast()?.message).toBe('تعذر حفظ الفترة الدراسية.');
   });
 });

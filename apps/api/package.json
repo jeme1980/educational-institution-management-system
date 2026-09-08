@@ -19,6 +19,7 @@
     "test:security:8c": "npm run build && node dist/security/phase8c.spec.js",
     "test:security:8d": "npm run build && node dist/security/phase8d.spec.js",
     "test:academic-years:close": "npm run build && node dist/security/academic-year-close.spec.js",
+    "test:academic-periods": "npm run build && node dist/security/academic-period.spec.js",
     "test:security:8e": "npm run build && node dist/security/phase8e.spec.js",
     "test:security:8f": "npm run build && node dist/security/phase8f.spec.js",
     "test:security:9a": "npm run build && node --test dist/security/phase9a.spec.js",

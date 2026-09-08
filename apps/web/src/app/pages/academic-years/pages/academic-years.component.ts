@@ -11,6 +11,15 @@ import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-
 import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
+export function academicPeriodErrorMessage(code: string | undefined, fallback: string | undefined): string {
+  if (code === 'ACADEMIC_PERIOD_YEAR_NOT_FOUND') return 'السنة الأكاديمية المحددة غير موجودة أو غير متاحة لهذه المؤسسة.';
+  if (code === 'ACADEMIC_PERIOD_NAME_REQUIRED') return 'اسم الفترة الدراسية مطلوب.';
+  if (code === 'ACADEMIC_PERIOD_DATES_INVALID') return 'يجب إدخال تاريخي بداية ونهاية صالحين للفترة الدراسية.';
+  if (code === 'ACADEMIC_PERIOD_DATE_ORDER_INVALID') return 'يجب أن يكون تاريخ انتهاء الفترة بعد تاريخ بدايتها.';
+  if (code === 'ACADEMIC_PERIOD_OUTSIDE_YEAR_RANGE') return 'يجب أن تقع تواريخ الفترة الدراسية ضمن نطاق السنة الأكاديمية.';
+  return fallback || 'تعذر حفظ الفترة الدراسية.';
+}
+
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-academic-years',
@@ -145,6 +154,7 @@ export class AcademicYearsComponent implements OnInit {
 
   selectYear(year: AcademicYear) {
     this.selectedYear.set(year);
+    void this.apiService.loadAcademicPeriods(year.id);
   }
   canSetCurrent(year: AcademicYear) { return !year.isCurrent && !year.isClosed && !year.archivedAt; }
   canCloseYear(year: AcademicYear) { return !year.isCurrent && !year.isClosed && !year.archivedAt; }
@@ -320,7 +330,7 @@ export class AcademicYearsComponent implements OnInit {
           this.closePeriodModal();
           this.showToast('تم إضافة الفترة الدراسية بنجاح.', 'success');
         } else {
-          this.showToast(res.error || 'فشل في إضافة الفترة الدراسية.', 'error');
+          this.showToast(academicPeriodErrorMessage(res.code, res.error), 'error');
         }
       }
     } catch (e) {

@@ -139,7 +139,7 @@ export class ApiService extends BaseApiService {
   updateAcademicYear(id: string, data: AcademicYearUpdatePayload) { return this.settingsApi.updateAcademicYear(id, data); }
   deleteAcademicYear(id: string) { return this.settingsApi.deleteAcademicYear(id); }
   archiveAcademicYear(id: string) { return this.settingsApi.archiveAcademicYear(id); }
-  loadAcademicPeriods() { return this.settingsApi.loadAcademicPeriods(); }
+  loadAcademicPeriods(academicYearId?: string) { return this.settingsApi.loadAcademicPeriods(academicYearId); }
   createAcademicPeriod(data: any) { return this.settingsApi.createAcademicPeriod(data); }
   updateAcademicPeriod(id: string, data: any) { return this.settingsApi.updateAcademicPeriod(id, data); }
   deleteAcademicPeriod(id: string) { return this.settingsApi.deleteAcademicPeriod(id); }

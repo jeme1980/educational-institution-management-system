@@ -332,9 +332,13 @@ export async function deleteAcademicYearsById(req: ContextRequest, res: Response
 }
 
 export async function getAcademicPeriods(req: ContextRequest, res: Response): Promise<any> {
-  
   const instId = req.context!.institutionId;
-  const acadYearId = req.context!.academicYearId;
+  const requestedYearId = req.query['academicYearId'];
+  const acadYearId = isUuid(requestedYearId) ? requestedYearId : req.context!.academicYearId;
+  if (requestedYearId) {
+    const academicYear = await prisma.academicYear.findFirst({ where: { id: acadYearId, institutionId: instId, archivedAt: null }, select: { id: true } });
+    if (!academicYear) return res.status(404).json({ code: 'ACADEMIC_PERIOD_YEAR_NOT_FOUND', error: 'السنة الأكاديمية المحددة غير موجودة أو غير متاحة لهذه المؤسسة.' });
+  }
   const periods = await prisma.academicPeriod.findMany({
     where: { institutionId: instId, academicYearId: acadYearId, archivedAt: null },
     orderBy: { sortOrder: 'asc' },
@@ -343,24 +347,36 @@ export async function getAcademicPeriods(req: ContextRequest, res: Response): Pr
 
 }
 
-function validateAcademicPeriodDates(startDate: unknown, endDate: unknown, academicYear: { startDate: Date; endDate: Date }): { start: Date; end: Date } | string {
-  const start = new Date(String(startDate || ''));
-  const end = new Date(String(endDate || ''));
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '״¬״¨ ״¥״¯״®״§„ ״×״§״±״® ״¨״¯״§״© ˆ†‡״§״© ״µ״§„״­† „„״×״±״© ״§„״¯״±״§״³״©.';
-  if (end.getTime() <= start.getTime()) return '״¬״¨ ״£† ƒˆ† ״×״§״±״® ״§†״×‡״§״¡ ״§„״×״±״© ״¨״¹״¯ ״×״§״±״® ״¨״¯״§״×‡״§.';
-  if (start.getTime() < academicYear.startDate.getTime() || end.getTime() > academicYear.endDate.getTime()) return '״¬״¨ ״£† ״×‚״¹ ״§„״×״±״© ״§„״¯״±״§״³״© ״¨״§„ƒ״§…„ ״¶…† ״­״¯ˆ״¯ ״§„״¹״§… ״§„״¯״±״§״³.';
-  return { start, end };
+type AcademicPeriodDateResult = { ok: true; start: Date; end: Date } | { ok: false; code: string; error: string };
+
+function parseBusinessDate(value: unknown): Date | null {
+  const raw = String(value || '');
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (!match) return null;
+  const parsed = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw ? null : parsed;
+}
+
+export function validateAcademicPeriodDates(startDate: unknown, endDate: unknown, academicYear: { startDate: Date; endDate: Date }): AcademicPeriodDateResult {
+  const start = parseBusinessDate(startDate);
+  const end = parseBusinessDate(endDate);
+  if (!start || !end) return { ok: false, code: 'ACADEMIC_PERIOD_DATES_INVALID', error: 'يجب إدخال تاريخي بداية ونهاية صالحين للفترة الدراسية.' };
+  if (end.getTime() <= start.getTime()) return { ok: false, code: 'ACADEMIC_PERIOD_DATE_ORDER_INVALID', error: 'يجب أن يكون تاريخ انتهاء الفترة بعد تاريخ بدايتها.' };
+  if (start.getTime() < academicYear.startDate.getTime() || end.getTime() > academicYear.endDate.getTime()) {
+    return { ok: false, code: 'ACADEMIC_PERIOD_OUTSIDE_YEAR_RANGE', error: 'يجب أن تقع تواريخ الفترة الدراسية ضمن نطاق السنة الأكاديمية.' };
+  }
+  return { ok: true, start, end };
 }
 
 export async function createAcademicPeriods(req: ContextRequest, res: Response): Promise<any> {
-  const { nameAr, nameHe, startDate, endDate, sortOrder, isActive } = req.body;
+  const { academicYearId, nameAr, nameHe, startDate, endDate, sortOrder, isActive } = req.body;
   const instId = req.context!.institutionId;
-  const acadYearId = req.context!.academicYearId;
+  const acadYearId = isUuid(academicYearId) ? academicYearId : req.context!.academicYearId;
   const academicYear = await prisma.academicYear.findFirst({ where: { id: acadYearId, institutionId: instId, archivedAt: null }, select: { startDate: true, endDate: true } });
-  if (!academicYear) return res.status(400).json({ error: '״§„״¹״§… ״§„״¯״±״§״³ ״§„…״­״¯״¯ ״÷״± …ˆ״¬ˆ״¯ ״£ˆ …״₪״±״´.' });
-  if (!String(nameAr || '').trim()) return res.status(400).json({ error: '״§״³… ״§„״×״±״© ״§„״¯״±״§״³״© …״·„ˆ״¨.' });
+  if (!academicYear) return res.status(404).json({ code: 'ACADEMIC_PERIOD_YEAR_NOT_FOUND', error: 'السنة الأكاديمية المحددة غير موجودة أو غير متاحة لهذه المؤسسة.' });
+  if (!String(nameAr || '').trim()) return res.status(400).json({ code: 'ACADEMIC_PERIOD_NAME_REQUIRED', error: 'اسم الفترة الدراسية مطلوب.' });
   const dates = validateAcademicPeriodDates(startDate, endDate, academicYear);
-  if (typeof dates === 'string') return res.status(400).json({ error: dates });
+  if (!dates.ok) return res.status(400).json({ code: dates.code, error: dates.error });
 
   const inserted = await prisma.academicPeriod.create({
     data: { institutionId: instId, academicYearId: acadYearId, nameAr: String(nameAr).trim(), nameHe: nameHe || null, startDate: dates.start, endDate: dates.end, sortOrder: Number(sortOrder) || 0, isActive: isActive !== undefined ? isActive : true },
@@ -381,10 +397,10 @@ export async function updateAcademicPeriodsById(req: ContextRequest, res: Respon
     return res.status(404).json({ error: 'Academic period not found or unauthorized' });
   }
   const academicYear = await prisma.academicYear.findFirst({ where: { id: existing.academicYearId, institutionId: instId, archivedAt: null }, select: { startDate: true, endDate: true } });
-  if (!academicYear) return res.status(400).json({ error: '״§„״¹״§… ״§„״¯״±״§״³ ״§„…״­״¯״¯ ״÷״± …ˆ״¬ˆ״¯ ״£ˆ …״₪״±״´.' });
+  if (!academicYear) return res.status(404).json({ code: 'ACADEMIC_PERIOD_YEAR_NOT_FOUND', error: 'السنة الأكاديمية المحددة غير موجودة أو غير متاحة لهذه المؤسسة.' });
   const dates = validateAcademicPeriodDates(startDate, endDate, academicYear);
-  if (typeof dates === 'string') return res.status(400).json({ error: dates });
-  if (!String(nameAr || '').trim()) return res.status(400).json({ error: '״§״³… ״§„״×״±״© ״§„״¯״±״§״³״© …״·„ˆ״¨.' });
+  if (!dates.ok) return res.status(400).json({ code: dates.code, error: dates.error });
+  if (!String(nameAr || '').trim()) return res.status(400).json({ code: 'ACADEMIC_PERIOD_NAME_REQUIRED', error: 'اسم الفترة الدراسية مطلوب.' });
   const updated = await prisma.academicPeriod.update({
     where: { id: existing.id },
     data: {

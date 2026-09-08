@@ -2,6 +2,23 @@ import { Injectable, signal } from '@angular/core';
 import { BaseApiService } from './base-api.service';
 import { DashboardStats, AcademicYear, AcademicPeriod, AcademicYearActionResult, AcademicYearUpdatePayload, CloseAcademicYearResponse, SetCurrentAcademicYearResponse, Town, LookupItem, GradeLevel } from '../models/api.models';
 
+export type AcademicPeriodActionResult = { success: true; data: AcademicPeriod } | { success: false; error: string; code?: string };
+
+export async function readApiError(res: Response, fallback: string): Promise<{ error: string; code?: string }> {
+  const body = await res.json().catch(() => null) as Record<string, unknown> | null;
+  if (!body || typeof body !== 'object') return { error: fallback };
+  const nested = body['error'] && typeof body['error'] === 'object' ? body['error'] as Record<string, unknown> : null;
+  const error = typeof body['error'] === 'string'
+    ? body['error']
+    : typeof body['message'] === 'string'
+      ? body['message']
+      : typeof nested?.['message'] === 'string'
+        ? nested['message']
+        : fallback;
+  const code = typeof body['code'] === 'string' ? body['code'] : typeof nested?.['code'] === 'string' ? nested['code'] : undefined;
+  return { error, ...(code ? { code } : {}) };
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -224,9 +241,10 @@ export class SettingsApiService extends BaseApiService {
     }
   }
 
-  async loadAcademicPeriods() {
+  async loadAcademicPeriods(academicYearId?: string) {
     try {
-      const res = await this.apiFetch('/api/academic-periods', { headers: this.headers });
+      const query = academicYearId ? `?academicYearId=${encodeURIComponent(academicYearId)}` : '';
+      const res = await this.apiFetch(`/api/academic-periods${query}`, { headers: this.headers });
       if (res.ok) {
         const data = await res.json();
         this.academicPeriods.set(this.lookupItems<AcademicPeriod>(data));
@@ -236,7 +254,7 @@ export class SettingsApiService extends BaseApiService {
     }
   }
 
-  async createAcademicPeriod(data: any): Promise<{ success: boolean; error?: string }> {
+  async createAcademicPeriod(data: any): Promise<AcademicPeriodActionResult> {
     try {
       const res = await this.apiFetch('/api/academic-periods', {
         method: 'POST',
@@ -244,15 +262,14 @@ export class SettingsApiService extends BaseApiService {
         body: JSON.stringify(data),
       });
       if (res.ok) {
-        await this.loadAcademicPeriods();
-        return { success: true };
-      } else {
-        const err = await res.json().catch(() => ({}));
-        return { success: false, error: err.error || 'Failed to create academic period' };
+        const created = await res.json() as AcademicPeriod;
+        this.academicPeriods.update((items) => [...items.filter((item) => item.id !== created.id), created]);
+        return { success: true, data: created };
       }
-    } catch (e: any) {
+      return { success: false, ...await readApiError(res, 'تعذر حفظ الفترة الدراسية.') };
+    } catch (e) {
       console.error(e);
-      return { success: false, error: e.message || 'Failed to create academic period' };
+      return { success: false, error: 'تعذر حفظ الفترة الدراسية.' };
     }
   }
 

@@ -5,7 +5,7 @@ import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ApiService } from '../../../core/services/api.service';
 import type { DashboardStats } from '../../../core/models/api.models';
-import { DashboardKpiCardComponent } from '../components/dashboard-kpi-card.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { DashboardBarChartComponent } from '../components/dashboard-bar-chart.component';
 import { DashboardRecentEnrollmentsComponent } from '../components/dashboard-recent-enrollments.component';
 
@@ -44,7 +44,7 @@ export function dashboardKpiValues(stats: DashboardStats | null): number[] | nul
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-dashboard',
-  imports: [CommonModule, MatIconModule, RouterLink, DashboardKpiCardComponent, DashboardBarChartComponent, DashboardRecentEnrollmentsComponent],
+  imports: [CommonModule, MatIconModule, RouterLink, UiStatCardComponent, DashboardBarChartComponent, DashboardRecentEnrollmentsComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css',
 })

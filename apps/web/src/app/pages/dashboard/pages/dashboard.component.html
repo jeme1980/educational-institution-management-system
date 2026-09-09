@@ -24,10 +24,10 @@
     }
 
   <section class="kpi-grid" aria-label="المؤشرات الرئيسية">
-    <app-dashboard-kpi-card label="إجمالي الطلاب النشطين" [value]="stats?.kpis?.activeStudents || 0" icon="groups" toneClass="kpi-tone--primary" />
-    <app-dashboard-kpi-card label="الموظفون والمعلمون" [value]="stats?.kpis?.staffMembers || 0" icon="badge" toneClass="kpi-tone--secondary" />
-    <app-dashboard-kpi-card label="الصفوف والشعب" [value]="stats?.kpis?.classes || 0" icon="meeting_room" toneClass="kpi-tone--success" />
-    <app-dashboard-kpi-card label="أولياء الأمور المرتبطون" [value]="stats?.kpis?.guardians || 0" icon="family_restroom" toneClass="kpi-tone--warning" />
+    <ui-stat-card label="إجمالي الطلاب النشطين" [value]="stats?.kpis?.activeStudents || 0" helper="السنة الدراسية الحالية" icon="groups" tone="primary" />
+    <ui-stat-card label="الموظفون والمعلمون" [value]="stats?.kpis?.staffMembers || 0" helper="السنة الدراسية الحالية" icon="badge" tone="neutral" />
+    <ui-stat-card label="الصفوف والشعب" [value]="stats?.kpis?.classes || 0" helper="السنة الدراسية الحالية" icon="meeting_room" tone="success" />
+    <ui-stat-card label="أولياء الأمور المرتبطون" [value]="stats?.kpis?.guardians || 0" helper="السنة الدراسية الحالية" icon="family_restroom" tone="warning" />
   </section>
 
   <section class="dashboard-grid dashboard-grid--wide">

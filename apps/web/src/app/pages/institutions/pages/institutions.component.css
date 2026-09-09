@@ -1,8 +1,4 @@
 :host { display: block; }
-.metric-card { position: relative; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 1rem; background: white; padding: 1.25rem; box-shadow: 0 1px 2px rgb(15 23 42 / 4%); }
-.metric-card span { display: block; color: #64748b; font-size: .75rem; font-weight: 700; }
-.metric-card strong { display: block; margin-top: .35rem; color: #0f172a; font-size: 1.75rem; font-weight: 900; }
-.metric-card mat-icon { position: absolute; left: 1rem; top: 1.25rem; color: #00236f; opacity: .2; font-size: 2.1rem; }
 .field { width: 100%; border: 1px solid #cbd5e1; border-radius: .75rem; background: #f8fafc; padding: .65rem .8rem; color: #0f172a; font-size: .82rem; outline: none; transition: .2s; }
 .field:focus { border-color: #00236f; background: white; box-shadow: 0 0 0 3px rgb(0 35 111 / 10%); }
 label { display: block; color: #334155; font-size: .78rem; font-weight: 800; }

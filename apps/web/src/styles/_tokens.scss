@@ -27,6 +27,8 @@
   --error-container: #ffdad6;
   --on-error-container: #93000a;
   --on-primary-container: #90a8ff;
+  --stat-icon-surface: var(--primary-container);
+  --stat-icon-foreground: var(--on-primary-container);
   --inverse-surface: #2f3036;
   --inverse-on-surface: #f1f0f7;
   --inverse-primary: #b6c4ff;

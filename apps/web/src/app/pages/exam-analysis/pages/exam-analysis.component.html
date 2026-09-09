@@ -77,11 +77,11 @@
       @if (dataQualityWarnings().length) { <div class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900"><div class="flex items-center gap-2"><mat-icon>warning</mat-icon><span>تنبيه حول جودة بيانات التحليل</span></div><ul class="mt-2 list-inside list-disc space-y-1 text-xs font-medium">@for (warning of dataQualityWarnings(); track warning) {<li>{{ warning }}</li>}</ul><button type="button" (click)="activeTab.set('questions')" class="mt-3 text-xs font-black text-amber-800 underline">مراجعة الأسئلة</button></div> }
       <div class="overview-kpis">
         <div class="overview-kpi-row overview-kpi-row--primary">
-          <ui-stat-card label="متوسط العلامات" [value]="format(summary().average) + '%'" icon="monitoring" tone="primary" iconTreatment="on-container" />
-          <ui-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" tone="primary" iconTreatment="on-container" />
+          <ui-stat-card label="متوسط العلامات" [value]="format(summary().average) + '%'" icon="monitoring" tone="primary" />
+          <ui-stat-card label="الوسيط" [value]="format(summary().median) + '%'" icon="align_horizontal_center" tone="primary" />
           <ui-stat-card label="الانحراف المعياري" [value]="format(summary().standardDeviation)" icon="scatter_plot" tone="neutral" />
           <ui-stat-card label="نسبة النجاح" [value]="format(summary().passRate) + '%'" icon="verified" tone="success" />
-          <ui-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" tone="primary" iconTreatment="on-container" />
+          <ui-stat-card label="أعلى / أدنى علامة" [value]="format(summary().highest) + '% / ' + format(summary().lowest) + '%'" icon="leaderboard" tone="primary" />
         </div>
         <div class="overview-kpi-row overview-kpi-row--secondary">
           <ui-stat-card label="الحضور والغياب" [value]="summary().attended + ' / ' + summary().absent" icon="groups" helper="حاضر / غائب" tone="neutral" />

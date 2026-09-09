@@ -11,7 +11,7 @@
   @else if (error()) { <div class="state state--error" role="alert"><mat-icon>error_outline</mat-icon><h2>{{ error() }}</h2><ui-button variant="secondary" (activated)="load()">إعادة المحاولة</ui-button></div> }
   @else if (!academicYearId) { <div class="state" role="status"><mat-icon>insights</mat-icon><h2>اختر السنة الدراسية لعرض اللوحة</h2></div> }
   @else if (data(); as dashboard) {
-    <section class="kpi-grid" aria-label="ملخص لوحة المدرسة">@for (kpi of kpis(); track kpi.label) { <ui-stat-card [label]="kpi.label" [value]="kpi.value" [icon]="kpi.icon" [tone]="kpi.tone" iconTreatment="on-container" /> }</section>
+    <section class="kpi-grid" aria-label="ملخص لوحة المدرسة">@for (kpi of kpis(); track kpi.label) { <ui-stat-card [label]="kpi.label" [value]="kpi.value" [icon]="kpi.icon" [tone]="kpi.tone" /> }</section>
     @if (!dashboard.summary.examCount) { <div class="state" role="status"><mat-icon>analytics</mat-icon><h2>لا توجد بيانات تقييم كافية لهذه السنة الدراسية.</h2><p>ستظهر مؤشرات الأداء والمقارنات عند توفر امتحانات ونتائج مؤهلة.</p></div> }
     @else { <section class="dashboard-grid">
       <ui-section-card title="الأداء حسب المادة" description="متوسط الأداء الموزون حسب النتائج المؤهلة."><div class="chart"><canvas baseChart type="bar" [data]="subjectChartData()" [options]="chartOptions()" role="img" aria-label="مقارنة متوسط الأداء حسب المادة"></canvas></div></ui-section-card>

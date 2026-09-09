@@ -14,12 +14,12 @@
   </ui-filter-panel>
 
   <section class="kpis" aria-label="مؤشرات التطوير المهني">
-    <ui-stat-card label="الموظفون المشاركون" [value]="participatingStaff()" helper="موظفون لديهم سجل ضمن الفلاتر" icon="groups" tone="primary" iconTreatment="on-container" />
-    <ui-stat-card label="إجمالي السجلات" [value]="totalRecords()" helper="السجلات المطابقة" icon="assignment" tone="primary" iconTreatment="on-container" />
-    <ui-stat-card label="إجمالي الساعات" [value]="totalHours()" helper="مجموع الساعات المسجلة" icon="schedule" tone="primary" iconTreatment="on-container" />
-    <ui-stat-card label="متوسط الساعات" [value]="averageHoursLabel()" helper="لكل موظف مشارك" icon="timelapse" tone="primary" iconTreatment="on-container" />
-    <ui-stat-card label="الجهات المقدمة" [value]="distinctProviders()" helper="جهات في النتائج" icon="business" tone="primary" iconTreatment="on-container" />
-    <ui-stat-card label="الاستكمالات" [value]="distinctCompletions()" helper="حسب رمز الاستكمال" icon="workspace_premium" tone="primary" iconTreatment="on-container" />
+    <ui-stat-card label="الموظفون المشاركون" [value]="participatingStaff()" helper="موظفون لديهم سجل ضمن الفلاتر" icon="groups" tone="primary" />
+    <ui-stat-card label="إجمالي السجلات" [value]="totalRecords()" helper="السجلات المطابقة" icon="assignment" tone="primary" />
+    <ui-stat-card label="إجمالي الساعات" [value]="totalHours()" helper="مجموع الساعات المسجلة" icon="schedule" tone="primary" />
+    <ui-stat-card label="متوسط الساعات" [value]="averageHoursLabel()" helper="لكل موظف مشارك" icon="timelapse" tone="primary" />
+    <ui-stat-card label="الجهات المقدمة" [value]="distinctProviders()" helper="جهات في النتائج" icon="business" tone="primary" />
+    <ui-stat-card label="الاستكمالات" [value]="distinctCompletions()" helper="حسب رمز الاستكمال" icon="workspace_premium" tone="primary" />
   </section>
 
   @if (!hasData()) { <div class="empty-state" role="status"><mat-icon aria-hidden="true">info</mat-icon><p>لا توجد بيانات استكمالات ضمن الفلاتر المختارة.</p></div> }

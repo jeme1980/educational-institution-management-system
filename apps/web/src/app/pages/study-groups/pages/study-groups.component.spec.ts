@@ -73,10 +73,11 @@ describe('StudyGroupsComponent design-system contract', () => {
   });
 
   it('uses shared badges and compact accessible actions with danger-ghost reserved for delete', () => {
-    const badges = fixture.debugElement.queryAll(By.directive(UiBadgeComponent));
+    const badges = fixture.debugElement.queryAll(By.directive(UiBadgeComponent)).map(item => item.componentInstance as UiBadgeComponent);
     const actions = fixture.debugElement.query(By.directive(UiTableActionsComponent)).queryAll(By.directive(UiButtonComponent)).map(item => item.componentInstance as UiButtonComponent);
 
     expect(badges).toHaveLength(2);
+    expect(badges.map(badge => badge.tone())).toEqual(['neutral', 'success']);
     expect(actions.map(action => action.size())).toEqual(['sm', 'sm', 'sm', 'sm']);
     expect(actions.map(action => action.variant())).toEqual(['ghost', 'ghost', 'ghost', 'danger-ghost']);
     expect(actions.map(action => action.ariaLabel())).toEqual(['عرض المجموعة', 'إدارة طلاب المجموعة', 'تعديل المجموعة', 'حذف المجموعة']);

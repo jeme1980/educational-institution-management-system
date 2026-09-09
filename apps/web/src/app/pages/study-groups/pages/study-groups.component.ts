@@ -10,11 +10,15 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 import { AuthService } from '../../../core/services/auth.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
+import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
+import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
+import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-study-groups',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StudyGroupMembersDialogComponent, UiButtonComponent, UiTableActionsComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, StudyGroupMembersDialogComponent, UiButtonComponent, UiTableActionsComponent, UiBadgeComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiStatCardComponent],
   templateUrl: './study-groups.component.html',
   styleUrl: './study-groups.component.css',
 })

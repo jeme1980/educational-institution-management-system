@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -14,6 +14,23 @@ import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+
+export type CompletionPeriodMode = 'ALL' | 'YEAR' | 'CUSTOM';
+
+export function dateValueToUtcDay(value: string | null | undefined): number | null {
+  const raw = String(value || '').trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(raw);
+  if (!match) return null;
+  if (raw.length > 10 && Number.isNaN(Date.parse(raw))) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcDay = Date.UTC(year, month - 1, day);
+  const normalized = new Date(utcDay);
+  return normalized.getUTCFullYear() === year && normalized.getUTCMonth() === month - 1 && normalized.getUTCDate() === day
+    ? utcDay
+    : null;
+}
 
 @Component({
   selector: 'app-staff-development',
@@ -37,25 +54,34 @@ export class StaffDevelopmentComponent implements OnInit {
   readonly isSaving = signal(false);
   readonly selectedStaffId = signal('ALL');
   readonly selectedSpecializationId = signal('ALL');
-  readonly selectedPeriodId = signal('ALL');
+  readonly periodMode = signal<CompletionPeriodMode>('ALL');
+  readonly selectedYear = signal<number | null>(null);
+  readonly fromDate = signal('');
+  readonly toDate = signal('');
   readonly specializations = computed(() =>
     (this.apiService.publicLookups()['specializations'] || []).filter(item => item.isActive !== false),
   );
-  readonly periodsForSelectedYear = computed(() => {
-    const academicYearId = this.apiService.selectedAcademicYearId();
-    return academicYearId
-      ? this.apiService.academicPeriods().filter(period => period.academicYearId === academicYearId)
-      : [];
+  readonly availableYears = computed(() => {
+    const years = new Set<number>();
+    for (const item of this.apiService.staffDevelopments()) {
+      const startDay = dateValueToUtcDay(item.startDate);
+      const endDay = dateValueToUtcDay(item.endDate);
+      if (startDay === null || endDay === null) continue;
+      const startYear = new Date(Math.min(startDay, endDay)).getUTCFullYear();
+      const endYear = new Date(Math.max(startDay, endDay)).getUTCFullYear();
+      for (let year = startYear; year <= endYear; year++) years.add(year);
+    }
+    return [...years].sort((a, b) => b - a);
+  });
+  readonly dateRangeError = computed(() => {
+    const fromDay = dateValueToUtcDay(this.fromDate());
+    const toDay = dateValueToUtcDay(this.toDate());
+    return fromDay !== null && toDay !== null && fromDay > toDay
+      ? 'يجب أن يكون تاريخ البداية قبل تاريخ النهاية.'
+      : '';
   });
   readonly beneficiaryCount = computed(() => new Set(this.apiService.staffDevelopments().map(item => item.staffMemberId)).size);
   readonly totalHours = computed(() => this.apiService.staffDevelopments().reduce((total, item) => total + (item.hoursCount || 0), 0));
-
-  private readonly resetInvalidPeriodFilter = effect(() => {
-    const selectedPeriodId = this.selectedPeriodId();
-    if (selectedPeriodId !== 'ALL' && !this.periodsForSelectedYear().some(period => period.id === selectedPeriodId)) {
-      this.selectedPeriodId.set('ALL');
-    }
-  });
 
   readonly form = this.fb.nonNullable.group({
     staffMemberId: ['', Validators.required],
@@ -71,14 +97,12 @@ export class StaffDevelopmentComponent implements OnInit {
     const term = this.searchTerm().trim().toLowerCase();
     const staffId = this.selectedStaffId();
     const specializationId = this.selectedSpecializationId();
-    const periodId = this.selectedPeriodId();
-    const period = this.periodsForSelectedYear().find(item => item.id === periodId);
     return this.apiService.staffDevelopments().filter(item => {
       const staffName = `${item.staffMember?.firstNameAr || ''} ${item.staffMember?.familyNameAr || ''}`.toLowerCase();
       const matchesTerm = !term || [item.courseCode, item.courseName, item.provider?.name || '', staffName].some(value => value.toLowerCase().includes(term));
       const matchesStaff = staffId === 'ALL' || item.staffMemberId === staffId;
       const matchesSpecialization = specializationId === 'ALL' || item.staffMember?.specialization?.id === specializationId;
-      const matchesPeriod = !period || this.dateRangesOverlap(item.startDate, item.endDate, period.startDate, period.endDate);
+      const matchesPeriod = this.matchesPeriodFilter(item.startDate, item.endDate);
       return matchesTerm && matchesStaff && matchesSpecialization && matchesPeriod;
     });
   });
@@ -89,7 +113,6 @@ export class StaffDevelopmentComponent implements OnInit {
       this.apiService.loadStaffDevelopments(),
       this.apiService.loadInstitutions(),
       this.apiService.loadPublicLookups(),
-      this.apiService.loadAcademicPeriods(),
     ]);
   }
 
@@ -227,11 +250,36 @@ export class StaffDevelopmentComponent implements OnInit {
   updateSearch(event: Event): void { this.searchTerm.set((event.target as HTMLInputElement).value); }
   updateStaffFilter(event: Event): void { this.selectedStaffId.set((event.target as HTMLSelectElement).value); }
   updateSpecializationFilter(event: Event): void { this.selectedSpecializationId.set((event.target as HTMLSelectElement).value); }
-  updatePeriodFilter(event: Event): void { this.selectedPeriodId.set((event.target as HTMLSelectElement).value); }
+  updatePeriodMode(event: Event): void {
+    this.periodMode.set((event.target as HTMLSelectElement).value as CompletionPeriodMode);
+    this.selectedYear.set(null);
+    this.fromDate.set('');
+    this.toDate.set('');
+  }
+  updateYearFilter(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.selectedYear.set(value ? Number(value) : null);
+  }
+  updateFromDate(event: Event): void { this.fromDate.set((event.target as HTMLInputElement).value); }
+  updateToDate(event: Event): void { this.toDate.set((event.target as HTMLInputElement).value); }
 
-  private dateRangesOverlap(firstStart: string, firstEnd: string, secondStart: string, secondEnd: string): boolean {
-    const values = [firstStart, firstEnd, secondStart, secondEnd].map(value => new Date(value).getTime());
-    return values.every(Number.isFinite) && values[0] <= values[3] && values[1] >= values[2];
+  private matchesPeriodFilter(recordStart: string, recordEnd: string): boolean {
+    if (this.periodMode() === 'ALL') return true;
+    const recordStartDay = dateValueToUtcDay(recordStart);
+    const recordEndDay = dateValueToUtcDay(recordEnd);
+    if (recordStartDay === null || recordEndDay === null) return false;
+
+    if (this.periodMode() === 'YEAR') {
+      const year = this.selectedYear();
+      return year === null || (recordStartDay <= Date.UTC(year, 11, 31) && recordEndDay >= Date.UTC(year, 0, 1));
+    }
+
+    const fromDay = dateValueToUtcDay(this.fromDate());
+    const toDay = dateValueToUtcDay(this.toDate());
+    if (fromDay !== null && toDay !== null && fromDay > toDay) return false;
+    if (fromDay === null && toDay === null) return true;
+    return recordStartDay <= (toDay ?? Number.POSITIVE_INFINITY)
+      && recordEndDay >= (fromDay ?? Number.NEGATIVE_INFINITY);
   }
 
   openAdd(): void {

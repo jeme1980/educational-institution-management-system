@@ -19,7 +19,17 @@
       <label class="development-search"><span class="sr-only">البحث</span><ui-input ariaLabel="البحث في برامج التطوير" (input)="updateSearch($event)" placeholder="رمز الدورة أو اسمها أو الجهة أو الموظف" /></label>
       <label><span>تصفية حسب الموظف</span><ui-select (change)="updateStaffFilter($event)" ariaLabel="تصفية حسب الموظف"><option value="ALL">كل الموظفين</option>@for (staff of apiService.staff(); track staff.id) {<option [value]="staff.id">{{ staff.firstNameAr }} {{ staff.familyNameAr }}</option>}</ui-select></label>
       <label><span>تصفية حسب التخصص</span><ui-select dataTestId="specialization-filter" (change)="updateSpecializationFilter($event)" ariaLabel="تصفية حسب التخصص"><option value="ALL">كل التخصصات</option>@for (specialization of specializations(); track specialization.id) {<option [value]="specialization.id">{{ specialization.nameAr }}</option>}</ui-select></label>
-      <label><span>تصفية حسب الفترة الدراسية</span><ui-select dataTestId="period-filter" (change)="updatePeriodFilter($event)" ariaLabel="تصفية حسب الفترة الدراسية" [disabled]="!apiService.selectedAcademicYearId()"><option value="ALL">كل الفترات</option>@for (period of periodsForSelectedYear(); track period.id) {<option [value]="period.id">{{ period.nameAr || period.nameHe || 'فترة دراسية' }}</option>}</ui-select></label>
+      <label><span>الفترة الزمنية</span><ui-select dataTestId="period-mode-filter" (change)="updatePeriodMode($event)" ariaLabel="التصفية حسب الفترة"><option value="ALL">كل الفترات</option><option value="YEAR">حسب السنة</option><option value="CUSTOM">نطاق تاريخ مخصص</option></ui-select></label>
+      @if (periodMode() === 'YEAR') {
+        <div class="development-period-fields development-period-fields--year"><label><span>السنة</span><ui-select dataTestId="year-filter" (change)="updateYearFilter($event)" ariaLabel="السنة"><option value="">كل السنوات</option>@for (year of availableYears(); track year) {<option [value]="year">{{ year }}</option>}</ui-select></label></div>
+      }
+      @if (periodMode() === 'CUSTOM') {
+        <div class="development-period-fields development-period-fields--range">
+          <label><span>من تاريخ</span><ui-input type="date" ariaLabel="من تاريخ" (input)="updateFromDate($event)" /></label>
+          <label><span>إلى تاريخ</span><ui-input type="date" ariaLabel="إلى تاريخ" (input)="updateToDate($event)" /></label>
+          @if (dateRangeError()) { <p class="development-period-error" role="alert">{{ dateRangeError() }}</p> }
+        </div>
+      }
     </div>
   </ui-filter-panel>
   <section class="development-table-card">

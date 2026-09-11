@@ -24,6 +24,7 @@ export class ApiService extends BaseApiService {
   // Backward-compatible signal accessors
   get stats() { return this.settingsApi.stats; }
   get dashboardError() { return this.settingsApi.dashboardError; }
+  get examResultsSaveError() { return this.examsApi.examResultsSaveError; }
   get students() { return this.studentsApi.students; }
   get staff() { return this.usersApi.staff; }
   get staffAssignments() { return this.usersApi.staffAssignments; }

@@ -13,6 +13,7 @@ export class ExamsApiService extends BaseApiService {
   public error = signal('');
   public questionSaveError = signal('');
   public questionLoadError = signal('');
+  public examResultsSaveError = signal('');
 
   private lookupItems(data: any): any[] {
     if (Array.isArray(data)) return data;
@@ -261,6 +262,7 @@ export class ExamsApiService extends BaseApiService {
   }
 
   async saveExamResults(examId: string, results: any[]) {
+    this.examResultsSaveError.set('');
     try {
       const res = await this.apiFetch(`/api/exams/${examId}/results`, {
         method: 'POST',
@@ -270,8 +272,10 @@ export class ExamsApiService extends BaseApiService {
       if (res.ok) {
         return true;
       }
+      this.examResultsSaveError.set(await this.readError(res));
     } catch (e) {
       console.error('Failed to save exam results', e);
+      this.examResultsSaveError.set('تعذر الاتصال بالخادم لحفظ النتائج.');
     }
     return false;
   }

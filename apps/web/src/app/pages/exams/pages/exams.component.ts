@@ -290,15 +290,34 @@ export class ExamsComponent implements OnInit {
   resultValue(row: any, event: Event): void { const value = (event.target as HTMLInputElement).value; row.totalScore = value === '' ? null : Number(value); }
   toggleAbsence(row: any, event: Event): void { row.isAbsence = (event.target as HTMLInputElement).checked; if (row.isAbsence) row.totalScore = null; }
   async saveResults(): Promise<void> {
+    await this.persistResults(this.results());
+  }
+  async saveResultsFromDialog(rows: any[]): Promise<void> { await this.persistResults(rows); }
+  private async persistResults(rows: any[]): Promise<void> {
     const exam = this.selectedExam();
     if (!exam || this.isSavingResults()) return;
     this.isSavingResults.set(true);
-    const ok = await this.apiService.saveExamResults(exam.id, this.results());
+    const payload = rows.map(row => row.isAbsence ? { ...row, totalScore: 0, questionScores: [] } : row);
+    const ok = await this.apiService.saveExamResults(exam.id, payload);
+    if (!ok) {
+      this.isSavingResults.set(false);
+      const detail = this.apiService.examResultsSaveError();
+      this.notify('error', detail || 'تعذر حفظ النتائج. بقيت تعديلاتك متاحة لإعادة المحاولة.');
+      return;
+    }
+    const refreshed = await this.apiService.loadExamResults(exam.id);
+    if (!refreshed) {
+      this.isSavingResults.set(false);
+      this.notify('error', 'تم حفظ النتائج، لكن تعذر تحديثها من الخادم. أعد المحاولة للتأكد من أحدث البيانات.');
+      return;
+    }
+    this.results.set(refreshed.results || []);
+    this.resultQuestions.set(refreshed.questions || []);
+    this.resultsWarning.set(refreshed.warning || '');
+    await this.refresh();
     this.isSavingResults.set(false);
-    if (ok) { await this.refresh(); this.notify('success', 'تم حفظ النتائج.'); }
-    else this.notify('error', 'تعذر حفظ النتائج.');
+    this.notify('success', 'تم حفظ النتائج بنجاح.');
   }
-  async saveResultsFromDialog(rows: any[]): Promise<void> { this.results.set(rows); await this.saveResults(); }
   async togglePublish(exam: ExamItem): Promise<void> {
     if (exam.isPublished) {
       const ok = await this.apiService.updateExam(exam.id, { isPublished: false });

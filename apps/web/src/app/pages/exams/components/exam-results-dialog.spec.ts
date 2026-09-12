@@ -1,5 +1,6 @@
 import { SimpleChange, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { ExamsApiService } from '../../../core/services/exams-api.service';
@@ -107,6 +108,35 @@ describe('ExamResultsDialogComponent absence editing', () => {
     expect(component.dirty()).toBe(true);
     expect(component.savePending()).toBe(false);
   });
+
+  it('keeps edits for hidden rows and saves every editable draft', () => {
+    const second = { ...presentResult, studentId: 'student-2', studentName: 'طالب آخر', nationalId: '456' };
+    component.results = [presentResult, second];
+    component.ngOnChanges({ results: new SimpleChange([presentResult], [presentResult, second], false) });
+    component.scoreInput(component.drafts()[0], question, { target: { value: '2' } } as unknown as Event);
+    component.search.set('456');
+    const emitted = vi.fn();
+    component.saved.subscribe(emitted);
+    component.save();
+
+    expect(component.filteredStudents().map(row => row.studentId)).toEqual(['student-2']);
+    expect(emitted.mock.calls[0][0]).toHaveLength(2);
+    expect(emitted.mock.calls[0][0][0].questionScores[0].score).toBe(2);
+  });
+
+  it('keeps multiple edited scores mapped to their question IDs and recalculates total', () => {
+    const secondQuestion = { id: 'question-2', questionNumber: 2, maxScore: 20 };
+    component.questions = [question, secondQuestion];
+    const row = component.drafts()[0];
+    component.scoreInput(row, question, { target: { value: '2' } } as unknown as Event);
+    component.scoreInput(row, secondQuestion, { target: { value: '4.5' } } as unknown as Event);
+
+    expect(row.questionScores).toEqual([
+      expect.objectContaining({ questionId: 'question-1', score: 2 }),
+      expect.objectContaining({ questionId: 'question-2', score: 4.5 }),
+    ]);
+    expect(row.totalScore).toBe(6.5);
+  });
 });
 
 describe('ExamsComponent result persistence', () => {
@@ -149,6 +179,101 @@ describe('ExamsComponent result persistence', () => {
     expect(order).toEqual(['POST', 'GET']);
     expect(component.results()[0].totalScore).toBe(17);
     expect(component.toast()?.type).toBe('success');
+  });
+
+  it('sends the latest score through the real DOM input and Save All click', async () => {
+    const { api } = createComponent();
+    const fixture = TestBed.createComponent(ExamsComponent);
+    const page = fixture.componentInstance;
+    page.selectedExam.set({ id: 'exam-1', maxScore: 20 } as any);
+    page.results.set([{ ...presentResult, totalScore: 3, questionScores: [{ questionId: question.id, score: 3 }] }]);
+    page.resultQuestions.set([question]);
+    page.isLoadingResults.set(false);
+    page.showResultsPanel.set(true);
+    fixture.detectChanges();
+
+    const dialog = fixture.debugElement.query(By.directive(ExamResultsDialogComponent)).componentInstance as ExamResultsDialogComponent;
+    const input = fixture.nativeElement.querySelector('[data-grade-cell]') as HTMLInputElement;
+    input.value = '2';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(input.value).toBe('2');
+    expect(dialog.drafts()[0].questionScores).toContainEqual(expect.objectContaining({ questionId: question.id, score: 2 }));
+    expect(dialog.drafts()[0].totalScore).toBe(2);
+
+    const saveButton = Array.from(fixture.nativeElement.querySelectorAll('button'))
+      .find((button: any) => button.textContent.includes('حفظ جميع النتائج')) as HTMLButtonElement;
+    saveButton.click();
+
+    await vi.waitFor(() => expect(api.saveExamResults).toHaveBeenCalled());
+    expect(api.saveExamResults.mock.calls[0][1][0]).toMatchObject({
+      studentId: 'student-1',
+      isAbsence: false,
+      totalScore: 2,
+      questionScores: [{ questionId: question.id, score: 2 }],
+    });
+    await vi.waitFor(() => expect(api.loadExamResults).toHaveBeenCalled());
+  });
+
+  it('sends present-to-absent from the real checkbox used by Save All', async () => {
+    const { api } = createComponent();
+    const fixture = TestBed.createComponent(ExamsComponent);
+    const page = fixture.componentInstance;
+    page.selectedExam.set({ id: 'exam-1', maxScore: 20 } as any);
+    page.results.set([presentResult]);
+    page.resultQuestions.set([question]);
+    page.isLoadingResults.set(false);
+    page.showResultsPanel.set(true);
+    fixture.detectChanges();
+
+    const checkbox = fixture.nativeElement.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+    const saveButton = Array.from(fixture.nativeElement.querySelectorAll('button'))
+      .find((button: any) => button.textContent.includes('حفظ جميع النتائج')) as HTMLButtonElement;
+    saveButton.click();
+
+    await vi.waitFor(() => expect(api.saveExamResults).toHaveBeenCalled());
+    expect(api.saveExamResults.mock.calls[0][1][0]).toMatchObject({
+      studentId: 'student-1',
+      isAbsence: true,
+      totalScore: 0,
+      questionScores: [],
+    });
+  });
+
+  it('sends absent-to-present with newly entered scores from the same DOM draft', async () => {
+    const { api } = createComponent();
+    const fixture = TestBed.createComponent(ExamsComponent);
+    const page = fixture.componentInstance;
+    page.selectedExam.set({ id: 'exam-1', maxScore: 20 } as any);
+    page.results.set([{ ...presentResult, isAbsence: true, totalScore: 0, questionScores: [{ questionId: question.id, score: null }] }]);
+    page.resultQuestions.set([question]);
+    page.isLoadingResults.set(false);
+    page.showResultsPanel.set(true);
+    fixture.detectChanges();
+
+    const checkbox = fixture.nativeElement.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+    const input = fixture.nativeElement.querySelector('[data-grade-cell]') as HTMLInputElement;
+    input.value = '4';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    const saveButton = Array.from(fixture.nativeElement.querySelectorAll('button'))
+      .find((button: any) => button.textContent.includes('حفظ جميع النتائج')) as HTMLButtonElement;
+    saveButton.click();
+
+    await vi.waitFor(() => expect(api.saveExamResults).toHaveBeenCalled());
+    expect(api.saveExamResults.mock.calls[0][1][0]).toMatchObject({
+      studentId: 'student-1',
+      isAbsence: false,
+      totalScore: 4,
+      questionScores: [expect.objectContaining({ questionId: question.id, score: 4 })],
+    });
   });
 
   it('does not refetch after a failed save and keeps the current authoritative state', async () => {

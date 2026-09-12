@@ -35,15 +35,11 @@ export class StudyGroupsComponent implements OnInit {
   readonly showArchived = signal(false);
   readonly showModal = signal(false);
   readonly showDetailsModal = signal(false);
-  readonly showMembersModal = signal(false);
   readonly showMembersPanel = signal(false);
   readonly editingGroup = signal<StudyGroupItem | null>(null);
   readonly selectedGroup = signal<StudyGroupItem | null>(null);
-  readonly groupMembers = signal<any[]>([]);
-  readonly memberSearch = signal('');
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
-  readonly isMembersLoading = signal(false);
   readonly isDeleting = signal<string | null>(null);
   readonly toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   readonly pageError = signal('');
@@ -74,18 +70,6 @@ export class StudyGroupsComponent implements OnInit {
       return [group.nameAr, group.nameHe, group.subject?.nameAr, group.classRoom?.nameAr, this.getTeacherName(group)].some(v => String(v || '').toLocaleLowerCase('ar').includes(q));
     });
   });
-  readonly availableEnrollments = computed(() => {
-    const current = new Set(this.groupMembers().map(m => m.enrollmentId));
-    return this.apiService.enrollments().filter(item => {
-      const id = this.enrollmentId(item);
-      if (!id || current.has(id)) return false;
-      const q = this.memberSearch().trim().toLocaleLowerCase('ar');
-      if (!q) return true;
-      const student = item.student || item.enrollment?.student;
-      return `${student?.firstNameAr || ''} ${student?.lastNameAr || ''}`.toLocaleLowerCase('ar').includes(q);
-    });
-  });
-
   ngOnInit(): void { void this.refresh(); }
 
   async refresh(): Promise<void> {
@@ -155,9 +139,5 @@ export class StudyGroupsComponent implements OnInit {
 
   async openMembers(group: StudyGroupItem): Promise<void> { this.selectedGroup.set(group); this.showMembersPanel.set(true); }
   async refreshMembersData(): Promise<void> { await this.groupsState.loadStudyGroups(this.showArchived()); }
-  enrollmentId(item: any): string { return item.enrollment?.id || item.id || ''; }
-  studentName(item: any): string { const s = item.student || item.enrollment?.student; return s ? `${s.firstNameAr || ''} ${s.lastNameAr || ''}`.trim() : 'طالب غير معروف'; }
-  async addMember(item: any): Promise<void> { const group = this.selectedGroup(); const id = this.enrollmentId(item); if (!group || !id) return; const ok = await this.apiService.addGroupMember(group.id, id); if (ok) { this.groupMembers.set(await this.apiService.loadGroupMembers(group.id)); this.notify('success', 'تمت إضافة الطالب للمجموعة.'); } else this.notify('error', 'تعذر إضافة الطالب للمجموعة.'); }
-  async removeMember(member: any): Promise<void> { const group = this.selectedGroup(); if (!group || !await this.confirmDialog.confirm({ title: 'إزالة طالب من المجموعة', message: 'هل تريد إزالة الطالب من المجموعة؟', variant: 'danger' })) return; const ok = await this.apiService.removeGroupMember(group.id, member.id); if (ok) { this.groupMembers.set(await this.apiService.loadGroupMembers(group.id)); this.notify('success', 'تمت إزالة الطالب من المجموعة.'); } else this.notify('error', 'تعذر إزالة الطالب.'); }
   private notify(type: 'success' | 'error', message: string): void { this.toast.set({ type, message }); setTimeout(() => this.toast.set(null), 3500); }
 }

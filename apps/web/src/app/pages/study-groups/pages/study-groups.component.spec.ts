@@ -13,6 +13,8 @@ import { StudyGroupsComponent } from './study-groups.component';
 
 describe('StudyGroupsComponent design-system contract', () => {
   let fixture: ComponentFixture<StudyGroupsComponent>;
+  let confirm: ReturnType<typeof vi.fn>;
+  let deleteStudyGroup: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     const group = {
@@ -31,7 +33,9 @@ describe('StudyGroupsComponent design-system contract', () => {
       loadStaffAssignments: vi.fn().mockResolvedValue(true), loadEnrollments: vi.fn().mockResolvedValue(true),
       classesApi: { studyGroupError: signal('') },
     };
-    const groupsState = { studyGroups: signal([group]), loadStudyGroups: vi.fn().mockResolvedValue(true) };
+    confirm = vi.fn().mockResolvedValue(false);
+    deleteStudyGroup = vi.fn().mockResolvedValue(true);
+    const groupsState = { studyGroups: signal([group]), loadStudyGroups: vi.fn().mockResolvedValue(true), deleteStudyGroup };
 
     await TestBed.configureTestingModule({
       imports: [StudyGroupsComponent],
@@ -39,7 +43,7 @@ describe('StudyGroupsComponent design-system contract', () => {
         { provide: ApiService, useValue: api },
         { provide: StudyGroupsStateService, useValue: groupsState },
         { provide: AuthService, useValue: { hasPermission: () => true } },
-        { provide: ConfirmDialogService, useValue: { confirm: vi.fn() } },
+        { provide: ConfirmDialogService, useValue: { confirm } },
       ],
     }).compileComponents();
 
@@ -82,5 +86,14 @@ describe('StudyGroupsComponent design-system contract', () => {
     expect(actions.map(action => action.variant())).toEqual(['ghost', 'ghost', 'ghost', 'danger-ghost']);
     expect(actions.map(action => action.ariaLabel())).toEqual(['عرض المجموعة', 'إدارة طلاب المجموعة', 'تعديل المجموعة', 'حذف المجموعة']);
     expect(actions.every(action => action.iconOnly())).toBe(true);
+  });
+
+  it('keeps confirmation for deleting the study group itself', async () => {
+    const group = fixture.componentInstance.groups()[0];
+
+    await fixture.componentInstance.deleteGroup(group);
+
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'أرشفة مجموعة التعلم' }));
+    expect(deleteStudyGroup).not.toHaveBeenCalled();
   });
 });

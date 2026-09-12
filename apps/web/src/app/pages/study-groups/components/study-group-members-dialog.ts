@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService } from '../../../core/services/api.service';
 import { StudyGroupItem } from '../models/study-group.model';
-import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 @Component({
   selector: 'app-study-group-members-dialog',
@@ -14,7 +13,6 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
   templateUrl: './study-group-members-dialog.html',
 })
 export class StudyGroupMembersDialogComponent implements OnInit {
-  private readonly confirmDialog = inject(ConfirmDialogService);
   @Input({ required: true }) group!: StudyGroupItem;
   @Input() enrollments: any[] = [];
   @Output() closed = new EventEmitter<void>();
@@ -25,6 +23,8 @@ export class StudyGroupMembersDialogComponent implements OnInit {
   readonly loading = signal(true);
   readonly savingId = signal<string | null>(null);
   readonly savingAll = signal(false);
+  readonly removingMemberId = signal<string | null>(null);
+  readonly removingAll = signal(false);
   readonly memberSearch = signal('');
   readonly candidateSearch = signal('');
   readonly toast = signal<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -80,7 +80,7 @@ export class StudyGroupMembersDialogComponent implements OnInit {
 
   async addMember(item: any): Promise<void> {
     const id = this.enrollmentId(item);
-    if (!id || this.savingId() || this.savingAll()) return;
+    if (!id || this.savingId() || this.savingAll() || this.removingMemberId() || this.removingAll()) return;
     this.savingId.set(id);
     const ok = await this.api.addGroupMember(this.group.id, id);
     this.savingId.set(null);
@@ -94,24 +94,25 @@ export class StudyGroupMembersDialogComponent implements OnInit {
   }
 
   async removeMember(member: any): Promise<void> {
-    if (this.savingId() || this.savingAll()) return;
-    const name = `${member.firstNameAr || ''} ${member.lastNameAr || ''}`.trim();
-    if (!await this.confirmDialog.confirm({ title: 'إزالة طالب من المجموعة', message: `هل تريد إزالة ${name} من المجموعة؟`, variant: 'danger' })) return;
-    this.savingId.set(member.id);
-    const ok = await this.api.removeGroupMember(this.group.id, member.id);
-    this.savingId.set(null);
-    if (!ok) {
-      this.showToast('error', 'تعذرت إزالة الطالب من المجموعة.');
-      return;
+    if (this.savingId() || this.savingAll() || this.removingMemberId() || this.removingAll()) return;
+    this.removingMemberId.set(member.id);
+    try {
+      const ok = await this.api.removeGroupMember(this.group.id, member.id);
+      if (!ok) {
+        this.showToast('error', 'تعذرت إزالة الطالب من المجموعة.');
+        return;
+      }
+      await this.loadMembers();
+      this.changed.emit();
+      this.showToast('success', 'تمت إزالة الطالب من المجموعة.');
+    } finally {
+      this.removingMemberId.set(null);
     }
-    await this.loadMembers();
-    this.changed.emit();
-    this.showToast('success', 'تمت إزالة الطالب من المجموعة.');
   }
 
   async addAllMembers(): Promise<void> {
     const candidates = this.availableEnrollments();
-    if (!candidates.length || this.savingId() || this.savingAll()) return;
+    if (!candidates.length || this.savingId() || this.savingAll() || this.removingMemberId() || this.removingAll()) return;
     this.savingAll.set(true);
     const results = await Promise.all(candidates.map((item) => this.api.addGroupMember(this.group.id, this.enrollmentId(item))));
     await this.loadMembers();
@@ -123,15 +124,17 @@ export class StudyGroupMembersDialogComponent implements OnInit {
 
   async removeAllMembers(): Promise<void> {
     const members = this.members();
-    if (!members.length || this.savingId() || this.savingAll()) return;
-    if (!await this.confirmDialog.confirm({ title: 'إزالة جميع الطلاب', message: `سيتم إزالة ${members.length} طالب من المجموعة. هل تريد المتابعة؟`, variant: 'danger' })) return;
-    this.savingAll.set(true);
-    const results = await Promise.all(members.map((member) => this.api.removeGroupMember(this.group.id, member.id)));
-    await this.loadMembers();
-    this.changed.emit();
-    this.savingAll.set(false);
-    const removed = results.filter(Boolean).length;
-    this.showToast(results.every(Boolean) ? 'success' : 'error', `تمت إزالة ${removed} من أصل ${members.length} طالب.`);
+    if (!members.length || this.savingId() || this.savingAll() || this.removingMemberId() || this.removingAll()) return;
+    this.removingAll.set(true);
+    try {
+      const results = await Promise.all(members.map((member) => this.api.removeGroupMember(this.group.id, member.id)));
+      await this.loadMembers();
+      this.changed.emit();
+      const removed = results.filter(Boolean).length;
+      this.showToast(results.every(Boolean) ? 'success' : 'error', `تمت إزالة ${removed} من أصل ${members.length} طالب.`);
+    } finally {
+      this.removingAll.set(false);
+    }
   }
 
   private searchText(item: any): string {

@@ -26,6 +26,8 @@ export const errorHandler: ErrorRequestHandler = (error: DatabaseError, req, res
   const isPrismaConflict = error.code === 'P2002';
   const isPrismaForeignKeyViolation = error.code === 'P2003';
   const isPayloadTooLarge = error.code === 'entity.too.large' || error.message === 'request entity too large';
+  const contentType = String(req.headers['content-type'] || '').toLowerCase();
+  const isJsonPayloadTooLarge = isPayloadTooLarge && (contentType.includes('application/json') || contentType.includes('+json'));
 
   const statusCode = isPayloadTooLarge
     ? 413
@@ -42,7 +44,9 @@ export const errorHandler: ErrorRequestHandler = (error: DatabaseError, req, res
       : 500;
 
   const code = isPayloadTooLarge
-    ? 'PAYLOAD_TOO_LARGE'
+    ? isJsonPayloadTooLarge
+      ? 'REQUEST_BODY_TOO_LARGE'
+      : 'PAYLOAD_TOO_LARGE'
     : isHttpError || isKnownApplicationError
     ? (error.code || 'HTTP_ERROR')
     : isInvalidJson
@@ -58,7 +62,9 @@ export const errorHandler: ErrorRequestHandler = (error: DatabaseError, req, res
             : 'INTERNAL_SERVER_ERROR';
 
   const message = isPayloadTooLarge
-    ? 'The uploaded file exceeds the 10 MB limit.'
+    ? isJsonPayloadTooLarge
+      ? 'حجم بيانات الطلب أكبر من الحد المسموح.'
+      : 'The uploaded file exceeds the 10 MB limit.'
     : statusCode >= 500
     ? 'An unexpected server error occurred.'
     : isUniqueViolation || isPrismaConflict

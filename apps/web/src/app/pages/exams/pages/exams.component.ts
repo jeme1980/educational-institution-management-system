@@ -295,9 +295,20 @@ export class ExamsComponent implements OnInit {
   async saveResultsFromDialog(rows: any[]): Promise<void> { await this.persistResults(rows); }
   private async persistResults(rows: any[]): Promise<void> {
     const exam = this.selectedExam();
-    if (!exam || this.isSavingResults()) return;
+    if (!exam || this.isSavingResults() || !rows.length) return;
     this.isSavingResults.set(true);
-    const payload = rows.map(row => row.isAbsence ? { ...row, totalScore: 0, questionScores: [] } : row);
+    const payload = rows.map(row => ({
+      studentId: row.studentId,
+      isAbsence: Boolean(row.isAbsence),
+      totalScore: row.isAbsence ? 0 : row.totalScore,
+      absenceReason: row.absenceReason || null,
+      notes: row.notes || null,
+      questionScores: row.isAbsence ? [] : (row.questionScores || []).map((score: any) => ({
+        questionId: score.questionId,
+        score: score.score === '' || score.score === undefined ? null : score.score,
+        notes: score.notes || null,
+      })),
+    }));
     const ok = await this.apiService.saveExamResults(exam.id, payload);
     if (!ok) {
       this.isSavingResults.set(false);

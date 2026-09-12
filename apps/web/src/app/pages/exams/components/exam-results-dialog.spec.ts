@@ -109,7 +109,7 @@ describe('ExamResultsDialogComponent absence editing', () => {
     expect(component.savePending()).toBe(false);
   });
 
-  it('keeps edits for hidden rows and saves every editable draft', () => {
+  it('keeps a hidden dirty row and emits only that row', () => {
     const second = { ...presentResult, studentId: 'student-2', studentName: 'طالب آخر', nationalId: '456' };
     component.results = [presentResult, second];
     component.ngOnChanges({ results: new SimpleChange([presentResult], [presentResult, second], false) });
@@ -120,8 +120,31 @@ describe('ExamResultsDialogComponent absence editing', () => {
     component.save();
 
     expect(component.filteredStudents().map(row => row.studentId)).toEqual(['student-2']);
-    expect(emitted.mock.calls[0][0]).toHaveLength(2);
+    expect(emitted.mock.calls[0][0]).toHaveLength(1);
     expect(emitted.mock.calls[0][0][0].questionScores[0].score).toBe(2);
+  });
+
+  it('emits only the three changed students from a larger result set', () => {
+    const rows = Array.from({ length: 8 }, (_, index) => ({ ...presentResult, studentId: `student-${index + 1}` }));
+    component.results = rows;
+    component.ngOnChanges({ results: new SimpleChange([presentResult], rows, false) });
+    component.scoreInput(component.drafts()[0], question, { target: { value: '1' } } as unknown as Event);
+    component.scoreInput(component.drafts()[2], question, { target: { value: '2' } } as unknown as Event);
+    component.toggleAbsence(component.drafts()[5], { target: { checked: true } } as unknown as Event);
+    const emitted = vi.fn();
+    component.saved.subscribe(emitted);
+    component.save();
+
+    expect(emitted.mock.calls[0][0].map((row: any) => row.studentId)).toEqual(['student-1', 'student-3', 'student-6']);
+  });
+
+  it('does not emit a save when no row changed', () => {
+    const emitted = vi.fn();
+    component.saved.subscribe(emitted);
+    component.save();
+
+    expect(emitted).not.toHaveBeenCalled();
+    expect(component.dirty()).toBe(false);
   });
 
   it('keeps multiple edited scores mapped to their question IDs and recalculates total', () => {
@@ -179,6 +202,24 @@ describe('ExamsComponent result persistence', () => {
     expect(order).toEqual(['POST', 'GET']);
     expect(component.results()[0].totalScore).toBe(17);
     expect(component.toast()?.type).toBe('success');
+  });
+
+  it('posts a minimal result DTO without display-only student data', async () => {
+    const { component, api } = createComponent();
+    await component.saveResultsFromDialog([presentResult]);
+
+    const payload = api.saveExamResults.mock.calls[0][1][0];
+    expect(payload).toEqual({
+      studentId: 'student-1',
+      isAbsence: false,
+      totalScore: 12,
+      absenceReason: null,
+      notes: null,
+      questionScores: [{ questionId: 'question-1', score: 12, notes: null }],
+    });
+    expect(JSON.stringify(payload)).not.toContain('studentName');
+    expect(JSON.stringify(payload)).not.toContain('nationalId');
+    expect(JSON.stringify(payload)).not.toContain('classNameAr');
   });
 
   it('sends the latest score through the real DOM input and Save All click', async () => {

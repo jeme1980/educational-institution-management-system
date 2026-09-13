@@ -36,6 +36,7 @@ export class SettingsApiService extends BaseApiService {
   public institutions = signal<any[]>([]);
   public institutionError = signal('');
   public dashboardError = signal('');
+  public lookupMutationError = signal('');
   public towns = signal<Town[]>([]);
   public educationStages = signal<LookupItem[]>([]);
   public gradeLevels = signal<GradeLevel[]>([]);
@@ -91,40 +92,49 @@ export class SettingsApiService extends BaseApiService {
   }
 
   async createPublicLookup(table: string, data: Record<string, unknown>): Promise<boolean> {
+    this.lookupMutationError.set('');
     try {
       const res = await this.apiFetch(`/api/public-lookups/${table}`, { method: 'POST', headers: this.headers, body: JSON.stringify(data) });
       if (res.ok) {
         await this.loadPublicLookups();
         return true;
       }
+      this.lookupMutationError.set((await readApiError(res, 'تعذر إضافة السجل.')).error);
     } catch (e) {
       console.error('Failed to create public lookup', e);
+      this.lookupMutationError.set('تعذر الاتصال بالخادم لإضافة السجل.');
     }
     return false;
   }
 
   async updatePublicLookup(table: string, id: string, data: Record<string, unknown>): Promise<boolean> {
+    this.lookupMutationError.set('');
     try {
       const res = await this.apiFetch(`/api/public-lookups/${table}/${id}`, { method: 'PUT', headers: this.headers, body: JSON.stringify(data) });
       if (res.ok) {
         await this.loadPublicLookups();
         return true;
       }
+      this.lookupMutationError.set((await readApiError(res, 'تعذر تعديل السجل.')).error);
     } catch (e) {
       console.error('Failed to update public lookup', e);
+      this.lookupMutationError.set('تعذر الاتصال بالخادم لتعديل السجل.');
     }
     return false;
   }
 
   async deletePublicLookup(table: string, id: string): Promise<boolean> {
+    this.lookupMutationError.set('');
     try {
       const res = await this.apiFetch(`/api/public-lookups/${table}/${id}`, { method: 'DELETE', headers: this.headers });
       if (res.ok) {
         await this.loadPublicLookups();
         return true;
       }
+      this.lookupMutationError.set((await readApiError(res, 'تعذر حذف السجل.')).error);
     } catch (e) {
       console.error('Failed to delete public lookup', e);
+      this.lookupMutationError.set('تعذر الاتصال بالخادم لحذف السجل.');
     }
     return false;
   }

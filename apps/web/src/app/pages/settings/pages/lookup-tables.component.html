@@ -9,7 +9,9 @@
       <h1 class="text-2xl font-bold text-on-surface">إدارة الجداول المساعدة للمؤسسة</h1>
       <p class="mt-1 text-sm text-on-surface-variant">هذه البيانات تخص مؤسستك فقط ولا تغيّر القوائم المرجعية المشتركة بين المدارس.</p>
     </div>
-    <ui-button (activated)="openAddModal()"><mat-icon>add</mat-icon><span>إضافة سجل</span></ui-button>
+    <ng-container *appHasPermission="'settings:update'">
+      <ui-button (activated)="openAddModal()"><mat-icon>add</mat-icon><span>إضافة {{ currentDefinition().singularLabel }}</span></ui-button>
+    </ng-container>
   </header>
 
   <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[260px_1fr]">
@@ -38,11 +40,11 @@
               <tr class="min-h-[52px] hover:bg-surface-container-low">
                 <td class="whitespace-nowrap px-5 py-4 font-bold text-on-surface">{{ item.nameAr }}</td>
                 <td class="whitespace-nowrap px-5 py-4 text-on-surface-variant">{{ item.nameHe || '—' }}</td>
-                <td class="px-5 py-4"><span class="rounded-full px-2.5 py-1 text-xs font-bold" [class]="item.isActive === false ? 'bg-neutral-container text-neutral' : 'bg-success-container text-success'">{{ item.isActive === false ? 'غير فعال' : 'فعال' }}</span></td>
-                <td class="px-5 py-4"><div class="flex justify-center gap-1"><button type="button" (click)="openEditModal(item)" class="rounded-lg p-2 text-primary hover:bg-primary-container" aria-label="تعديل {{ item.nameAr }}"><mat-icon aria-hidden="true" class="text-lg">edit</mat-icon></button><button type="button" (click)="deleteItem(item)" class="rounded-lg p-2 text-error hover:bg-error-container" aria-label="حذف {{ item.nameAr }}"><mat-icon aria-hidden="true" class="text-lg">delete_outline</mat-icon></button></div></td>
+                <td class="px-5 py-4"><ui-badge [tone]="item.isActive === false ? 'disabled' : 'success'">{{ item.isActive === false ? 'غير فعال' : 'فعال' }}</ui-badge></td>
+                <td class="px-5 py-4 text-center"><ng-container *appHasPermission="'settings:update'"><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="openEditModal(item)" [ariaLabel]="'تعديل ' + item.nameAr" [title]="'تعديل ' + item.nameAr"><mat-icon aria-hidden="true">edit</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="danger-ghost" (activated)="deleteItem(item)" [ariaLabel]="'حذف ' + item.nameAr" [title]="'حذف ' + item.nameAr"><mat-icon aria-hidden="true">delete_outline</mat-icon></ui-button></ui-table-actions></ng-container></td>
               </tr>
             } @empty {
-              <tr><td colspan="4" class="px-5 py-14 text-center text-on-surface-variant"><mat-icon class="mx-auto mb-2 block text-4xl">table_rows</mat-icon>لا توجد سجلات في هذا الجدول.</td></tr>
+              <tr><td colspan="4" class="px-5 py-14 text-center text-on-surface-variant"><mat-icon class="mx-auto mb-2 block text-4xl">table_rows</mat-icon><p>{{ currentDefinition().emptyMessage }}</p><ng-container *appHasPermission="'settings:update'"><ui-button class="mt-3" size="sm" variant="secondary" (activated)="openAddModal()">إضافة {{ currentDefinition().singularLabel }}</ui-button></ng-container></td></tr>
             }
           </tbody>
         </table>
@@ -50,7 +52,7 @@
     </main>
   </div>
 
-  <ui-modal [open]="showModal()" [title]="(editingItem() ? 'تعديل سجل - ' : 'إضافة سجل - ') + currentDefinition().label" [closeOnBackdrop]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" (closed)="closeModal()">
+  <ui-modal [open]="showModal()" [title]="(editingItem() ? 'تعديل ' : 'إضافة ') + currentDefinition().singularLabel" [closeOnBackdrop]="!isSubmitting()" [closeOnEscape]="!isSubmitting()" (closed)="closeModal()">
     <form ui-modal-body [formGroup]="form" class="space-y-4" (ngSubmit)="saveItem()">
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label class="text-sm font-bold text-on-surface">الاسم بالعربية *<ui-input formControlName="nameAr" [required]="true" maxlength="150" /></label>

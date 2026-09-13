@@ -291,12 +291,60 @@ export async function createExamsByIdStudyGroupsBySgIdResults(req: AuthRequest, 
   if (!Array.isArray(req.body?.results) || (req.body.results as any[]).some(item => !allowed.has(String(item.studentId)))) return res.status(400).json({ error: 'تتضمن النتائج طالبًا من خارج المجموعة.' });
   return createExamsByIdResultsEnhanced(req, res);
 }
-export async function createExamTypes(req: AuthRequest, res: Response): Promise<any> { const item = await prisma.examType.create({ data: { institutionId: context(req).institutionId, nameAr: String(req.body.nameAr).trim(), nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }); return res.status(201).json(item); }
-export async function updateExamTypesById(req: AuthRequest, res: Response): Promise<any> { const { institutionId } = context(req); const existing = await prisma.examType.findFirst({ where: { id: String(req.params.id), institutionId } }); if (!existing) return res.status(404).json({ error: 'نوع الامتحان غير موجود.' }); const item = await prisma.examType.update({ where: { id: existing.id }, data: { nameAr: String(req.body.nameAr).trim(), nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }); return res.json(item); }
-export async function deleteExamTypesById(req: AuthRequest, res: Response): Promise<any> { const { institutionId } = context(req); const existing = await prisma.examType.findFirst({ where: { id: String(req.params.id), institutionId } }); if (!existing) return res.status(404).json({ error: 'نوع الامتحان غير موجود.' }); await prisma.examType.update({ where: { id: existing.id }, data: { isActive: false } }); return res.json({ success: true }); }
-export async function createQuestionTypes(req: AuthRequest, res: Response): Promise<any> { const item = await prisma.questionType.create({ data: { institutionId: context(req).institutionId, nameAr: String(req.body.nameAr).trim(), nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }); return res.status(201).json(item); }
-export async function updateQuestionTypesById(req: AuthRequest, res: Response): Promise<any> { const { institutionId } = context(req); const existing = await prisma.questionType.findFirst({ where: { id: String(req.params.id), institutionId } }); if (!existing) return res.status(404).json({ error: 'نوع السؤال غير موجود.' }); const item = await prisma.questionType.update({ where: { id: existing.id }, data: { nameAr: String(req.body.nameAr).trim(), nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }); return res.json(item); }
-export async function deleteQuestionTypesById(req: AuthRequest, res: Response): Promise<any> { const { institutionId } = context(req); const existing = await prisma.questionType.findFirst({ where: { id: String(req.params.id), institutionId } }); if (!existing) return res.status(404).json({ error: 'نوع السؤال غير موجود.' }); await prisma.questionType.update({ where: { id: existing.id }, data: { isActive: false } }); return res.json({ success: true }); }
+export async function createExamTypes(req: AuthRequest, res: Response): Promise<any> {
+  const institutionId = context(req).institutionId;
+  const nameAr = String(req.body.nameAr || '').trim();
+  if (!nameAr) return res.status(400).json({ error: 'اسم نوع الامتحان بالعربية مطلوب.' });
+  if (await prisma.examType.findFirst({ where: { institutionId, nameAr: { equals: nameAr, mode: 'insensitive' } }, select: { id: true } })) return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: 'يوجد نوع امتحان بهذا الاسم مسبقًا.' });
+  const item = await prisma.examType.create({ data: { institutionId, nameAr, nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } });
+  return res.status(201).json(item);
+}
+export async function updateExamTypesById(req: AuthRequest, res: Response): Promise<any> {
+  const { institutionId } = context(req);
+  const id = String(req.params.id);
+  const existing = await prisma.examType.findFirst({ where: { id, institutionId } });
+  if (!existing) return res.status(404).json({ error: 'نوع الامتحان غير موجود.' });
+  const nameAr = String(req.body.nameAr || '').trim();
+  if (!nameAr) return res.status(400).json({ error: 'اسم نوع الامتحان بالعربية مطلوب.' });
+  if (await prisma.examType.findFirst({ where: { institutionId, id: { not: id }, nameAr: { equals: nameAr, mode: 'insensitive' } }, select: { id: true } })) return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: 'يوجد نوع امتحان بهذا الاسم مسبقًا.' });
+  return res.json(await prisma.examType.update({ where: { id }, data: { nameAr, nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }));
+}
+export async function deleteExamTypesById(req: AuthRequest, res: Response): Promise<any> {
+  const { institutionId } = context(req);
+  const id = String(req.params.id);
+  const existing = await prisma.examType.findFirst({ where: { id, institutionId } });
+  if (!existing) return res.status(404).json({ error: 'نوع الامتحان غير موجود.' });
+  if (await prisma.exam.count({ where: { institutionId, examTypeId: id } })) return res.status(409).json({ code: 'LOOKUP_IN_USE', error: 'لا يمكن حذف نوع الامتحان لأنه مستخدم في امتحانات موجودة.' });
+  await prisma.examType.update({ where: { id }, data: { isActive: false } });
+  return res.json({ success: true });
+}
+export async function createQuestionTypes(req: AuthRequest, res: Response): Promise<any> {
+  const institutionId = context(req).institutionId;
+  const nameAr = String(req.body.nameAr || '').trim();
+  if (!nameAr) return res.status(400).json({ error: 'اسم نوع السؤال بالعربية مطلوب.' });
+  if (await prisma.questionType.findFirst({ where: { institutionId, nameAr: { equals: nameAr, mode: 'insensitive' } }, select: { id: true } })) return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: 'يوجد نوع سؤال بهذا الاسم مسبقًا.' });
+  const item = await prisma.questionType.create({ data: { institutionId, nameAr, nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } });
+  return res.status(201).json(item);
+}
+export async function updateQuestionTypesById(req: AuthRequest, res: Response): Promise<any> {
+  const { institutionId } = context(req);
+  const id = String(req.params.id);
+  const existing = await prisma.questionType.findFirst({ where: { id, institutionId } });
+  if (!existing) return res.status(404).json({ error: 'نوع السؤال غير موجود.' });
+  const nameAr = String(req.body.nameAr || '').trim();
+  if (!nameAr) return res.status(400).json({ error: 'اسم نوع السؤال بالعربية مطلوب.' });
+  if (await prisma.questionType.findFirst({ where: { institutionId, id: { not: id }, nameAr: { equals: nameAr, mode: 'insensitive' } }, select: { id: true } })) return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: 'يوجد نوع سؤال بهذا الاسم مسبقًا.' });
+  return res.json(await prisma.questionType.update({ where: { id }, data: { nameAr, nameHe: req.body.nameHe || null, isActive: req.body.isActive !== false, sortOrder: Number(req.body.sortOrder || 0) } }));
+}
+export async function deleteQuestionTypesById(req: AuthRequest, res: Response): Promise<any> {
+  const { institutionId } = context(req);
+  const id = String(req.params.id);
+  const existing = await prisma.questionType.findFirst({ where: { id, institutionId } });
+  if (!existing) return res.status(404).json({ error: 'نوع السؤال غير موجود.' });
+  if (await prisma.examQuestion.count({ where: { institutionId, questionTypeId: id } })) return res.status(409).json({ code: 'LOOKUP_IN_USE', error: 'لا يمكن حذف نوع السؤال لأنه مستخدم في أسئلة موجودة.' });
+  await prisma.questionType.update({ where: { id }, data: { isActive: false } });
+  return res.json({ success: true });
+}
 
 export async function getExamsByIdResults(req: ContextRequest, res: Response): Promise<any> {
   return getExamsByIdResultsEnhanced(req, res);

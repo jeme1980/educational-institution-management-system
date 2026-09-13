@@ -203,7 +203,7 @@ export const routes: Routes = [
     path: 'settings/lookup-tables',
     title: 'الجداول المساعدة',
     canActivate: [authGuard, permissionGuard],
-    data: { requiredPermission: 'settings:create' },
+    data: { requiredPermission: 'settings:read' },
     loadComponent: () => import('./pages/settings/pages/lookup-tables').then(m => m.LookupTablesComponent),
   },
   {

@@ -8,20 +8,25 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+import { HasPermissionDirective } from '../../../core/directives/has-permission.directive';
 
-type InstitutionLookupKey = 'specializations' | 'jobRoles';
+type InstitutionLookupKey = 'specializations' | 'jobRoles' | 'examTypes' | 'questionTypes';
 
 interface InstitutionLookupDefinition {
   key: InstitutionLookupKey;
   label: string;
   icon: string;
+  singularLabel: string;
+  emptyMessage: string;
   hasTeachingRole?: boolean;
 }
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-lookup-tables',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiButtonComponent, UiModalComponent, UiInputComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiButtonComponent, UiModalComponent, UiInputComponent, UiBadgeComponent, UiTableActionsComponent, HasPermissionDirective],
   templateUrl: './lookup-tables.component.html',
   styleUrl: './lookup-tables.component.css',
 })
@@ -31,8 +36,10 @@ export class LookupTablesComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
 
   readonly definitions: InstitutionLookupDefinition[] = [
-    { key: 'specializations', label: 'التخصصات', icon: 'workspace_premium' },
-    { key: 'jobRoles', label: 'المسميات الوظيفية', icon: 'badge', hasTeachingRole: true },
+    { key: 'specializations', label: 'التخصصات', singularLabel: 'تخصص', emptyMessage: 'لا توجد تخصصات.', icon: 'workspace_premium' },
+    { key: 'jobRoles', label: 'المسميات الوظيفية', singularLabel: 'مسمى وظيفي', emptyMessage: 'لا توجد مسميات وظيفية.', icon: 'badge', hasTeachingRole: true },
+    { key: 'examTypes', label: 'أنواع الامتحانات', singularLabel: 'نوع امتحان', emptyMessage: 'لا توجد أنواع امتحانات.', icon: 'quiz' },
+    { key: 'questionTypes', label: 'أنواع الأسئلة', singularLabel: 'نوع سؤال', emptyMessage: 'لا توجد أنواع أسئلة.', icon: 'help_outline' },
   ];
 
   readonly activeTable = signal<InstitutionLookupKey>('specializations');
@@ -66,8 +73,6 @@ export class LookupTablesComponent implements OnInit {
   ngOnInit(): void {
     void this.apiService.loadInstitutions();
     void this.apiService.loadPublicLookups();
-    void this.apiService.loadQuestionTypes();
-    void this.apiService.loadExamTypes();
     void this.apiService.loadJobRoles();
   }
 
@@ -129,22 +134,30 @@ export class LookupTablesComponent implements OnInit {
       : (editing ? await this.apiService.updatePublicLookup(table, editing.id, payload) : await this.apiService.createPublicLookup(table, payload));
     this.isSubmitting.set(false);
     if (saved) {
+      this.refreshExamFormLookups(table);
       this.showToast(editing ? 'تم تعديل السجل بنجاح' : 'تمت إضافة السجل بنجاح', 'success');
       this.closeModal();
       return;
     }
     this.showToast(table === 'jobRoles' && this.apiService.usersApi.jobRoleError()
       ? this.apiService.usersApi.jobRoleError()!
-      : 'تعذر حفظ السجل. تحقق من البيانات أو الارتباطات الحالية.', 'error');
+      : this.apiService.lookupMutationError() || 'تعذر حفظ السجل. تحقق من البيانات أو الارتباطات الحالية.', 'error');
   }
 
   async deleteItem(item: any): Promise<void> {
-    if (!await this.confirmDialog.confirm({ title: 'حذف السجل', message: `هل تريد حذف السجل "${item.nameAr}"؟`, variant: 'danger' })) return;
+    const definition = this.currentDefinition();
+    if (!await this.confirmDialog.confirm({ title: `حذف ${definition.singularLabel}؟`, message: `هل تريد حذف ${definition.singularLabel} "${item.nameAr}"؟`, variant: 'danger' })) return;
     const table = this.activeTable();
     const deleted = table === 'jobRoles'
       ? await this.apiService.deleteJobRole(item.id)
       : await this.apiService.deletePublicLookup(table, item.id);
-    this.showToast(deleted ? 'تم حذف السجل بنجاح' : 'تعذر حذف السجل، قد يكون مرتبطًا ببيانات أخرى', deleted ? 'success' : 'error');
+    if (deleted) this.refreshExamFormLookups(table);
+    this.showToast(deleted ? 'تم حذف السجل بنجاح' : this.apiService.lookupMutationError() || 'تعذر حذف السجل، قد يكون مرتبطًا ببيانات أخرى', deleted ? 'success' : 'error');
+  }
+
+  private refreshExamFormLookups(table: InstitutionLookupKey): void {
+    if (table === 'examTypes') this.apiService.examTypes.set((this.apiService.publicLookups()['examTypes'] || []).filter((item) => item.isActive !== false));
+    if (table === 'questionTypes') this.apiService.questionTypes.set((this.apiService.publicLookups()['questionTypes'] || []).filter((item) => item.isActive !== false));
   }
 
   private showToast(message: string, type: 'success' | 'error'): void {

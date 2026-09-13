@@ -39,6 +39,7 @@ export class ApiService extends BaseApiService {
   get exams() { return this.examsApi.exams; }
   get lookups() { return this.settingsApi.lookups; }
   get publicLookups() { return this.settingsApi.publicLookups; }
+  get lookupMutationError() { return this.settingsApi.lookupMutationError; }
   get languages() { return this.settingsApi.languages; }
   get appState() { return this.settingsApi.appState; }
   get regions() { return this.settingsApi.regions; }

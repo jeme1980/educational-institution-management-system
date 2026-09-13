@@ -11,7 +11,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { path: '/settings/users', label: 'المستخدمون', icon: 'manage_accounts', permission: 'settings:create' },
   { path: '/settings/roles', label: 'الأدوار والصلاحيات', icon: 'admin_panel_settings', permission: 'settings:create' },
   { path: '/settings/subscription', label: 'الاشتراك', icon: 'card_membership', permission: 'subscription:read' },
-  { path: '/settings/lookup-tables', label: 'الجداول المساعدة', icon: 'table_rows', permission: 'settings:create' },
+  { path: '/settings/lookup-tables', label: 'الجداول المساعدة', icon: 'table_rows', permission: 'settings:read' },
   { path: '/settings/audit-log', label: 'سجل التدقيق', icon: 'history', permission: 'audit:read' },
 ];
 

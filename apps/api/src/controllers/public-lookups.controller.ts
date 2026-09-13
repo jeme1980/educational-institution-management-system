@@ -19,6 +19,8 @@ export const PUBLIC_LOOKUP_KEYS = [
   'relationTypes',
   'studentFeatures',
   'specializations',
+  'examTypes',
+  'questionTypes',
   'providers',
 ] as const;
 
@@ -40,13 +42,15 @@ const delegateNames: Record<PublicLookupKey, string> = {
   relationTypes: 'relationType',
   studentFeatures: 'studentFeature',
   specializations: 'specialization',
+  examTypes: 'examType',
+  questionTypes: 'questionType',
   providers: 'provider',
 };
 
 const isPublicLookupKey = (value: string): value is PublicLookupKey =>
   PUBLIC_LOOKUP_KEYS.includes(value as PublicLookupKey);
 
-const INSTITUTION_MANAGED_LOOKUP_KEYS = new Set<PublicLookupKey>(['specializations']);
+const INSTITUTION_MANAGED_LOOKUP_KEYS = new Set<PublicLookupKey>(['specializations', 'examTypes', 'questionTypes']);
 
 const rejectGlobalLookupMutation = (key: PublicLookupKey, res: Response): boolean => {
   if (INSTITUTION_MANAGED_LOOKUP_KEYS.has(key)) return false;
@@ -87,6 +91,8 @@ const findManyFor = (key: PublicLookupKey, institutionId?: string) => {
     case 'relationTypes': return prisma.relationType.findMany({ orderBy: lookupOrder(key) });
     case 'studentFeatures': return prisma.studentFeature.findMany({ orderBy: [{ nameAr: 'asc' }] });
     case 'specializations': return (prisma as any).specialization.findMany({ where: { institutionId }, orderBy: lookupOrder(key) });
+    case 'examTypes': return prisma.examType.findMany({ where: { institutionId }, orderBy: lookupOrder(key) });
+    case 'questionTypes': return prisma.questionType.findMany({ where: { institutionId }, orderBy: lookupOrder(key) });
     case 'providers': return prisma.provider.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] }).then((items) => items.map((item) => ({ ...item, nameAr: item.name, nameHe: item.providerCode })));
   }
 };
@@ -132,7 +138,37 @@ const dataFor = (key: PublicLookupKey, body: Record<string, unknown>, partial = 
   return data;
 };
 
-const institutionScopedKey = (key: PublicLookupKey): boolean => key === 'specializations';
+const institutionScopedKey = (key: PublicLookupKey): boolean => INSTITUTION_MANAGED_LOOKUP_KEYS.has(key);
+
+const isExamLookupKey = (key: PublicLookupKey): key is 'examTypes' | 'questionTypes' =>
+  key === 'examTypes' || key === 'questionTypes';
+
+const duplicateMessage = (key: 'examTypes' | 'questionTypes'): string =>
+  key === 'examTypes'
+    ? 'يوجد نوع امتحان بهذا الاسم مسبقًا.'
+    : 'يوجد نوع سؤال بهذا الاسم مسبقًا.';
+
+const inUseMessage = (key: 'examTypes' | 'questionTypes'): string =>
+  key === 'examTypes'
+    ? 'لا يمكن حذف نوع الامتحان لأنه مستخدم في امتحانات موجودة.'
+    : 'لا يمكن حذف نوع السؤال لأنه مستخدم في أسئلة موجودة.';
+
+async function hasDuplicateName(
+  key: 'examTypes' | 'questionTypes',
+  institutionId: string,
+  nameAr: string,
+  excludedId?: string,
+): Promise<boolean> {
+  const delegate = (prisma as any)[delegateNames[key]];
+  return Boolean(await delegate.findFirst({
+    where: {
+      institutionId,
+      nameAr: { equals: nameAr, mode: 'insensitive' },
+      ...(excludedId ? { id: { not: excludedId } } : {}),
+    },
+    select: { id: true },
+  }));
+}
 
 export async function getPublicLookups(req: ContextRequest, res: Response): Promise<any> {
   const entries = await Promise.all(PUBLIC_LOOKUP_KEYS.map(async (key) => [key, await findManyFor(key, req.context?.institutionId)] as const));
@@ -151,6 +187,9 @@ export async function createPublicLookup(req: AuthRequest & ContextRequest, res:
   }
   if (key === 'genders' && !/^[mf]$/.test(String(data.genderCode || ''))) {
     return res.status(400).json({ error: 'رمز الجنس مطلوب ويجب أن يكون m أو f.' });
+  }
+  if (isExamLookupKey(key) && await hasDuplicateName(key, institutionId, String(data.nameAr))) {
+    return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: duplicateMessage(key) });
   }
 
   const created = await (prisma as any)[delegateNames[key]].create({ data });
@@ -172,6 +211,9 @@ export async function updatePublicLookup(req: AuthRequest & ContextRequest, res:
   if (key === 'genders' && data.genderCode !== undefined && !/^[mfu]$/.test(String(data.genderCode || ''))) {
     return res.status(400).json({ error: 'رمز الجنس يجب أن يكون حرفاً واحداً: m أو f أو u.' });
   }
+  if (isExamLookupKey(key) && typeof data.nameAr === 'string' && await hasDuplicateName(key, req.context?.institutionId || '', data.nameAr, id)) {
+    return res.status(409).json({ code: 'DUPLICATE_LOOKUP_NAME', error: duplicateMessage(key) });
+  }
   const updated = await delegate.update({ where: { id }, data: { ...data, updatedAt: new Date() } });
   return res.json(updated);
 }
@@ -185,6 +227,14 @@ export async function deletePublicLookup(req: AuthRequest & ContextRequest, res:
   const existing = await delegate.findFirst({ where: institutionScopedKey(key) ? { id, institutionId: req.context?.institutionId } : { id } });
   if (!existing) return res.status(404).json({ error: 'Lookup item not found' });
   if (existing.isSystem === true) return res.status(409).json({ error: 'System lookup items cannot be deleted' });
+  if (isExamLookupKey(key)) {
+    const usageCount = key === 'examTypes'
+      ? await prisma.exam.count({ where: { institutionId: req.context?.institutionId, examTypeId: id } })
+      : await prisma.examQuestion.count({ where: { institutionId: req.context?.institutionId, questionTypeId: id } });
+    if (usageCount > 0) return res.status(409).json({ code: 'LOOKUP_IN_USE', error: inUseMessage(key) });
+    await delegate.update({ where: { id }, data: { isActive: false, updatedAt: new Date() } });
+    return res.json({ success: true });
+  }
   await delegate.delete({ where: { id } });
   return res.json({ success: true });
 }

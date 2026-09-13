@@ -25,7 +25,7 @@
           <div class="filter-field filter-field--readonly"><span>السنة الدراسية</span><output>{{ selectedYearLabel() }}</output></div>
           <div class="filter-field filter-field--readonly"><span>الفصل الدراسي</span><output>{{ dataset()?.exam?.academicPeriod?.nameAr || 'حسب الامتحان' }}</output></div>
           <div class="filter-field filter-field--readonly"><span>الصف</span><output>حسب الامتحان</output></div>
-          <label class="filter-field filter-field--select"><span>الشعبة</span><ui-select ariaLabel="اختيار الشعبة" [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event)"><option value="ALL">جميع الشعب</option>@for (group of dataset()?.groups || []; track group.studyGroupId) {<option [value]="group.studyGroupId">{{ group.studyGroupName || group.nameAr || 'الشعبة' }}</option>}</ui-select></label>
+          <label class="filter-field filter-field--select"><span>الصف</span><ui-select ariaLabel="اختيار الصف" [ngModel]="selectedGroupId()" (ngModelChange)="selectedGroupId.set($event)"><option value="ALL">جميع الصفوف</option>@for (classroom of classOptions(); track classroom.id) {<option [value]="classroom.id">{{ classroom.label }}</option>}</ui-select></label>
         </div>
       </fieldset>
       <fieldset class="analysis-filter-group">

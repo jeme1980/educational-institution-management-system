@@ -1,17 +1,74 @@
 import '@angular/compiler';
 import { computed, signal } from '@angular/core';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis, StudentAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { buildInterventionGroups, countFollowUpStudents, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
+import { ALL_ANALYSIS_CLASSES, buildInterventionGroups, countFollowUpStudents, examAnalysisClassOptions, filterAnalysisStudentsByClass, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
+import { resolveAnalysisStudentGroupIds } from '../services/exam-analysis-data.service';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
 import { questionSuccessBarData } from '../components/question-success-chart.component';
 import { topicOverviewBarData } from '../components/topic-overview-chart.component';
 
-const overviewTemplate = readFileSync(new URL('./exam-analysis.component.html', import.meta.url), 'utf8');
-const analysisDataServiceSource = readFileSync(new URL('../services/exam-analysis-data.service.ts', import.meta.url), 'utf8');
+const overviewTemplate = readFileSync(resolve(process.cwd(), 'src/app/pages/exam-analysis/pages/exam-analysis.component.html'), 'utf8');
+const analysisDataServiceSource = readFileSync(resolve(process.cwd(), 'src/app/pages/exam-analysis/services/exam-analysis-data.service.ts'), 'utf8');
+const analysisComponentSource = readFileSync(resolve(process.cwd(), 'src/app/pages/exam-analysis/pages/exam-analysis.component.ts'), 'utf8');
+
+describe('ExamAnalysis class filter', () => {
+  const groups = [
+    { studyGroupId: 'class-a', studyGroupName: 'الصف أ' },
+    { studyGroupId: 'class-b', studyGroupName: 'الصف ب' },
+    { studyGroupId: 'class-c', studyGroupName: 'الصف ج' },
+  ];
+  const students: AnalysisStudent[] = groups.map((group, index) => ({
+    studentId: `student-${index + 1}`,
+    studentName: group.studyGroupName,
+    groupId: group.studyGroupId,
+    groupIds: [group.studyGroupId],
+    totalScore: 10,
+    isAbsent: false,
+    questionScores: [],
+  }));
+
+  it('uses the requested label, default option, and explicit all sentinel', () => {
+    expect(overviewTemplate).toContain('<span>الصف</span>');
+    expect(overviewTemplate).toContain('ariaLabel="اختيار الصف"');
+    expect(overviewTemplate).toContain('<option value="ALL">جميع الصفوف</option>');
+    expect(analysisComponentSource).toContain('selectedGroupId = signal(ALL_ANALYSIS_CLASSES)');
+    expect(ALL_ANALYSIS_CLASSES).toBe('ALL');
+  });
+
+  it('filters all, first, second, and last classes by stable IDs', () => {
+    expect(filterAnalysisStudentsByClass(students, ALL_ANALYSIS_CLASSES).map(item => item.studentId)).toEqual(['student-1', 'student-2', 'student-3']);
+    expect(filterAnalysisStudentsByClass(students, 'class-a').map(item => item.studentId)).toEqual(['student-1']);
+    expect(filterAnalysisStudentsByClass(students, 'class-b').map(item => item.studentId)).toEqual(['student-2']);
+    expect(filterAnalysisStudentsByClass(students, 'class-c').map(item => item.studentId)).toEqual(['student-3']);
+  });
+
+  it('keeps behavior stable when class order changes and excludes empty or duplicate IDs', () => {
+    const options = examAnalysisClassOptions([groups[2], groups[0], groups[1], { studyGroupId: '', studyGroupName: 'فارغ' }, groups[0]]);
+    expect(options).toEqual([
+      { id: 'class-c', label: 'الصف ج' },
+      { id: 'class-a', label: 'الصف أ' },
+      { id: 'class-b', label: 'الصف ب' },
+    ]);
+    expect(filterAnalysisStudentsByClass(students, options[1].id).map(item => item.studentId)).toEqual(['student-1']);
+    expect(overviewTemplate).toContain('<option [value]="classroom.id">');
+  });
+
+  it('does not assign the first linked class to students with another explicit membership', () => {
+    expect(resolveAnalysisStudentGroupIds({ groupIds: ['class-b'] }, 'class-a')).toEqual(['class-b']);
+    expect(resolveAnalysisStudentGroupIds({ groupIds: ['class-a', 'class-a'] }, 'class-a')).toEqual(['class-a']);
+    expect(resolveAnalysisStudentGroupIds({}, '')).toEqual([]);
+  });
+
+  it('resets the class filter explicitly when the academic-year exam dataset changes', () => {
+    expect(analysisComponentSource).toContain("this.selectedGroupId.set('ALL')");
+    expect(analysisComponentSource).not.toContain('if (!selectedGroupId)');
+  });
+});
 
 describe('ExamAnalysis intervention reactivity', () => {
   it('moves a student between level groups when levels change without reload', () => {

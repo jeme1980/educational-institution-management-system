@@ -17,7 +17,7 @@ import { QuestionSuccessChartComponent } from '../components/question-success-ch
 import { TopicOverviewChartComponent } from '../components/topic-overview-chart.component';
 import { SkillOverviewChartComponent } from '../components/skill-overview-chart.component';
 import {
-  AnalysisQuestion, AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
+  AnalysisQuestion, AnalysisStudent, AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
 } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
@@ -86,6 +86,24 @@ export type QuestionSortDirection = 'asc' | 'desc';
 export type TopicSortKey = 'mastery-desc' | 'mastery-asc' | 'questions-desc' | 'name';
 export type SkillSortKey = TopicSortKey;
 export type StudentSortKey = 'score-desc' | 'score-asc' | 'level';
+export const ALL_ANALYSIS_CLASSES = 'ALL';
+
+export interface ExamAnalysisClassOption { id: string; label: string }
+
+export function examAnalysisClassOptions(groups: any[]): ExamAnalysisClassOption[] {
+  const seen = new Set<string>();
+  return groups.flatMap(group => {
+    const id = String(group.studyGroupId || group.id || '').trim();
+    if (!id || id === ALL_ANALYSIS_CLASSES || seen.has(id)) return [];
+    seen.add(id);
+    return [{ id, label: group.studyGroupName || group.nameAr || 'الشعبة' }];
+  });
+}
+
+export function filterAnalysisStudentsByClass(students: AnalysisStudent[], selectedClassId: string): AnalysisStudent[] {
+  if (selectedClassId === ALL_ANALYSIS_CLASSES) return students;
+  return students.filter(student => student.groupIds?.includes(selectedClassId) || student.groupId === selectedClassId);
+}
 
 export function questionDetailUnavailable(questions: QuestionAnalysis[], attendedCount: number, hasMatchingQuestionScore: boolean): boolean {
   return questions.length > 0 && attendedCount > 0 && !hasMatchingQuestionScore && questions.every(question => question.unansweredRate === 100);
@@ -209,7 +227,7 @@ export class ExamAnalysisComponent implements OnInit {
   error = signal('');
   dataset = signal<ExamAnalysisDataset | null>(null);
   selectedExamId = signal('');
-  selectedGroupId = signal('ALL');
+  selectedGroupId = signal(ALL_ANALYSIS_CLASSES);
   activeTab = signal<AnalysisTab>('overview');
   studentSearch = signal('');
   levelFilter = signal('ALL');
@@ -241,6 +259,7 @@ export class ExamAnalysisComponent implements OnInit {
   });
   readonly examSubjectLabel = computed(() => this.dataset()?.exam?.subject?.nameAr || this.dataset()?.exam?.subjectNameAr || 'غير محدد');
   readonly examPeriodLabel = computed(() => this.dataset()?.exam?.academicPeriod?.nameAr || 'غير محددة');
+  readonly classOptions = computed(() => examAnalysisClassOptions(this.dataset()?.groups || []));
   readonly examGroupsLabel = computed(() => {
     const groups = this.dataset()?.groups || [];
     return groups.map((group: any) => group.studyGroupName || group.nameAr || 'الشعبة').join('، ') || 'غير محددة';
@@ -281,7 +300,7 @@ export class ExamAnalysisComponent implements OnInit {
     const data = this.dataset();
     if (!data) return [];
     const groupId = this.selectedGroupId();
-    return groupId === 'ALL' ? data.students : data.students.filter(student => student.groupIds?.includes(groupId) || student.groupId === groupId);
+    return filterAnalysisStudentsByClass(data.students, groupId);
   });
   students = computed(() => {
     const data = this.dataset();

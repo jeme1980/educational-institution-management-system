@@ -2,6 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import { ApiService } from '../../../core/services/api.service';
 import { AnalysisQuestion, AnalysisStudent, ExamAnalysisDataset } from '../models/exam-analysis.model';
 
+export function resolveAnalysisStudentGroupIds(row: any, onlyLinkedGroupId = ''): string[] {
+  const explicitIds = Array.isArray(row.groupIds) ? row.groupIds : row.groupId ? [row.groupId] : [];
+  const ids: string[] = explicitIds.map((value: unknown): string => String(value || '').trim()).filter(Boolean);
+  if (ids.length) return [...new Set(ids)];
+  return onlyLinkedGroupId && onlyLinkedGroupId !== 'ALL' ? [onlyLinkedGroupId] : [];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ExamAnalysisDataService {
   private api = inject(ApiService);
@@ -57,13 +64,15 @@ export class ExamAnalysisDataService {
       for (const row of payload.data?.results || []) {
         if (seen.has(row.studentId)) continue;
         seen.add(row.studentId);
+        const groupIds = resolveAnalysisStudentGroupIds(row, groupTargets.length === 1 ? payload.group.studyGroupId : '');
+        const primaryGroup = groups.find((group: any) => group.studyGroupId === groupIds[0]);
         students.push({
           studentId: row.studentId,
           studentNumber: row.studentNumber || undefined,
           studentName: row.studentName,
-          groupId: payload.group.studyGroupId,
-          groupIds: row.groupIds || (payload.group.studyGroupId ? [payload.group.studyGroupId] : []),
-          groupName: payload.group.studyGroupName || payload.group.nameAr || 'الشعبة',
+          groupId: row.groupId || (groupIds.length === 1 ? groupIds[0] : undefined),
+          groupIds,
+          groupName: primaryGroup?.studyGroupName || primaryGroup?.nameAr || row.groupName || 'الشعبة',
           totalScore: row.totalScore === null ? null : Number(row.totalScore),
           // نتائج الامتحان تستخدم isAbsence، بينما نموذج التحليل يستخدم isAbsent.
           isAbsent: Boolean(row.isAbsent ?? row.isAbsence),

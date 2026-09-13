@@ -25,11 +25,13 @@ const presentResult = {
 describe('ExamResultsDialogComponent absence editing', () => {
   let fixture: ComponentFixture<ExamResultsDialogComponent>;
   let component: ExamResultsDialogComponent;
+  let api: { importExamResults: ReturnType<typeof vi.fn>; loadExamResults: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    api = { importExamResults: vi.fn(), loadExamResults: vi.fn() };
     await TestBed.configureTestingModule({
       imports: [ExamResultsDialogComponent],
-      providers: [{ provide: ApiService, useValue: {} }],
+      providers: [{ provide: ApiService, useValue: api }],
     }).compileComponents();
     fixture = TestBed.createComponent(ExamResultsDialogComponent);
     component = fixture.componentInstance;
@@ -159,6 +161,74 @@ describe('ExamResultsDialogComponent absence editing', () => {
       expect.objectContaining({ questionId: 'question-2', score: 4.5 }),
     ]);
     expect(row.totalScore).toBe(6.5);
+  });
+
+  it('imports the XLSX file, refetches authoritative results, then replaces drafts and reports success', async () => {
+    const refreshed = { results: [{ ...presentResult, totalScore: 2, questionScores: [{ questionId: question.id, score: 2 }] }], questions: [question], warning: '' };
+    const order: string[] = [];
+    api.importExamResults.mockImplementation(async () => { order.push('POST'); return { ok: true, data: { rowCount: 1 } }; });
+    api.loadExamResults.mockImplementation(async () => { order.push('GET'); return refreshed; });
+    const emitted = vi.fn();
+    component.imported.subscribe(emitted);
+    const input = { files: [new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(order).toEqual(['POST', 'GET']);
+    expect(component.drafts()[0].questionScores[0].score).toBe(2);
+    expect(component.dirty()).toBe(false);
+    expect(emitted).toHaveBeenCalledWith(refreshed);
+    expect(component.importMessage()?.type).toBe('success');
+    expect(input.value).toBe('');
+  });
+
+  it('shows a readable Arabic validation message returned by the API', async () => {
+    api.importExamResults.mockResolvedValue({ ok: false, data: { errors: [{ row: 8, code: 'INVALID_QUESTION_SCORE', message: 'درجة السؤال غير صالحة أو تتجاوز الدرجة القصوى.' }] } });
+    const input = { files: [new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(component.importMessage()?.text).toBe('الصف 8: درجة السؤال غير صالحة أو تتجاوز الدرجة القصوى.');
+    expect(api.loadExamResults).not.toHaveBeenCalled();
+  });
+
+  it('uses a readable fallback for an unexpected import error', async () => {
+    api.importExamResults.mockResolvedValue({ ok: false, data: { error: { message: 'An unexpected server error occurred.' } } });
+    const input = { files: [new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(component.importMessage()?.text).toBe('تعذر استيراد درجات الأسئلة. حاول مرة أخرى أو تحقق من الملف.');
+  });
+
+  it('keeps the 10 MB upload limit and does not call the API for a larger file', async () => {
+    const input = { files: [new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(api.importExamResults).not.toHaveBeenCalled();
+    expect(component.importMessage()?.text).toContain('10 ميجابايت');
+  });
+
+  it('reports a successful import whose required refresh fails without clearing current drafts', async () => {
+    api.importExamResults.mockResolvedValue({ ok: true, data: { rowCount: 1 } });
+    api.loadExamResults.mockResolvedValue(null);
+    const input = { files: [new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(component.drafts()[0].questionScores[0].score).toBe(12);
+    expect(component.importMessage()?.text).toBe('تم استيراد الدرجات، لكن تعذر تحديث البيانات المعروضة.');
+  });
+
+  it('blocks Excel import while unsaved grade edits exist', async () => {
+    component.scoreInput(component.drafts()[0], question, { target: { value: '2' } } as unknown as Event);
+    const input = { files: [new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })], value: 'scores.xlsx' };
+
+    await component.importQuestionGradesByNationalId({ target: input } as unknown as Event);
+
+    expect(api.importExamResults).not.toHaveBeenCalled();
+    expect(component.importMessage()?.text).toContain('احفظ التعديلات الحالية');
   });
 });
 
@@ -339,6 +409,27 @@ describe('ExamsComponent result persistence', () => {
 });
 
 describe('ExamsApiService result errors', () => {
+  it('sends the selected XLSX file as the raw request body expected by the import route', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        ExamsApiService,
+        provideRouter([]),
+        { provide: AuthService, useValue: { idToken: signal('token'), waitForAuthInit: vi.fn() } },
+      ],
+    });
+    const service = TestBed.inject(ExamsApiService);
+    const request = vi.spyOn(service, 'apiFetch').mockResolvedValue(new Response('{}', { status: 200 }));
+    const file = new File(['PK'], 'scores.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    await service.importExamResults('exam-1', file);
+
+    expect(request).toHaveBeenCalledWith('/api/exams/exam-1/results/import', expect.objectContaining({
+      method: 'POST',
+      body: file,
+      headers: expect.objectContaining({ 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    }));
+  });
+
   it('keeps a structured backend error message for the results screen', async () => {
     TestBed.configureTestingModule({
       providers: [

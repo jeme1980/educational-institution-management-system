@@ -286,7 +286,11 @@ export class ExamsComponent implements OnInit {
     this.isLoadingResults.set(false);
     this.showResultsPanel.set(true);
   }
-  async refreshImportedResults(): Promise<void> { const exam = this.selectedExam(); if (exam) await this.openResults(exam); }
+  refreshImportedResults(data: { results: any[]; questions: any[]; warning: string }): void {
+    this.results.set(data.results);
+    this.resultQuestions.set(data.questions);
+    this.resultsWarning.set(data.warning);
+  }
   resultValue(row: any, event: Event): void { const value = (event.target as HTMLInputElement).value; row.totalScore = value === '' ? null : Number(value); }
   toggleAbsence(row: any, event: Event): void { row.isAbsence = (event.target as HTMLInputElement).checked; if (row.isAbsence) row.totalScore = null; }
   async saveResults(): Promise<void> {

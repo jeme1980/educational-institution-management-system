@@ -79,6 +79,7 @@ export async function parseExamResultsWorkbook(buffer: Uint8Array, contentType: 
     result.__row = String(rowNumber);
     rows.push(result);
   });
+  if (!rows.length) fail('EMPTY_SHEET');
   return rows;
 }
 

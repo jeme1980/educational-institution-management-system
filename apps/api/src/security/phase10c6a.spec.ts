@@ -31,6 +31,14 @@ test('Phase 10C-6A: formulas and multiple worksheets are rejected', async () => 
   await assert.rejects(() => parseExamResultsWorkbook(multiple, XLSX_MIME), (error: unknown) => error instanceof SpreadsheetValidationError && error.errors[0].code === 'MULTIPLE_SHEETS');
 });
 
+test('Phase 10C-6A: a template without student rows is rejected as empty', async () => {
+  const empty = await workbookBuffer(workbook => {
+    const sheet = workbook.addWorksheet('Results');
+    sheet.addRow(['nationalId', 'isAbsence', 'question_1_00000000-0000-4000-8000-000000000001']);
+  });
+  await assert.rejects(() => parseExamResultsWorkbook(empty, XLSX_MIME), (error: unknown) => error instanceof SpreadsheetValidationError && error.errors[0].code === 'EMPTY_SHEET');
+});
+
 test('Phase 10C-6A: row and column ceilings are enforced', async () => {
   const tooManyRows = await workbookBuffer(workbook => {
     const sheet = workbook.addWorksheet('Results');

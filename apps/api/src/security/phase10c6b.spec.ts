@@ -48,6 +48,7 @@ test('Phase 10C-6B: HTTP spreadsheet import is authenticated, RLS-bound, atomic,
       return student;
     };
     const eligible = await createStudent(`${Date.now()}`.slice(-10), true);
+    const secondEligible = await createStudent(`${Date.now() + 2}`.slice(-10), true);
     const ineligible = await createStudent(`${Date.now() + 1}`.slice(-10), false);
     const permission = await admin.permission.upsert({ where: { module_action: { module: 'exams', action: 'UPDATE' } }, update: { isActive: true }, create: { module: 'exams', action: 'UPDATE', nameAr: 'تعديل الامتحانات' } });
     const createUser = async (canImport: boolean, platform = false) => {
@@ -62,10 +63,19 @@ test('Phase 10C-6B: HTTP spreadsheet import is authenticated, RLS-bound, atomic,
     const importer = await createUser(true); const denied = await createUser(false); const platform = await createUser(false, true);
     await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve)); const address = server.address(); assert.ok(address && typeof address !== 'string'); const baseUrl = `http://127.0.0.1:${address.port}`;
     const token = await createLocalAccessToken(importer.id, importer.email); const headers = { authorization: `Bearer ${token}`, 'x-institution-id': institution.id, 'x-academic-year-id': year.id, 'content-type': XLSX_MIME };
-    const upload = (body: Uint8Array, extra: Record<string, string> = {}) => fetch(`${baseUrl}/api/exams/${exam.id}/results/import`, { method: 'POST', headers: { ...headers, ...extra }, body: body as any });
+    const upload = async (body: Uint8Array, extra: Record<string, string> = {}) => {
+      const response = await fetch(`${baseUrl}/api/exams/${exam.id}/results/import`, { method: 'POST', headers: { ...headers, ...extra }, body: body as any });
+      // The request-scoped RLS transaction commits immediately after the response finishes.
+      await new Promise(resolve => setTimeout(resolve, 25));
+      return response;
+    };
     const valid = await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 8]]);
     let response = await upload(valid); assert.equal(response.status, 200, await response.text());
     let result = await admin.studentExamResult.findFirstOrThrow({ where: { examId: exam.id, studentId: eligible.id } }); assert.equal(Number(result.totalScore), 8); assert.equal(await admin.studentQuestionScore.count({ where: { studentId: eligible.id, examQuestionId: question.id } }), 1);
+    response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 0], [secondEligible.nationalId, 'false', 4.5]])); assert.equal(response.status, 200, await response.text());
+    assert.equal(Number((await admin.studentExamResult.findFirstOrThrow({ where: { examId: exam.id, studentId: eligible.id } })).totalScore), 0);
+    assert.equal(Number((await admin.studentExamResult.findFirstOrThrow({ where: { examId: exam.id, studentId: secondEligible.id } })).totalScore), 4.5);
+    response = await upload(valid); assert.equal(response.status, 200, await response.text());
     const before = await Promise.all([admin.studentExamResult.count({ where: { examId: exam.id } }), admin.studentQuestionScore.count({ where: { examQuestionId: question.id } })]);
     response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 9], [ineligible.nationalId, 'false', 3]])); assert.equal(response.status, 400); assert.deepEqual(await Promise.all([admin.studentExamResult.count({ where: { examId: exam.id } }), admin.studentQuestionScore.count({ where: { examQuestionId: question.id } })]), before); result = await admin.studentExamResult.findFirstOrThrow({ where: { examId: exam.id, studentId: eligible.id } }); assert.equal(Number(result.totalScore), 8);
     response = await upload(valid, { 'content-type': 'text/plain' }); assert.equal(response.status, 400); assert.equal((await json(response)).code, 'SPREADSHEET_VALIDATION_FAILED');
@@ -79,6 +89,9 @@ test('Phase 10C-6B: HTTP spreadsheet import is authenticated, RLS-bound, atomic,
     response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], Array.from({ length: 5001 }, () => [eligible.nationalId, 'false', 8]))); assert.equal(response.status, 400);
     response = await upload(Buffer.alloc(MAX_SPREADSHEET_FILE_BYTES + 1)); assert.equal(response.status, 413);
     response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', -1]])); assert.equal(response.status, 400);
+    response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 'not-a-score']])); assert.equal(response.status, 400); assert.equal((await json(response)).errors[0].code, 'INVALID_QUESTION_SCORE');
+    response = await upload(await xlsx(['nationalId', 'isAbsence', `question_99_${randomUUID()}`], [[eligible.nationalId, 'false', 1]])); assert.equal(response.status, 400); assert.equal((await json(response)).errors[0].code, 'QUESTION_NOT_IN_EXAM');
+    response = await upload(await xlsx(['nationalId', 'isAbsence', 'question_1', `question_1_${question.id}`], [[eligible.nationalId, 'false', 1, 1]])); assert.equal(response.status, 400); assert.equal((await json(response)).errors[0].code, 'DUPLICATE_QUESTION_COLUMN');
     response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 8], [eligible.nationalId, 'false', 8]])); assert.equal(response.status, 400);
     response = await upload(await xlsx(['nationalId', 'isAbsence', `question_1_${question.id}`], [[eligible.nationalId, 'false', 9]])); assert.equal(response.status, 200); result = await admin.studentExamResult.findFirstOrThrow({ where: { examId: exam.id, studentId: eligible.id } }); assert.equal(Number(result.totalScore), 9);
     const deniedToken = await createLocalAccessToken(denied.id, denied.email); response = await fetch(`${baseUrl}/api/exams/${exam.id}/results/import`, { method: 'POST', headers: { ...headers, authorization: `Bearer ${deniedToken}` }, body: valid as any }); assert.equal(response.status, 403);

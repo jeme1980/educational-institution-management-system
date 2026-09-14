@@ -17,7 +17,7 @@ import { QuestionSuccessChartComponent } from '../components/question-success-ch
 import { TopicOverviewChartComponent } from '../components/topic-overview-chart.component';
 import { SkillOverviewChartComponent } from '../components/skill-overview-chart.component';
 import {
-  AnalysisQuestion, AnalysisStudent, AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
+  AnalysisQuestion, AnalysisStudent, AnalysisSummary, AnalysisTab, DEFAULT_PERFORMANCE_LEVELS, DimensionAnalysis, ExamAnalysisDataset, PerformanceLevel,
   QuestionAnalysis, StudentAnalysis,
 } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
@@ -208,6 +208,17 @@ export function groupTargetedSkills(
     .sort((left, right) => left.masteryRate - right.masteryRate || left.name.localeCompare(right.name, 'ar'));
 }
 
+export function calculateNormalizedAnalysis(
+  calculator: ExamAnalysisCalculatorService,
+  students: AnalysisStudent[],
+  questions: AnalysisQuestion[],
+  possibleScore: number,
+  levels: PerformanceLevel[],
+): { students: StudentAnalysis[]; summary: AnalysisSummary } {
+  const analyzedStudents = calculator.students(students, questions, possibleScore, levels);
+  return { students: analyzedStudents, summary: calculator.summary(analyzedStudents) };
+}
+
 @Component({
   selector: 'app-exam-analysis',
   imports: [CommonModule, FormsModule, MatIconModule, PerformanceBarChartComponent, PerformanceDonutChartComponent, QuestionSuccessChartComponent, SkillOverviewChartComponent, TopicOverviewChartComponent, UiButtonComponent, UiFilterPanelComponent, UiPageHeaderComponent, UiSectionCardComponent, UiSelectComponent, UiStatCardComponent, UiTableActionsComponent],
@@ -313,16 +324,12 @@ export class ExamAnalysisComponent implements OnInit {
     if (possibleScore <= 0 || Math.abs(possibleScore - 100) <= 0.01) return '';
     return `مجموع درجات الأسئلة هو ${this.format(possibleScore)}، ويتم تحويل النتائج في التحليل تلقائيًا إلى مقياس 100.`;
   });
-  students = computed(() => {
+  normalizedAnalysis = computed(() => {
     const data = this.dataset();
-    if (!data) return [];
-    return this.calculator.students(this.filteredBaseStudents(), data.questions, this.questionMaxTotal(), this.levels());
+    return calculateNormalizedAnalysis(this.calculator, this.filteredBaseStudents(), data?.questions || [], this.questionMaxTotal(), this.levels());
   });
-  summary = computed(() => {
-    const calculated = this.calculator.summary(this.students());
-    const backend = this.dataset()?.backendAnalysis?.summary;
-    return this.selectedGroupId() === 'ALL' && backend ? { ...calculated, ...backend } : calculated;
-  });
+  students = computed(() => this.normalizedAnalysis().students);
+  summary = computed(() => this.normalizedAnalysis().summary);
   dataQualityWarnings = computed(() => {
     const data = this.dataset();
     if (!data) return [] as string[];

@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PERFORMANCE_LEVELS, AnalysisQuestion, AnalysisStudent, DimensionAnalysis, QuestionAnalysis, StudentAnalysis } from '../models/exam-analysis.model';
 import { ExamAnalysisCalculatorService } from '../services/exam-analysis-calculator.service';
-import { ALL_ANALYSIS_CLASSES, buildInterventionGroups, countFollowUpStudents, examAnalysisClassOptions, filterAnalysisStudentsByClass, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
+import { ALL_ANALYSIS_CLASSES, buildInterventionGroups, calculateNormalizedAnalysis, countFollowUpStudents, examAnalysisClassOptions, filterAnalysisStudentsByClass, filterAndSortQuestions, filterAndSortSkills, filterAndSortStudents, filterAndSortTopics, groupRecommendations, groupTargetedSkills, interventionSuccessCriterion, questionDetailUnavailable, recommendationSeverity } from './exam-analysis.component';
 import { resolveAnalysisStudentGroupIds } from '../services/exam-analysis-data.service';
 import { performanceDonutData } from '../components/performance-donut-chart.component';
 import { performanceGroupBarData } from '../components/performance-bar-chart.component';
@@ -378,6 +378,79 @@ describe('ExamAnalysis intervention plan presentation', () => {
   it('keeps the execution-status feature deferred', () => {
     expect(overviewTemplate).not.toContain('executionStatus');
     expect(overviewTemplate).not.toContain('completedAt');
+  });
+});
+
+describe('ExamAnalysis all-classes normalized KPI pipeline', () => {
+  const calculator = new ExamAnalysisCalculatorService();
+  const question: AnalysisQuestion = { id: 'q-1', questionNumber: 1, points: 89, topicId: 'topic', topicName: 'Topic', skillId: 'skill', skillName: 'Skill', typeId: 'type', typeName: 'Type' };
+  const row = (studentId: string, groupId: string, totalScore: number, isAbsent = false, achievedScore: number | null = totalScore): AnalysisStudent => ({
+    studentId, studentName: studentId, groupId, groupIds: [groupId], totalScore, isAbsent,
+    questionScores: [{ questionId: question.id, achievedScore }],
+  });
+  const dataset = [
+    row('A-1', 'A', 88), row('A-2', 'A', 58), row('A-absent', 'A', 0, true, null),
+    row('B-1', 'B', 13),
+    row('C-1', 'C', 0), row('C-2', 'C', 44.5),
+  ];
+  const analyze = (groupId: string) => calculateNormalizedAnalysis(
+    calculator,
+    filterAnalysisStudentsByClass(dataset, groupId),
+    [question],
+    89,
+    DEFAULT_PERFORMANCE_LEVELS,
+  );
+
+  it('calculates every ALL score KPI directly from normalized student rows', () => {
+    const result = analyze(ALL_ANALYSIS_CLASSES);
+    const normalized = [88, 58, 13, 0, 44.5].map(score => score / 89 * 100).sort((left, right) => left - right);
+    const average = normalized.reduce((sum, value) => sum + value, 0) / normalized.length;
+    const median = normalized[Math.floor(normalized.length / 2)];
+    const standardDeviation = Math.sqrt(normalized.reduce((sum, value) => sum + Math.pow(value - average, 2), 0) / normalized.length);
+
+    expect(result.summary.average).toBeCloseTo(average, 10);
+    expect(result.summary.median).toBeCloseTo(median, 10);
+    expect(result.summary.standardDeviation).toBeCloseTo(standardDeviation, 10);
+    expect(result.summary.passRate).toBe(60);
+    expect(result.summary.highest).toBeCloseTo(88 / 89 * 100, 10);
+    expect(result.summary.lowest).toBe(0);
+  });
+
+  it('uses the same calculator for ALL and every class without averaging class means', () => {
+    const all = analyze(ALL_ANALYSIS_CLASSES);
+    const classA = analyze('A');
+    const classB = analyze('B');
+    const classC = analyze('C');
+
+    expect(all.summary.average).toBeCloseTo((88 + 58 + 13 + 0 + 44.5) / 5 / 89 * 100, 10);
+    expect(classA.summary.average).toBeCloseTo((88 + 58) / 2 / 89 * 100, 10);
+    expect(classB.summary.average).toBeCloseTo(13 / 89 * 100, 10);
+    expect(classC.summary.average).toBeCloseTo(25, 10);
+    expect(all.summary.average).not.toBeCloseTo((classA.summary.average + classB.summary.average + classC.summary.average) / 3, 5);
+  });
+
+  it('recomputes without stale metrics while switching class A to B and back to ALL', () => {
+    const classA = analyze('A').summary;
+    const classB = analyze('B').summary;
+    const allAgain = analyze(ALL_ANALYSIS_CLASSES).summary;
+
+    expect(classA.highest).toBeCloseTo(88 / 89 * 100, 10);
+    expect(classB.highest).toBeCloseTo(13 / 89 * 100, 10);
+    expect(allAgain.highest).toBeCloseTo(88 / 89 * 100, 10);
+    expect(allAgain.average).not.toBe(classB.average);
+  });
+
+  it('keeps attendance and answer-count metrics in their original units', () => {
+    const result = analyze(ALL_ANALYSIS_CLASSES);
+    expect(result.summary).toMatchObject({ registered: 6, attended: 5, absent: 1, averageCorrect: 0.6, averageWrong: 0.4, averageUnanswered: 0 });
+    expect(result.students.find(student => student.studentId === 'C-1')).toMatchObject({ isAbsent: false, normalizedScore: 0 });
+    expect(result.students.find(student => student.studentId === 'A-absent')).toMatchObject({ isAbsent: true });
+  });
+
+  it('does not overlay a special backend summary when ALL is selected', () => {
+    expect(analysisComponentSource).toContain('calculateNormalizedAnalysis(this.calculator, this.filteredBaseStudents()');
+    expect(analysisComponentSource).not.toContain("this.selectedGroupId() === 'ALL' && backend");
+    expect(analysisComponentSource).not.toContain("const backend = this.dataset()?.backendAnalysis?.summary");
   });
 });
 

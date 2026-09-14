@@ -39,10 +39,22 @@ export interface ExamAnalysisDataset {
   students: AnalysisStudent[];
   questions: AnalysisQuestion[];
   groups: any[];
-  backendAnalysis?: any;
+  backendAnalysis?: ExamAnalysisBackendPayload;
+}
+
+export interface ExamAnalysisBackendPayload {
+  normalization?: {
+    possibleScore: number;
+    configuredExamMax: number;
+    analysisScale: 100;
+    available: boolean;
+  };
+  summary?: Partial<AnalysisSummary>;
+  questions?: unknown[];
 }
 
 export interface StudentAnalysis extends AnalysisStudent {
+  possibleScore: number;
   normalizedScore: number;
   level: PerformanceLevel;
   correct: number;

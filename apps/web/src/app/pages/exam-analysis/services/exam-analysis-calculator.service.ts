@@ -7,7 +7,9 @@ import {
 @Injectable({ providedIn: 'root' })
 export class ExamAnalysisCalculatorService {
   classify(score: number, levels: PerformanceLevel[]): PerformanceLevel {
-    return levels.find(level => score >= level.min && score <= level.max) ?? levels[levels.length - 1];
+    const matched = levels.find(level => score >= level.min && score <= level.max);
+    if (matched) return matched;
+    return [...levels].sort((left, right) => this.distanceFromLevel(score, left) - this.distanceFromLevel(score, right))[0] ?? levels[levels.length - 1];
   }
 
   validateLevels(levels: PerformanceLevel[]): string | null {
@@ -27,11 +29,22 @@ export class ExamAnalysisCalculatorService {
     return null;
   }
 
-  students(students: AnalysisStudent[], questions: AnalysisQuestion[], maxScore: number, levels: PerformanceLevel[]): StudentAnalysis[] {
+  normalizeScore(rawScore: number, questionMaxTotal: number): number | null {
+    if (!Number.isFinite(rawScore) || !Number.isFinite(questionMaxTotal) || questionMaxTotal <= 0) return null;
+    return rawScore / questionMaxTotal * 100;
+  }
+
+  private distanceFromLevel(score: number, level: PerformanceLevel): number {
+    if (score < level.min) return level.min - score;
+    if (score > level.max) return score - level.max;
+    return 0;
+  }
+
+  students(students: AnalysisStudent[], questions: AnalysisQuestion[], questionMaxTotal: number, levels: PerformanceLevel[]): StudentAnalysis[] {
     return students.map(student => {
-      const normalizedScore = student.isAbsent || student.totalScore === null || !maxScore
+      const normalizedScore = student.isAbsent || student.totalScore === null
         ? 0
-        : Math.max(0, Math.min(100, (Number(student.totalScore) / maxScore) * 100));
+        : this.normalizeScore(Number(student.totalScore), questionMaxTotal) ?? 0;
       let correct = 0, wrong = 0, unanswered = 0;
       for (const question of questions) {
         const answer = student.questionScores.find(score => score.questionId === question.id);
@@ -39,7 +52,7 @@ export class ExamAnalysisCalculatorService {
         else if (Number(answer.achievedScore) >= question.points * 0.5) correct++;
         else wrong++;
       }
-      return { ...student, normalizedScore, level: this.classify(normalizedScore, levels), correct, wrong, unanswered };
+      return { ...student, possibleScore: questionMaxTotal, normalizedScore, level: this.classify(normalizedScore, levels), correct, wrong, unanswered };
     });
   }
 

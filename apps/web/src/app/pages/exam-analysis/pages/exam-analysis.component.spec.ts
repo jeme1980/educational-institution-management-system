@@ -177,7 +177,7 @@ describe('ExamAnalysis students presentation', () => {
   const high = { id: 'high', name: 'مرتفع', min: 85, max: 100, color: '#16a34a' };
   const student = (overrides: Partial<StudentAnalysis> = {}): StudentAnalysis => ({
     studentId: 'internal-uuid-1', studentName: 'أحمد علي', totalScore: 12, isAbsent: false, questionScores: [], studentNumber: undefined,
-    normalizedScore: 60, level: low, correct: 2, wrong: 1, unanswered: 0, ...overrides,
+    possibleScore: 20, normalizedScore: 60, level: low, correct: 2, wrong: 1, unanswered: 0, ...overrides,
   });
 
   it('searches by student name only and keeps the existing sort/filter options', () => {
@@ -378,5 +378,77 @@ describe('ExamAnalysis intervention plan presentation', () => {
   it('keeps the execution-status feature deferred', () => {
     expect(overviewTemplate).not.toContain('executionStatus');
     expect(overviewTemplate).not.toContain('completedAt');
+  });
+});
+
+describe('ExamAnalysis score normalization', () => {
+  const calculator = new ExamAnalysisCalculatorService();
+  const rawStudent = (studentId: string, totalScore: number, isAbsent = false): AnalysisStudent => ({
+    studentId,
+    studentName: studentId,
+    totalScore,
+    isAbsent,
+    questionScores: [],
+  });
+
+  it('normalizes raw scores against the question maximum total without premature rounding', () => {
+    expect(calculator.normalizeScore(89, 89)).toBe(100);
+    expect(calculator.normalizeScore(44.5, 89)).toBe(50);
+    expect(calculator.normalizeScore(58, 89)).toBeCloseTo(65.1685393258, 9);
+    expect(calculator.normalizeScore(0, 89)).toBe(0);
+    expect(calculator.normalizeScore(37.5, 75)).toBe(50);
+    expect(calculator.normalizeScore(60, 120)).toBe(50);
+  });
+
+  it('returns unavailable for a zero denominator and does not clamp an over-maximum score', () => {
+    expect(calculator.normalizeScore(10, 0)).toBeNull();
+    expect(calculator.normalizeScore(110, 89)).toBeCloseTo(123.5955, 4);
+    expect(calculator.students([rawStudent('over-max', 110)], [], 89, DEFAULT_PERFORMANCE_LEVELS)[0].level.id).toBe('high');
+  });
+
+  it('calculates overview metrics and performance levels on the normalized 100 scale', () => {
+    const analyzed = calculator.students([
+      rawStudent('A', 89), rawStudent('B', 44.5), rawStudent('C', 58), rawStudent('D', 0),
+    ], [], 89, DEFAULT_PERFORMANCE_LEVELS);
+    const summary = calculator.summary(analyzed);
+
+    expect(analyzed.map(student => student.normalizedScore)).toEqual([100, 50, 58 / 89 * 100, 0]);
+    expect(analyzed.map(student => student.possibleScore)).toEqual([89, 89, 89, 89]);
+    expect(summary.average).toBeCloseTo(53.7921, 4);
+    expect(summary.median).toBeCloseTo(57.5843, 4);
+    expect(summary.standardDeviation).toBeCloseTo(35.9603, 4);
+    expect(summary.highest).toBe(100);
+    expect(summary.lowest).toBe(0);
+    expect(summary.passRate).toBe(75);
+    expect(analyzed.map(student => student.level.id)).toEqual(['high', 'low', 'lower-mid', 'low']);
+  });
+
+  it('keeps absence distinct from a present zero score', () => {
+    const [absent, presentZero] = calculator.students([
+      rawStudent('absent', 0, true), rawStudent('present-zero', 0),
+    ], [], 89, DEFAULT_PERFORMANCE_LEVELS);
+    expect(absent).toMatchObject({ isAbsent: true, normalizedScore: 0 });
+    expect(presentZero).toMatchObject({ isAbsent: false, normalizedScore: 0 });
+    expect(calculator.summary([absent, presentZero])).toMatchObject({ attended: 1, absent: 1, lowest: 0 });
+  });
+
+  it('retains per-question and dimension earned-over-possible percentages', () => {
+    const question: AnalysisQuestion = { id: 'q-1', questionNumber: 1, points: 3, topicId: 'topic', topicName: 'Topic', skillId: 'skill', skillName: 'Skill', typeId: 'type', typeName: 'Type' };
+    const students: AnalysisStudent[] = [{ ...rawStudent('student', 2), questionScores: [{ questionId: question.id, achievedScore: 2 }] }];
+    expect(calculator.questions([question], students, DEFAULT_PERFORMANCE_LEVELS)[0].successRate).toBeCloseTo(66.6667, 4);
+    expect(calculator.dimensions('skill', [question], students, DEFAULT_PERFORMANCE_LEVELS)[0].masteryRate).toBeCloseTo(66.6667, 4);
+  });
+
+  it('uses the established 50 percent pass threshold after normalization', () => {
+    const analyzed = calculator.students([rawStudent('fail', 44.49), rawStudent('pass', 44.5)], [], 89, DEFAULT_PERFORMANCE_LEVELS);
+    expect(calculator.summary(analyzed).passRate).toBe(50);
+  });
+
+  it('shows the informational normalization note and the unavailable state without a mismatch warning', () => {
+    expect(overviewTemplate).toContain('normalizationInfo()');
+    expect(overviewTemplate).toContain('لا يمكن حساب التحليل قبل تحديد درجات الأسئلة.');
+    expect(analysisComponentSource).toContain('مجموع درجات الأسئلة هو');
+    expect(analysisComponentSource).not.toContain('لا يساوي العلامة النهائية للامتحان');
+    expect(overviewTemplate).toContain("student.totalScore + ' / ' + format(student.possibleScore)");
   });
 });

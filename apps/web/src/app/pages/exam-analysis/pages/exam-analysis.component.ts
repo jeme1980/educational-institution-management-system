@@ -302,10 +302,21 @@ export class ExamAnalysisComponent implements OnInit {
     const groupId = this.selectedGroupId();
     return filterAnalysisStudentsByClass(data.students, groupId);
   });
+  questionMaxTotal = computed(() => {
+    const data = this.dataset();
+    if (!data) return 0;
+    return Number(data.backendAnalysis?.normalization?.possibleScore ?? data.questions.reduce((sum, question) => sum + Number(question.points || 0), 0));
+  });
+  analysisAvailable = computed(() => this.questionMaxTotal() > 0);
+  normalizationInfo = computed(() => {
+    const possibleScore = this.questionMaxTotal();
+    if (possibleScore <= 0 || Math.abs(possibleScore - 100) <= 0.01) return '';
+    return `مجموع درجات الأسئلة هو ${this.format(possibleScore)}، ويتم تحويل النتائج في التحليل تلقائيًا إلى مقياس 100.`;
+  });
   students = computed(() => {
     const data = this.dataset();
     if (!data) return [];
-    return this.calculator.students(this.filteredBaseStudents(), data.questions, Number(data.exam.maxScore), this.levels());
+    return this.calculator.students(this.filteredBaseStudents(), data.questions, this.questionMaxTotal(), this.levels());
   });
   summary = computed(() => {
     const calculated = this.calculator.summary(this.students());
@@ -316,11 +327,11 @@ export class ExamAnalysisComponent implements OnInit {
     const data = this.dataset();
     if (!data) return [] as string[];
     const warnings: string[] = [];
-    const questionTotal = data.questions.reduce((sum, question) => sum + Number(question.points || 0), 0);
-    const examTotal = Number(data.exam.maxScore || 0);
+    const questionTotal = this.questionMaxTotal();
     const notRecorded = data.students.filter(student => !student.isAbsent && student.totalScore === null).length;
     if (notRecorded) warnings.push(`يوجد ${notRecorded} طالب دون نتيجة محفوظة؛ لا يُحتسب ضمن الحضور أو الغياب حتى يتم رصد نتيجته.`);
-    if (data.questions.length && Math.abs(questionTotal - examTotal) > 0.01) warnings.push(`مجموع علامات الأسئلة (${questionTotal}) لا يساوي العلامة النهائية للامتحان (${examTotal}).`);
+    if (data.questions.some(question => Number(question.points) <= 0)) warnings.push('يوجد سؤال بدرجة قصوى غير صالحة؛ راجع إعداد درجات الأسئلة.');
+    if (questionTotal > 0 && data.students.some(student => !student.isAbsent && student.totalScore !== null && Number(student.totalScore) > questionTotal)) warnings.push(`توجد نتيجة خام تتجاوز مجموع درجات الأسئلة (${this.format(questionTotal)})؛ راجع بيانات الرصد.`);
     if (!data.questions.length) warnings.push('لا توجد أسئلة مرتبطة بهذا الامتحان، لذلك لا يمكن استخراج تحليل الطلاب والمهارات والموضوعات.');
     return warnings;
   });
@@ -574,7 +585,7 @@ export class ExamAnalysisComponent implements OnInit {
     const names = new Map(data.groups.map(group => [group.studyGroupId, group.studyGroupName || group.nameAr || 'الشعبة']));
     const groupIds = [...new Set(data.students.flatMap(student => student.groupIds?.length ? student.groupIds : student.groupId ? [student.groupId] : []).filter(Boolean))];
     return groupIds.map(groupId => {
-      const analyzed = this.calculator.students(data.students.filter(student => student.groupIds?.includes(groupId) || student.groupId === groupId), data.questions, Number(data.exam.maxScore), this.levels());
+      const analyzed = this.calculator.students(data.students.filter(student => student.groupIds?.includes(groupId) || student.groupId === groupId), data.questions, this.questionMaxTotal(), this.levels());
       return { id: groupId, name: names.get(groupId) || analyzed[0]?.groupName || 'الشعبة', summary: this.calculator.summary(analyzed) };
     });
   }

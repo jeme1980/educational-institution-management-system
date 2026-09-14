@@ -4,7 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
 import { eligibleStudentIds, getEligibleExamStudents } from '../services/exam-eligibility.service';
-import { isPassingPercentage, isPassingScore } from '../services/exam-metrics.service';
+import { isPassingPercentage, isPassingScore, normalizeExamAnalysisScore } from '../services/exam-metrics.service';
 
 const uuid = (value: unknown): string | null => { const text = String(value || ''); return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text) ? text : null; };
 const context = (req: ContextRequest) => ({ institutionId: req.context?.institutionId || '', academicYearId: req.context?.academicYearId || '' });
@@ -383,16 +383,38 @@ export async function getExamsByIdAnalysis(req: ContextRequest, res: Response): 
   ]);
   const attended = results.filter(result => !result.isAbsence);
   const scores = await prisma.studentQuestionScore.findMany({ where: { institutionId, examQuestionId: { in: questions.map(question => question.id) }, studentId: { in: attended.map(result => result.studentId) } }, select: { examQuestionId: true, studentId: true, score: true } });
-  const maxScore = Number(exam.maxScore) || 0;
-  const percentages = attended.map(result => maxScore ? Number(result.totalScore) / maxScore * 100 : 0);
+  const questionMaxTotal = questions.reduce((sum, question) => sum + Number(question.maxScore), 0);
+  const percentages = attended
+    .map(result => normalizeExamAnalysisScore(Number(result.totalScore), questionMaxTotal))
+    .filter((value): value is number => value !== null);
   const average = percentages.length ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length : 0;
+  const sortedPercentages = [...percentages].sort((left, right) => left - right);
+  const middle = Math.floor(sortedPercentages.length / 2);
+  const median = sortedPercentages.length ? (sortedPercentages.length % 2 ? sortedPercentages[middle] : (sortedPercentages[middle - 1] + sortedPercentages[middle]) / 2) : 0;
+  const standardDeviation = percentages.length ? Math.sqrt(percentages.reduce((sum, value) => sum + Math.pow(value - average, 2), 0) / percentages.length) : 0;
   const questionAnalysis = questions.map(question => {
     const rows = scores.filter(score => score.examQuestionId === question.id);
     const achieved = rows.reduce((sum, row) => sum + Number(row.score), 0);
     const questionMax = Number(question.maxScore) || 0;
     return { questionId: question.id, questionNumber: question.questionNumber, topicId: question.topicId, skillId: question.skillId, answeredCount: rows.length, successRate: attended.length && questionMax ? achieved / (attended.length * questionMax) * 100 : 0 };
   });
-  return res.json({ source: 'database', scope: { institutionId, academicYearId, examId: exam.id }, summary: { registered: eligible.size, attended: attended.length, absent: results.filter(result => result.isAbsence).length, average, highest: percentages.length ? Math.max(...percentages) : 0, lowest: percentages.length ? Math.min(...percentages) : 0, passRate: attended.length ? attended.filter(result => isPassingScore(Number(result.totalScore), maxScore)).length / attended.length * 100 : 0 }, questions: questionAnalysis });
+  return res.json({
+    source: 'database',
+    scope: { institutionId, academicYearId, examId: exam.id },
+    normalization: { possibleScore: questionMaxTotal, configuredExamMax: Number(exam.maxScore), analysisScale: 100, available: questionMaxTotal > 0 },
+    summary: {
+      registered: eligible.size,
+      attended: attended.length,
+      absent: results.filter(result => result.isAbsence).length,
+      average,
+      median,
+      standardDeviation,
+      highest: percentages.length ? Math.max(...percentages) : 0,
+      lowest: percentages.length ? Math.min(...percentages) : 0,
+      passRate: percentages.length ? percentages.filter(isPassingPercentage).length / percentages.length * 100 : 0,
+    },
+    questions: questionAnalysis,
+  });
 }
 
 export async function getExamTypes(req: ContextRequest, res: Response): Promise<any> { return res.json(await prisma.examType.findMany({ where: { institutionId: context(req).institutionId, isActive: true }, orderBy: { sortOrder: 'asc' } })); }

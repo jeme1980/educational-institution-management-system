@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService, ExamItem } from '../../../core/services/api.service';
@@ -12,13 +12,19 @@ import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.se
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
+import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
 
-type QuestionContext = { topics: any[]; skills: any[]; gradeLevels: any[]; warning: string | null };
+interface QuestionContext { topics: any[]; skills: any[]; gradeLevels: any[]; warning: string | null }
+type ExamFilterName = 'subject' | 'grade' | 'class' | 'teacher' | 'period' | 'examType' | 'published';
+interface ExamClassOption { id: string; nameAr: string; gradeLevelId: string; gradeLevelName: string }
+interface ExamTeacherOption { id: string; nameAr: string }
+export const EXAM_FILTER_ALL = 'all';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-exams',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, ExamTableComponent, ExamResultsDialogComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, ExamTableComponent, ExamResultsDialogComponent, UiButtonComponent, UiPageHeaderComponent, UiStatCardComponent, UiSelectComponent, UiInputComponent],
   templateUrl: './exams.component.html',
   styleUrl: './exams.component.css',
 })
@@ -30,9 +36,13 @@ export class ExamsComponent implements OnInit {
   private readonly router = inject(Router);
 
   readonly search = signal('');
-  readonly subjectFilter = signal('');
-  readonly academicPeriodFilter = signal('');
-  readonly publishedFilter = signal('');
+  readonly subjectFilter = signal(EXAM_FILTER_ALL);
+  readonly gradeFilter = signal(EXAM_FILTER_ALL);
+  readonly classFilter = signal(EXAM_FILTER_ALL);
+  readonly teacherFilter = signal(EXAM_FILTER_ALL);
+  readonly academicPeriodFilter = signal(EXAM_FILTER_ALL);
+  readonly examTypeFilter = signal(EXAM_FILTER_ALL);
+  readonly publishedFilter = signal(EXAM_FILTER_ALL);
   readonly resultSearch = signal('');
   readonly showModal = signal(false);
   readonly showResultsPanel = signal(false);
@@ -70,16 +80,60 @@ export class ExamsComponent implements OnInit {
   });
 
   readonly exams = computed(() => this.state.exams());
+  readonly classOptions = computed<ExamClassOption[]>(() => {
+    const options = new Map<string, ExamClassOption>();
+    for (const item of this.state.classes()) {
+      options.set(item.id, {
+        id: item.id,
+        nameAr: item.nameAr,
+        gradeLevelId: item.gradeLevelId,
+        gradeLevelName: item.gradeLevelInfo?.nameAr || item.gradeLevel || '',
+      });
+    }
+    for (const exam of this.exams()) for (const link of exam.examGroups || []) {
+      const classRoom = link.studyGroup.classRoom;
+      if (classRoom) options.set(classRoom.id, { id: classRoom.id, nameAr: classRoom.nameAr, gradeLevelId: classRoom.gradeLevelId, gradeLevelName: classRoom.gradeLevel?.nameAr || '' });
+    }
+    return [...options.values()].sort((a, b) => a.nameAr.localeCompare(b.nameAr, 'ar'));
+  });
+  readonly gradeOptions = computed(() => {
+    const options = new Map<string, { id: string; nameAr: string }>();
+    for (const item of this.classOptions()) if (item.gradeLevelId) options.set(item.gradeLevelId, { id: item.gradeLevelId, nameAr: item.gradeLevelName });
+    return [...options.values()].sort((a, b) => a.nameAr.localeCompare(b.nameAr, 'ar'));
+  });
+  readonly visibleClassOptions = computed(() => this.gradeFilter() === EXAM_FILTER_ALL
+    ? this.classOptions()
+    : this.classOptions().filter(item => item.gradeLevelId === this.gradeFilter()));
+  readonly teacherOptions = computed<ExamTeacherOption[]>(() => {
+    const options = new Map<string, ExamTeacherOption>();
+    for (const exam of this.exams()) for (const link of exam.examGroups || []) {
+      const assignment = link.studyGroup.staffAssignment;
+      const teacher = assignment?.staffMember;
+      if (assignment?.staffMemberId && teacher) options.set(assignment.staffMemberId, { id: assignment.staffMemberId, nameAr: `${teacher.firstNameAr} ${teacher.familyNameAr}`.trim() });
+    }
+    return [...options.values()].sort((a, b) => a.nameAr.localeCompare(b.nameAr, 'ar'));
+  });
+  readonly examTypeOptions = computed(() => {
+    const options = new Map<string, { id: string; nameAr: string }>();
+    for (const type of this.apiService.examTypes()) if (type.isActive !== false) options.set(type.id, { id: type.id, nameAr: type.nameAr });
+    for (const exam of this.exams()) if (exam.examType) options.set(exam.examType.id, { id: exam.examType.id, nameAr: exam.examType.nameAr });
+    return [...options.values()];
+  });
   readonly filteredExams = computed(() => {
     const query = this.search().trim().toLocaleLowerCase('ar');
     return this.exams().filter(exam =>
-      (!this.subjectFilter() || exam.subjectId === this.subjectFilter()) &&
-      (!this.academicPeriodFilter() || exam.academicPeriodId === this.academicPeriodFilter()) &&
-      (!this.publishedFilter() || String(exam.isPublished) === this.publishedFilter()) &&
+      (this.subjectFilter() === EXAM_FILTER_ALL || exam.subjectId === this.subjectFilter()) &&
+      (this.gradeFilter() === EXAM_FILTER_ALL || this.matchesExamGroup(exam, group => group.classRoom?.gradeLevelId === this.gradeFilter())) &&
+      (this.classFilter() === EXAM_FILTER_ALL || this.matchesExamGroup(exam, group => group.classId === this.classFilter() || group.classRoom?.id === this.classFilter())) &&
+      (this.teacherFilter() === EXAM_FILTER_ALL || this.matchesExamGroup(exam, group => group.staffAssignment?.staffMemberId === this.teacherFilter())) &&
+      (this.academicPeriodFilter() === EXAM_FILTER_ALL || exam.academicPeriodId === this.academicPeriodFilter()) &&
+      (this.examTypeFilter() === EXAM_FILTER_ALL || exam.examTypeId === this.examTypeFilter()) &&
+      (this.publishedFilter() === EXAM_FILTER_ALL || String(exam.isPublished) === this.publishedFilter()) &&
       (!query || [exam.titleAr, exam.titleHe, exam.subject?.nameAr, exam.examType?.nameAr, exam.academicPeriod?.nameAr]
         .some(value => String(value || '').toLocaleLowerCase('ar').includes(query))),
     );
   });
+  readonly hasActiveFilters = computed(() => Boolean(this.search()) || [this.subjectFilter(), this.gradeFilter(), this.classFilter(), this.teacherFilter(), this.academicPeriodFilter(), this.examTypeFilter(), this.publishedFilter()].some(value => value !== EXAM_FILTER_ALL));
   readonly availableStudyGroups = computed(() => {
     const exam = this.selectedExam();
     return this.state.studyGroups().filter(group => group.subjectId === exam?.subjectId && group.academicYearId === exam?.academicYearId);
@@ -101,6 +155,14 @@ export class ExamsComponent implements OnInit {
   readonly unlinkedExams = computed(() => this.exams().filter(exam => !this.hasGroups(exam)).length);
   readonly unpublishedExams = computed(() => this.exams().filter(exam => !exam.isPublished).length);
   readonly fullyRecordedExams = computed(() => this.exams().filter(exam => this.isFullyRecorded(exam)).length);
+  private observedAcademicYearId = this.apiService.selectedAcademicYearId();
+  private readonly academicYearEffect = effect(() => {
+    const academicYearId = this.apiService.selectedAcademicYearId();
+    if (academicYearId === this.observedAcademicYearId) return;
+    this.observedAcademicYearId = academicYearId;
+    this.resetYearScopedFilters();
+    void this.refresh();
+  });
 
   ngOnInit(): void { void this.refresh(); }
 
@@ -112,20 +174,56 @@ export class ExamsComponent implements OnInit {
       this.apiService.loadQuestionTypes(),
       this.apiService.loadAcademicPeriods(),
       this.apiService.loadSubjects(),
+      this.state.loadClasses(),
       this.state.loadStudyGroups(),
     ]);
+    this.reconcileYearScopedFilters();
     this.isLoading.set(false);
   }
 
-  updateSearch(event: Event): void { this.search.set((event.target as HTMLInputElement).value); }
   updateResultSearch(event: Event): void { this.resultSearch.set((event.target as HTMLInputElement).value); }
-  setFilter(name: 'subject' | 'period' | 'published', event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
+  setFilter(name: ExamFilterName, value: string): void {
     if (name === 'subject') this.subjectFilter.set(value);
+    if (name === 'grade') {
+      this.gradeFilter.set(value);
+      if (this.classFilter() !== EXAM_FILTER_ALL && !this.visibleClassOptions().some(item => item.id === this.classFilter())) this.classFilter.set(EXAM_FILTER_ALL);
+    }
+    if (name === 'class') this.classFilter.set(value);
+    if (name === 'teacher') this.teacherFilter.set(value);
     if (name === 'period') this.academicPeriodFilter.set(value);
+    if (name === 'examType') this.examTypeFilter.set(value);
     if (name === 'published') this.publishedFilter.set(value);
   }
-  clearFilters(): void { this.search.set(''); this.subjectFilter.set(''); this.academicPeriodFilter.set(''); this.publishedFilter.set(''); }
+  clearFilters(): void {
+    this.search.set('');
+    this.subjectFilter.set(EXAM_FILTER_ALL);
+    this.gradeFilter.set(EXAM_FILTER_ALL);
+    this.classFilter.set(EXAM_FILTER_ALL);
+    this.teacherFilter.set(EXAM_FILTER_ALL);
+    this.academicPeriodFilter.set(EXAM_FILTER_ALL);
+    this.examTypeFilter.set(EXAM_FILTER_ALL);
+    this.publishedFilter.set(EXAM_FILTER_ALL);
+  }
+
+  private matchesExamGroup(exam: ExamItem, predicate: (group: NonNullable<ExamItem['examGroups']>[number]['studyGroup']) => boolean): boolean {
+    return (exam.examGroups || []).some(link => predicate(link.studyGroup));
+  }
+
+  private resetYearScopedFilters(): void {
+    this.subjectFilter.set(EXAM_FILTER_ALL);
+    this.gradeFilter.set(EXAM_FILTER_ALL);
+    this.classFilter.set(EXAM_FILTER_ALL);
+    this.teacherFilter.set(EXAM_FILTER_ALL);
+    this.academicPeriodFilter.set(EXAM_FILTER_ALL);
+  }
+
+  private reconcileYearScopedFilters(): void {
+    if (this.subjectFilter() !== EXAM_FILTER_ALL && !this.apiService.subjects().some(item => item.id === this.subjectFilter())) this.subjectFilter.set(EXAM_FILTER_ALL);
+    if (this.gradeFilter() !== EXAM_FILTER_ALL && !this.gradeOptions().some(item => item.id === this.gradeFilter())) this.gradeFilter.set(EXAM_FILTER_ALL);
+    if (this.classFilter() !== EXAM_FILTER_ALL && !this.visibleClassOptions().some(item => item.id === this.classFilter())) this.classFilter.set(EXAM_FILTER_ALL);
+    if (this.teacherFilter() !== EXAM_FILTER_ALL && !this.teacherOptions().some(item => item.id === this.teacherFilter())) this.teacherFilter.set(EXAM_FILTER_ALL);
+    if (this.academicPeriodFilter() !== EXAM_FILTER_ALL && !this.apiService.academicPeriods().some(item => item.id === this.academicPeriodFilter())) this.academicPeriodFilter.set(EXAM_FILTER_ALL);
+  }
 
   openAdd(): void {
     void this.router.navigate(['/exams/new']);
@@ -263,7 +361,7 @@ export class ExamsComponent implements OnInit {
     const headers = split(lines[0]).map(value => this.normalizeImportHeader(value)); let scoreIndex = headers.findIndex(value => ['علامةالسؤال', 'العلامة', 'maxscore', 'score', 'mark'].includes(value)); let textIndex = headers.findIndex(value => ['نصالسؤال', 'السؤال', 'contentar', 'question', 'text'].includes(value)); if (scoreIndex < 0 && textIndex < 0 && headers.length >= 2) { scoreIndex = 0; textIndex = 1; } if (scoreIndex < 0 || textIndex < 0) throw new Error('INVALID_HEADERS');
     return lines.slice(1).map(line => { const values = split(line); return { maxScore: values[scoreIndex], contentAr: values[textIndex] }; });
   }
-  private normalizeImportHeader(value: string): string { return String(value || '').replace(/^\uFEFF/, '').replace(/[\s_\-]+/g, '').trim().toLocaleLowerCase('ar'); }
+  private normalizeImportHeader(value: string): string { return String(value || '').replace(/^\uFEFF/, '').replace(/[\s_-]+/g, '').trim().toLocaleLowerCase('ar'); }
   private importCellText(value: any): string {
     if (value == null) return '';
     if (typeof value === 'object' && Array.isArray(value.richText)) return value.richText.map((item: any) => item.text || '').join('');

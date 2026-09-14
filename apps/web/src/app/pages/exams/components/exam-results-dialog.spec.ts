@@ -236,6 +236,10 @@ describe('ExamsComponent result persistence', () => {
   function createComponent(options: { save?: boolean; refreshed?: any } = {}) {
     const order: string[] = [];
     const api = {
+      selectedAcademicYearId: signal('year-1'),
+      examTypes: signal([]),
+      academicPeriods: signal([]),
+      subjects: signal([]),
       examResultsSaveError: signal(''),
       saveExamResults: vi.fn().mockImplementation(async () => { order.push('POST'); return options.save ?? true; }),
       loadExamResults: vi.fn().mockImplementation(async () => { order.push('GET'); return options.refreshed === undefined ? { results: [{ ...presentResult, totalScore: 17 }], questions: [question] } : options.refreshed; }),
@@ -246,8 +250,10 @@ describe('ExamsComponent result persistence', () => {
     };
     const state = {
       exams: signal([]),
+      classes: signal([]),
       studyGroups: signal([]),
       loadExams: vi.fn().mockResolvedValue(true),
+      loadClasses: vi.fn().mockResolvedValue(true),
       loadStudyGroups: vi.fn().mockResolvedValue(true),
     };
     TestBed.configureTestingModule({

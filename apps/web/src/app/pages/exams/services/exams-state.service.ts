@@ -27,6 +27,7 @@ export class ExamsStateService {
   }
 
   loadStudyGroups() { return this.apiService.loadStudyGroups(); }
+  loadClasses() { return this.apiService.loadClasses(); }
   loadExamQuestions(id: string) { return this.apiService.loadExamQuestions(id); }
   saveExamQuestions(id: string, questions: any[]) { return this.apiService.saveExamQuestions(id, questions); }
   loadExamStudyGroups(id: string) { return this.apiService.loadExamStudyGroups(id); }

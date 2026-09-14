@@ -66,7 +66,29 @@ async function persistPostResultQuestions(tx: any, exam: any, institutionId: str
 
 export async function getExams(req: ContextRequest, res: Response): Promise<any> {
   const { institutionId, academicYearId } = context(req);
-  const exams = await prisma.exam.findMany({ where: { institutionId, academicYearId, archivedAt: null }, include: { subject: { select: { id: true, nameAr: true, nameHe: true } }, academicPeriod: { select: { id: true, nameAr: true, startDate: true, endDate: true } }, examType: { select: { id: true, nameAr: true, nameHe: true } }, _count: { select: { studentExamResults: true, examQuestions: true, examGroups: true } } }, orderBy: [{ examDate: 'asc' }, { titleAr: 'asc' }] });
+  const exams = await prisma.exam.findMany({
+    where: { institutionId, academicYearId, archivedAt: null },
+    include: {
+      subject: { select: { id: true, nameAr: true, nameHe: true } },
+      academicPeriod: { select: { id: true, nameAr: true, startDate: true, endDate: true } },
+      examType: { select: { id: true, nameAr: true, nameHe: true } },
+      examGroups: {
+        select: {
+          studyGroupId: true,
+          studyGroup: {
+            select: {
+              classId: true,
+              staffAssignmentId: true,
+              classRoom: { select: { id: true, nameAr: true, gradeLevelId: true, gradeLevel: { select: { id: true, nameAr: true } } } },
+              staffAssignment: { select: { id: true, staffMemberId: true, staffMember: { select: { id: true, firstNameAr: true, familyNameAr: true } } } },
+            },
+          },
+        },
+      },
+      _count: { select: { studentExamResults: true, examQuestions: true, examGroups: true } },
+    },
+    orderBy: [{ examDate: 'asc' }, { titleAr: 'asc' }],
+  });
   const examIds = exams.map(exam => exam.id);
   const links = await prisma.examStudyGroup.findMany({ where: { institutionId, examId: { in: examIds } }, select: { examId: true, studyGroup: { select: { students: { select: { studentEnrollment: { select: { studentId: true } } } } } } } });
   const expected = new Map<string, Set<string>>();

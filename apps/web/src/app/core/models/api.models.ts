@@ -42,16 +42,16 @@ export interface DashboardStats {
     gradeLabel: string;
     statusName: string;
   }[];
-  studentsByFeature?: Array<{ id: string; label: string; count: number }>;
-  studentsByEnrollmentStatus?: Array<{ id: string; label: string; count: number }>;
-  studentsByTown?: Array<{ id: string; label: string; count: number }>;
-  classDensity?: Array<{ id: string; label: string; stage: string; className: string; classCode: string | null; gradeCodeNumber: number; parallelNumber: number; count: number }>;
-  staffByRole?: Array<{ id: string; label: string; isTeachingRole: boolean; count: number }>;
+  studentsByFeature?: { id: string; label: string; count: number }[];
+  studentsByEnrollmentStatus?: { id: string; label: string; count: number }[];
+  studentsByTown?: { id: string; label: string; count: number }[];
+  classDensity?: { id: string; label: string; stage: string; className: string; classCode: string | null; gradeCodeNumber: number; parallelNumber: number; count: number }[];
+  staffByRole?: { id: string; label: string; isTeachingRole: boolean; count: number }[];
   subjectCoverage?: { total: number; assigned: number; unassigned: number };
   teacherStudentRatio?: { teachers: number; students: number; studentsPerTeacher: number };
-  examStatus?: Array<{ id: string; label: string; count: number }>;
-  performance?: { average: number; gradedStudents: number; bySubject: Array<{ id: string; label: string; average: number; count: number }> };
-  skillPerformance?: Array<{ id: string; label: string; average: number; count: number; kind: 'skill' | 'topic' }>;
+  examStatus?: { id: string; label: string; count: number }[];
+  performance?: { average: number; gradedStudents: number; bySubject: { id: string; label: string; average: number; count: number }[] };
+  skillPerformance?: { id: string; label: string; average: number; count: number; kind: 'skill' | 'topic' }[];
   support?: { specialNeeds: number; medicalProfiles: number; allergiesOrChronic: number; guardiansLinked: number; guardianCoveragePercent: number };
 }
 
@@ -297,6 +297,15 @@ export interface ExamItem {
   subject?: LookupItem | null;
   academicPeriod?: LookupItem | null;
   examType?: LookupItem | null;
+  examGroups?: {
+    studyGroupId: string;
+    studyGroup: {
+      classId?: string | null;
+      staffAssignmentId?: string | null;
+      classRoom?: { id: string; nameAr: string; gradeLevelId: string; gradeLevel?: { id: string; nameAr: string } | null } | null;
+      staffAssignment?: { id: string; staffMemberId: string; staffMember?: { id: string; firstNameAr: string; familyNameAr: string } | null } | null;
+    };
+  }[];
   _count?: { studentExamResults: number; examQuestions: number; examGroups: number };
   metrics?: { expectedStudents: number; recordedStudents: number };
 }

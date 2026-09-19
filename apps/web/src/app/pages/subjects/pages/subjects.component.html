@@ -170,8 +170,8 @@
           @let isSelected = selectedSubject().id === subject.id;
 
           <div
-            (click)="selectedSubjectId.set(subject.id)"
-            (keydown.enter)="selectedSubjectId.set(subject.id)"
+            (click)="selectSubject(subject.id)"
+            (keydown.enter)="selectSubject(subject.id)"
             tabindex="0"
             [class]="isSelected ? 'bg-white border-[#00236f] ring-2 ring-[#00236f]/10 shadow-md' : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
             class="p-4 rounded-2xl border transition-all cursor-pointer relative group"
@@ -236,8 +236,190 @@
       </div>
     </div>
 
-    <!-- Right Column: Detail View for Selected Subject (Topics & Skills) -->
-    <div class="lg:col-span-7">
+    <!-- Right Column: scalable curriculum management for the selected subject -->
+    <div class="lg:col-span-7 curriculum-detail">
+      @if (selectedSubject(); as activeSubject) {
+        <section class="curriculum-panel" aria-labelledby="curriculum-subject-title">
+          <header class="curriculum-header">
+            <div>
+              <p class="curriculum-header__eyebrow">تفاصيل المادة</p>
+              <h2 id="curriculum-subject-title">{{ activeSubject.nameAr }}</h2>
+              <p>إدارة مواضيع المنهاج والمهارات التعليمية حسب الطبقة.</p>
+            </div>
+            <ui-button size="sm" variant="secondary" [hidden]="!canUpdate()" (activated)="openEditSubjectModal(activeSubject)">
+              <mat-icon aria-hidden="true">edit</mat-icon>
+              تعديل المادة
+            </ui-button>
+          </header>
+
+          <div class="curriculum-tabs" role="tablist" aria-label="محتوى المادة">
+            <button
+              id="topics-tab"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="curriculumTab() === 'topics'"
+              aria-controls="curriculum-tab-panel"
+              [class.curriculum-tab--active]="curriculumTab() === 'topics'"
+              (click)="setCurriculumTab('topics')">
+              المواضيع <span>{{ topicFilteredCount() }}</span>
+            </button>
+            <button
+              id="skills-tab"
+              type="button"
+              role="tab"
+              [attr.aria-selected]="curriculumTab() === 'skills'"
+              aria-controls="curriculum-tab-panel"
+              [class.curriculum-tab--active]="curriculumTab() === 'skills'"
+              (click)="setCurriculumTab('skills')">
+              المهارات <span>{{ skillFilteredCount() }}</span>
+            </button>
+          </div>
+
+          <div class="curriculum-toolbar" aria-label="تصفية محتوى المادة">
+            <label class="curriculum-filter curriculum-filter--search" for="curriculum-search">
+              <span>البحث</span>
+              <input
+                id="curriculum-search"
+                type="search"
+                [value]="curriculumSearch()"
+                [placeholder]="curriculumSearchPlaceholder()"
+                (input)="setCurriculumSearch($event)" />
+            </label>
+            <label class="curriculum-filter" for="curriculum-grade">
+              <span>الطبقة</span>
+              <select id="curriculum-grade" [value]="selectedGradeId()" (change)="setCurriculumGrade($event)">
+                <option value="all">كل الطبقات</option>
+                @for (grade of curriculumGradeOptions(); track grade.id) {
+                  <option [value]="grade.id">{{ grade.nameAr }}</option>
+                }
+              </select>
+            </label>
+            <label class="curriculum-filter" for="curriculum-status">
+              <span>الحالة</span>
+              <select id="curriculum-status" [value]="curriculumStatus()" (change)="setCurriculumStatus($event)">
+                <option value="all">كل الحالات</option>
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+              </select>
+            </label>
+          </div>
+
+          <div
+            id="curriculum-tab-panel"
+            class="curriculum-results"
+            role="tabpanel"
+            [attr.aria-labelledby]="curriculumTab() === 'topics' ? 'topics-tab' : 'skills-tab'">
+            <div class="curriculum-results__summary">
+              <p>
+                @if (selectedGradeId() === 'all') {
+                  {{ filteredCurriculumItems().length }} {{ curriculumItemLabel() }} ضمن {{ curriculumGroups().length }} طبقة
+                } @else {
+                  {{ filteredCurriculumItems().length }} {{ curriculumItemLabel() }} في {{ selectedGradeLabel() }}
+                }
+              </p>
+              @if (canCreate()) {
+                <ui-button
+                  size="sm"
+                  variant="primary"
+                  (activated)="curriculumTab() === 'topics' ? openCreateTopicModal() : openCreateSkillModal()">
+                  <mat-icon aria-hidden="true">add</mat-icon>
+                  {{ curriculumTab() === 'topics' ? 'إضافة موضوع' : 'إضافة مهارة' }}
+                </ui-button>
+              }
+            </div>
+
+            @if (filteredCurriculumItems().length && selectedGradeId() === 'all') {
+              <div class="curriculum-groups">
+                @for (group of curriculumGroups(); track group.gradeLevelId) {
+                  <section class="grade-group">
+                    <button
+                      type="button"
+                      class="grade-group__header"
+                      [attr.aria-expanded]="!collapsedGradeIds().has(group.gradeLevelId)"
+                      [attr.aria-controls]="'grade-group-' + group.gradeLevelId"
+                      (click)="toggleGradeGroup(group.gradeLevelId)">
+                      <span>
+                        <strong>{{ group.grade?.nameAr || 'طبقة غير معروفة' }}</strong>
+                        <small>{{ group.items.length }} {{ curriculumItemLabel() }}</small>
+                      </span>
+                      <mat-icon aria-hidden="true">{{ collapsedGradeIds().has(group.gradeLevelId) ? 'expand_more' : 'expand_less' }}</mat-icon>
+                    </button>
+                    @if (!collapsedGradeIds().has(group.gradeLevelId)) {
+                      <div class="curriculum-list" [id]="'grade-group-' + group.gradeLevelId">
+                        @for (item of group.items; track item.id) {
+                          <article class="curriculum-row">
+                            <div class="curriculum-row__main">
+                              <strong>{{ item.nameAr }}</strong>
+                              @if (item.nameHe) { <span dir="rtl">{{ item.nameHe }}</span> }
+                            </div>
+                            <div class="curriculum-row__meta">
+                              <ui-badge tone="neutral">{{ gradeLabel(item.gradeLevelId) }}</ui-badge>
+                              <ui-badge [tone]="item.isActive ? 'success' : 'neutral'">{{ item.isActive ? 'نشط' : 'غير نشط' }}</ui-badge>
+                            </div>
+                            <ui-table-actions>
+                              <ui-button size="sm" variant="ghost" [iconOnly]="true" [hidden]="!canUpdate()" [ariaLabel]="'تعديل ' + item.nameAr" (activated)="curriculumTab() === 'topics' ? openEditTopicModal(item) : openEditSkillModal(item)">
+                                <mat-icon aria-hidden="true">edit</mat-icon>
+                              </ui-button>
+                              <ui-button size="sm" variant="danger-ghost" [iconOnly]="true" [hidden]="!canDelete()" [ariaLabel]="'حذف ' + item.nameAr" (activated)="confirmDelete(curriculumTab() === 'topics' ? 'topic' : 'skill', item.id, item.nameAr)">
+                                <mat-icon aria-hidden="true">delete</mat-icon>
+                              </ui-button>
+                            </ui-table-actions>
+                          </article>
+                        }
+                      </div>
+                    }
+                  </section>
+                }
+              </div>
+            } @else if (filteredCurriculumItems().length) {
+              <div class="curriculum-list curriculum-list--single-grade">
+                @for (item of filteredCurriculumItems(); track item.id) {
+                  <article class="curriculum-row">
+                    <div class="curriculum-row__main">
+                      <strong>{{ item.nameAr }}</strong>
+                      @if (item.nameHe) { <span dir="rtl">{{ item.nameHe }}</span> }
+                    </div>
+                    <div class="curriculum-row__meta">
+                      <ui-badge tone="neutral">{{ gradeLabel(item.gradeLevelId) }}</ui-badge>
+                      <ui-badge [tone]="item.isActive ? 'success' : 'neutral'">{{ item.isActive ? 'نشط' : 'غير نشط' }}</ui-badge>
+                    </div>
+                    <ui-table-actions>
+                      <ui-button size="sm" variant="ghost" [iconOnly]="true" [hidden]="!canUpdate()" [ariaLabel]="'تعديل ' + item.nameAr" (activated)="curriculumTab() === 'topics' ? openEditTopicModal(item) : openEditSkillModal(item)">
+                        <mat-icon aria-hidden="true">edit</mat-icon>
+                      </ui-button>
+                      <ui-button size="sm" variant="danger-ghost" [iconOnly]="true" [hidden]="!canDelete()" [ariaLabel]="'حذف ' + item.nameAr" (activated)="confirmDelete(curriculumTab() === 'topics' ? 'topic' : 'skill', item.id, item.nameAr)">
+                        <mat-icon aria-hidden="true">delete</mat-icon>
+                      </ui-button>
+                    </ui-table-actions>
+                  </article>
+                }
+              </div>
+            } @else if (activeCurriculumItems().length) {
+              <ui-empty-state [compact]="true" icon="filter_alt_off" title="لا توجد نتائج مطابقة" description="جرّب تغيير الطبقة أو الحالة أو عبارة البحث.">
+                <ui-button ui-empty-action size="sm" variant="secondary" (activated)="resetCurriculumFilters()">مسح الفلاتر</ui-button>
+              </ui-empty-state>
+            } @else {
+              <ui-empty-state
+                [compact]="true"
+                [icon]="curriculumTab() === 'topics' ? 'note_add' : 'verified'"
+                [title]="curriculumTab() === 'topics' ? 'لا توجد مواضيع بعد' : 'لا توجد مهارات بعد'"
+                [description]="curriculumTab() === 'topics' ? 'أضف أول موضوع لهذه المادة وعيّن طبقته.' : 'أضف أول مهارة لهذه المادة وعيّن طبقتها.'">
+                @if (canCreate()) {
+                  <ui-button ui-empty-action size="sm" variant="primary" (activated)="curriculumTab() === 'topics' ? openCreateTopicModal() : openCreateSkillModal()">
+                    {{ curriculumTab() === 'topics' ? 'إضافة موضوع' : 'إضافة مهارة' }}
+                  </ui-button>
+                }
+              </ui-empty-state>
+            }
+          </div>
+        </section>
+      } @else {
+        <ui-empty-state icon="touch_app" title="لم يتم اختيار مادة" description="اختر مادة دراسية من القائمة لعرض مواضيعها ومهاراتها." />
+      }
+    </div>
+
+    <!-- Legacy detail is retained temporarily for markup compatibility and is not rendered. -->
+    <div class="hidden" aria-hidden="true">
       @if (selectedSubject(); as activeSubject) {
         @let colorScheme = getSubjectColor(activeSubject.nameAr);
         @let topicsList = getSubjectTopics(activeSubject.id);

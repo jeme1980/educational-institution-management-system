@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,12 +10,27 @@ import { UiFormFieldComponent } from '../../../shared/components/form-field/ui-f
 import { UiModalComponent } from '../../../shared/components/ui-modal/ui-modal.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiStatCardComponent } from '../../../shared/components/ui-stat-card/ui-stat-card.component';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
+import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+import { UiEmptyStateComponent } from '../../../shared/components/ui-empty-state/ui-empty-state.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { GradeLevel } from '../../../core/models/api.models';
+import { filterCurriculumItems, groupCurriculumItemsByGrade, CurriculumStatusFilter } from '../utils/subjects-curriculum.utils';
+import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
+
+type CurriculumTab = 'topics' | 'skills';
+type CurriculumItem = TopicItem | SkillItem;
+
+interface CurriculumGradeGroup {
+  grade: GradeLevel | null;
+  gradeLevelId: string;
+  items: CurriculumItem[];
+}
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-subjects',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiFormFieldComponent, UiModalComponent, UiPageHeaderComponent, UiStatCardComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiFormFieldComponent, UiModalComponent, UiPageHeaderComponent, UiStatCardComponent, UiBadgeComponent, UiTableActionsComponent, UiEmptyStateComponent],
   templateUrl: './subjects.component.html',
   styleUrl: './subjects.component.css'
 })
@@ -23,6 +38,7 @@ export class SubjectsComponent implements OnInit {
   apiService = inject(ApiService);
   fb = inject(FormBuilder);
   authService = inject(AuthService);
+  confirmDialog = inject(ConfirmDialogService);
   pageError = signal('');
   canCreate = computed(() => this.authService.hasPermission('settings:create'));
   canUpdate = computed(() => this.authService.hasPermission('settings:create'));
@@ -32,6 +48,11 @@ export class SubjectsComponent implements OnInit {
   selectedSubjectId = signal<string | null>(null);
   searchQuery = signal<string>('');
   statusFilter = signal<string>('all');
+  curriculumTab = signal<CurriculumTab>('topics');
+  selectedGradeId = signal<string>('all');
+  curriculumStatus = signal<CurriculumStatusFilter>('all');
+  curriculumSearch = signal<string>('');
+  collapsedGradeIds = signal<ReadonlySet<string>>(new Set());
   isProcessing = signal<boolean>(false);
   toast = signal<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -80,6 +101,19 @@ export class SubjectsComponent implements OnInit {
     archivedAt: ['']
   });
 
+  private observedAcademicYearId = this.apiService.selectedAcademicYearId();
+
+  constructor() {
+    effect(() => {
+      const academicYearId = this.apiService.selectedAcademicYearId();
+      if (academicYearId !== this.observedAcademicYearId) {
+        this.observedAcademicYearId = academicYearId;
+        this.selectedGradeId.set('all');
+        this.collapsedGradeIds.set(new Set());
+      }
+    });
+  }
+
   async ngOnInit() {
     this.isProcessing.set(true);
     try {
@@ -126,6 +160,108 @@ export class SubjectsComponent implements OnInit {
     const yearId = this.currentAcademicYearId();
     const allSkills = (this.apiService.skills() || []).filter(skill => !yearId || skill.academicYearId === yearId);
     return allSkills.filter(s => s.subjectId === subjectId);
+  }
+
+  readonly curriculumGradeOptions = computed<GradeLevel[]>(() => {
+    const subject = this.selectedSubject();
+    if (!subject) return [];
+    const gradeIds = new Set([
+      ...this.getSubjectTopics(subject.id).map(item => item.gradeLevelId),
+      ...this.getSubjectSkills(subject.id).map(item => item.gradeLevelId),
+    ]);
+    return (this.apiService.lookups()?.gradeLevels || [])
+      .filter((grade: GradeLevel) => gradeIds.has(grade.id))
+      .sort((a: GradeLevel, b: GradeLevel) => (a.sortOrder ?? a.codeNumber) - (b.sortOrder ?? b.codeNumber));
+  });
+
+  readonly activeCurriculumItems = computed<CurriculumItem[]>(() => {
+    const subject = this.selectedSubject();
+    if (!subject) return [];
+    return this.curriculumTab() === 'topics'
+      ? this.getSubjectTopics(subject.id)
+      : this.getSubjectSkills(subject.id);
+  });
+
+  readonly filteredCurriculumItems = computed<CurriculumItem[]>(() =>
+    filterCurriculumItems(this.activeCurriculumItems(), {
+      gradeLevelId: this.selectedGradeId(),
+      status: this.curriculumStatus(),
+      search: this.curriculumSearch(),
+    }),
+  );
+
+  readonly topicFilteredCount = computed(() => {
+    const subject = this.selectedSubject();
+    return filterCurriculumItems(subject ? this.getSubjectTopics(subject.id) : [], {
+      gradeLevelId: this.selectedGradeId(), status: this.curriculumStatus(), search: this.curriculumSearch(),
+    }).length;
+  });
+
+  readonly skillFilteredCount = computed(() => {
+    const subject = this.selectedSubject();
+    return filterCurriculumItems(subject ? this.getSubjectSkills(subject.id) : [], {
+      gradeLevelId: this.selectedGradeId(), status: this.curriculumStatus(), search: this.curriculumSearch(),
+    }).length;
+  });
+
+  readonly curriculumGroups = computed<CurriculumGradeGroup[]>(() => {
+    if (this.selectedGradeId() !== 'all') return [];
+    return groupCurriculumItemsByGrade(this.filteredCurriculumItems(), this.curriculumGradeOptions());
+  });
+
+  setCurriculumTab(tab: CurriculumTab): void {
+    this.curriculumTab.set(tab);
+  }
+
+  selectSubject(subjectId: string): void {
+    if (this.selectedSubjectId() !== subjectId) {
+      this.selectedSubjectId.set(subjectId);
+      this.selectedGradeId.set('all');
+      this.collapsedGradeIds.set(new Set());
+    }
+  }
+
+  setCurriculumGrade(event: Event): void {
+    this.selectedGradeId.set((event.target as HTMLSelectElement).value || 'all');
+  }
+
+  setCurriculumStatus(event: Event): void {
+    this.curriculumStatus.set(((event.target as HTMLSelectElement).value || 'all') as CurriculumStatusFilter);
+  }
+
+  setCurriculumSearch(event: Event): void {
+    this.curriculumSearch.set((event.target as HTMLInputElement).value);
+  }
+
+  resetCurriculumFilters(): void {
+    this.selectedGradeId.set('all');
+    this.curriculumStatus.set('all');
+    this.curriculumSearch.set('');
+  }
+
+  toggleGradeGroup(gradeLevelId: string): void {
+    this.collapsedGradeIds.update(current => {
+      const next = new Set(current);
+      if (next.has(gradeLevelId)) next.delete(gradeLevelId);
+      else next.add(gradeLevelId);
+      return next;
+    });
+  }
+
+  gradeLabel(gradeLevelId: string): string {
+    return this.apiService.lookups()?.gradeLevels?.find((grade: GradeLevel) => grade.id === gradeLevelId)?.nameAr || 'طبقة غير معروفة';
+  }
+
+  selectedGradeLabel(): string {
+    return this.gradeLabel(this.selectedGradeId());
+  }
+
+  curriculumItemLabel(): string {
+    return this.curriculumTab() === 'topics' ? 'موضوعًا' : 'مهارة';
+  }
+
+  curriculumSearchPlaceholder(): string {
+    return this.curriculumTab() === 'topics' ? 'ابحث باسم الموضوع...' : 'ابحث باسم المهارة...';
   }
 
   currentAcademicYearId(): string {
@@ -320,7 +456,7 @@ export class SubjectsComponent implements OnInit {
     this.topicForm.reset({
       academicYearId: this.currentAcademicYearId(),
       subjectId: this.selectedSubject()?.id || '',
-      gradeLevelId: '',
+      gradeLevelId: this.selectedGradeId() === 'all' ? '' : this.selectedGradeId(),
       nameAr: '',
       nameHe: '',
       isActive: true,
@@ -399,7 +535,7 @@ export class SubjectsComponent implements OnInit {
     this.skillForm.reset({
       academicYearId: this.currentAcademicYearId(),
       subjectId: this.selectedSubject()?.id || '',
-      gradeLevelId: '',
+      gradeLevelId: this.selectedGradeId() === 'all' ? '' : this.selectedGradeId(),
       nameAr: '',
       nameHe: '',
       isActive: true,
@@ -473,13 +609,24 @@ export class SubjectsComponent implements OnInit {
   }
 
   // Deletion Confirmation triggers
-  confirmDelete(type: 'subject' | 'topic' | 'skill', id: string, name: string) {
-    this.confirmDeleteTarget.set({ type, id, name });
+  async confirmDelete(type: 'subject' | 'topic' | 'skill', id: string, name: string) {
+    const isSubject = type === 'subject';
+    const confirmed = await this.confirmDialog.confirm({
+      title: isSubject ? 'أرشفة المادة؟' : 'تأكيد الحذف؟',
+      message: isSubject
+        ? `هل تريد أرشفة المادة "${name}"؟ ستبقى بياناتها المرتبطة محفوظة.`
+        : `هل تريد حذف "${name}"؟ لا يمكن التراجع عن هذا الإجراء.`,
+      confirmText: isSubject ? 'أرشفة' : 'حذف',
+      cancelText: 'إلغاء',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    await this.executeDelete({ type, id, name });
   }
 
-  async executeDelete() {
+  async executeDelete(targetOverride?: { type: 'subject' | 'topic' | 'skill', id: string, name: string }) {
     if (!this.canDelete()) return;
-    const target = this.confirmDeleteTarget();
+    const target = targetOverride || this.confirmDeleteTarget();
     if (!target) return;
 
     this.isProcessing.set(true);

@@ -7,6 +7,163 @@ div:has(> input[placeholder*="SKILL-ALG-01"]) {
   display: none;
 }
 
+.subject-registry {
+  min-width: 0;
+}
+
+.subject-registry__header {
+  display: flex;
+  min-height: var(--control-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-block-end: var(--space-3);
+}
+
+.subject-registry__header h2 {
+  margin: 0;
+  color: var(--on-surface);
+  font-size: var(--text-body-md);
+  line-height: var(--text-body-md-line);
+  font-weight: var(--font-bold);
+}
+
+.subject-registry__header p {
+  margin: var(--space-1) 0 0;
+  color: var(--on-surface-variant);
+  font-size: var(--text-label-sm);
+}
+
+.subject-registry__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
+.subject-registry__search,
+.subject-registry__status {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--on-surface-variant);
+  font-size: var(--text-label-sm);
+  font-weight: var(--font-semibold);
+}
+
+.subject-registry__search input,
+.subject-registry__status select {
+  width: 100%;
+  min-height: var(--control-height);
+  border: var(--border-width-thin) solid var(--border);
+  border-radius: var(--radius-default);
+  padding-inline: var(--space-3);
+  background: var(--surface-elevated);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: var(--text-body-sm);
+}
+
+.subject-registry__search input::placeholder { color: var(--text-placeholder); }
+
+.subject-registry__search input:focus-visible,
+.subject-registry__status select:focus-visible,
+.subject-card:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.subject-registry__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.subject-registry__grid > ui-empty-state { grid-column: 1 / -1; }
+
+.subject-card {
+  display: flex;
+  min-width: 0;
+  min-height: calc(var(--table-row-height) * 2);
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width-thin) solid var(--border-subtle);
+  border-inline-start: var(--space-1) solid transparent;
+  border-radius: var(--radius-default);
+  background: var(--surface-elevated);
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background-color var(--transition-fast) var(--ease-standard), border-color var(--transition-fast) var(--ease-standard);
+}
+
+.subject-card:hover { background: var(--hover-surface); }
+
+.subject-card--selected {
+  border-color: var(--primary);
+  border-inline-start-color: var(--primary);
+  background: var(--selected-surface);
+}
+
+.subject-card__header,
+.subject-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.subject-card__header h3 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm-line);
+  font-weight: var(--font-bold);
+}
+
+.subject-card__secondary-name {
+  margin: calc(var(--space-1) * -1) 0 0;
+  overflow: hidden;
+  color: var(--on-surface-variant);
+  font-size: var(--text-label-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subject-card__footer {
+  margin-block-start: auto;
+  padding-block-start: var(--space-2);
+  border-block-start: var(--border-width-thin) solid var(--divider);
+}
+
+.subject-card__counts {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.subject-card__selected-note {
+  margin: 0;
+  color: var(--primary);
+  font-size: var(--text-label-sm);
+  font-weight: var(--font-semibold);
+}
+
+@media (max-width: 1199px) and (min-width: 1024px) {
+  .subject-registry__grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 767px) {
+  .subject-registry__grid,
+  .subject-registry__filters { grid-template-columns: 1fr; }
+  .subject-registry__header { align-items: flex-start; }
+  .subject-card__footer { align-items: flex-end; }
+}
+
 .curriculum-panel {
   overflow: hidden;
   border: var(--border-width-thin) solid var(--border-subtle);

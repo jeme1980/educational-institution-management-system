@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filterCurriculumItems, groupCurriculumItemsByGrade } from './subjects-curriculum.utils';
+import { filterCurriculumItems, filterSubjectRegistry, groupCurriculumItemsByGrade } from './subjects-curriculum.utils';
 
 const items = [
   { id: 'topic-a', gradeLevelId: 'grade-a', nameAr: 'الكسور', nameHe: 'שברים', isActive: true },
@@ -49,5 +49,27 @@ describe('subjects curriculum filters', () => {
   it('keeps a selected grade list limited to that grade before grouping', () => {
     const selected = filterCurriculumItems(items, { gradeLevelId: 'grade-b', status: 'all', search: '' });
     expect(selected.every(item => item.gradeLevelId === 'grade-b')).toBe(true);
+  });
+});
+
+describe('subject registry filters', () => {
+  const subjects = [
+    { id: 'math', academicYearId: 'year-1', nameAr: 'الرياضيات', nameHe: 'מתמטיקה', isActive: true, archivedAt: null },
+    { id: 'science', academicYearId: 'year-1', nameAr: 'العلوم', nameHe: 'מדעים', isActive: false, archivedAt: null },
+    { id: 'old', academicYearId: 'year-2', nameAr: 'مادة قديمة', nameHe: null, isActive: true, archivedAt: '2025-01-01' },
+  ];
+
+  it('searches subject Arabic and Hebrew names', () => {
+    expect(filterSubjectRegistry(subjects, { academicYearId: 'year-1', status: 'all', search: 'رياض' }).map(item => item.id)).toEqual(['math']);
+    expect(filterSubjectRegistry(subjects, { academicYearId: 'year-1', status: 'all', search: 'מדעים' }).map(item => item.id)).toEqual(['science']);
+  });
+
+  it('composes status and academic-year filters and excludes archived subjects', () => {
+    expect(filterSubjectRegistry(subjects, { academicYearId: 'year-1', status: 'active', search: '' }).map(item => item.id)).toEqual(['math']);
+    expect(filterSubjectRegistry(subjects, { academicYearId: '', status: 'all', search: '' }).map(item => item.id)).toEqual(['math', 'science']);
+  });
+
+  it('returns an empty registry for an unmatched search', () => {
+    expect(filterSubjectRegistry(subjects, { academicYearId: 'year-1', status: 'all', search: 'لغة' })).toEqual([]);
   });
 });

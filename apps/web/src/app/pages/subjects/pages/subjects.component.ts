@@ -15,7 +15,7 @@ import { UiTableActionsComponent } from '../../../shared/components/ui-table-act
 import { UiEmptyStateComponent } from '../../../shared/components/ui-empty-state/ui-empty-state.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { GradeLevel } from '../../../core/models/api.models';
-import { filterCurriculumItems, groupCurriculumItemsByGrade, CurriculumStatusFilter } from '../utils/subjects-curriculum.utils';
+import { filterCurriculumItems, filterSubjectRegistry, groupCurriculumItemsByGrade, CurriculumStatusFilter } from '../utils/subjects-curriculum.utils';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
 
 type CurriculumTab = 'topics' | 'skills';
@@ -336,41 +336,10 @@ export class SubjectsComponent implements OnInit {
   // Sophisticated search/filter logic matching topics/skills too!
   filteredSubjects = computed(() => {
     const academicYearId = this.currentAcademicYearId();
-    const list = (this.apiService.subjects() || []).filter(subject =>
-      !subject.archivedAt && (!academicYearId || subject.academicYearId === academicYearId)
-    );
-    const term = this.searchQuery().trim().toLowerCase();
-    const status = this.statusFilter();
-    const allTopics = (this.apiService.topics() || []).filter(topic => !academicYearId || topic.academicYearId === academicYearId);
-    const allSkills = (this.apiService.skills() || []).filter(skill => !academicYearId || skill.academicYearId === academicYearId);
-    
-    return list.filter(s => {
-      // Direct subject match
-      const nameMatch = (s.nameAr || '').toLowerCase().includes(term);
-      const nameHeMatch = (s.nameHe || '').toLowerCase().includes(term);
-      
-      // Secondary curriculum topics search match
-      const topicsOfSubject = allTopics.filter(t => t.subjectId === s.id);
-      const topicsMatch = topicsOfSubject.some(t => 
-        (t.nameAr || '').toLowerCase().includes(term) || 
-        (t.nameHe || '').toLowerCase().includes(term)
-      );
-      
-      // Secondary learning skills search match
-      const skillsOfSubject = allSkills.filter(sk => sk.subjectId === s.id);
-      const skillsMatch = skillsOfSubject.some(sk => 
-        (sk.nameAr || '').toLowerCase().includes(term) ||
-        (sk.nameHe || '').toLowerCase().includes(term)
-      );
-      
-      const searchMatch = !term || nameMatch || nameHeMatch || topicsMatch || skillsMatch;
-      
-      // Active state filter
-      const statusMatch = status === 'all' || 
-                          (status === 'active' && s.isActive) || 
-                          (status === 'inactive' && !s.isActive);
-      
-      return searchMatch && statusMatch;
+    return filterSubjectRegistry(this.apiService.subjects() || [], {
+      academicYearId,
+      status: this.statusFilter() as CurriculumStatusFilter,
+      search: this.searchQuery(),
     });
   });
 

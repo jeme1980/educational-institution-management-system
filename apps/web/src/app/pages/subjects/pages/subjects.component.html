@@ -98,143 +98,91 @@
     </div>
   </div>
 
-  <!-- Filters / Search section -->
-  <div class="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
-    <div class="relative w-full md:w-96">
-      <mat-icon class="search-icon text-slate-400 text-lg">search</mat-icon>
-      <input
-        type="text"
-        [value]="searchQuery()"
-        (input)="searchQuery.set($any($event.target).value)"
-        placeholder="ابحث عن مادة، كود، موضوع، أو مهارة تعليمية..."
-        class="w-full bg-slate-50 border border-slate-200 rounded-xl pr-10 pl-4 py-2 text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-[#00236f] focus:ring-2 focus:ring-[#00236f]/10 transition-all placeholder:text-slate-400"
-      />
-    </div>
-
-    <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-      <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-        <button
-          type="button"
-          (click)="statusFilter.set('all')"
-          [class]="statusFilter() === 'all' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          الكل
-        </button>
-        <button
-          type="button"
-          (click)="statusFilter.set('active')"
-          [class]="statusFilter() === 'active' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          نشطة
-        </button>
-        <button
-          type="button"
-          (click)="statusFilter.set('inactive')"
-          [class]="statusFilter() === 'inactive' ? 'bg-white text-[#00236f] shadow-xs' : 'text-slate-500 hover:text-slate-800'"
-          class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer"
-        >
-          غير نشطة
-        </button>
-      </div>
-
-      @if (searchQuery() || statusFilter() !== 'all') {
-        <button
-          type="button"
-          (click)="resetFilters()"
-          class="text-xs text-rose-600 font-bold hover:underline px-2 cursor-pointer flex items-center gap-1"
-        >
-          <mat-icon class="text-sm block">refresh</mat-icon>
-          <span>تفريغ</span>
-        </button>
-      }
-    </div>
-  </div>
-
   <!-- Master Detail Layout (2 Columns) -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
     <!-- Left Column: Master List of Subjects -->
-    <div class="lg:col-span-5 space-y-3">
-      <div class="flex items-center justify-between px-1 mb-1">
-        <span class="text-xs font-extrabold text-slate-500">سجل المواد دراسية ({{ filteredSubjects().length }})</span>
-        <span class="text-[10px] text-slate-400 font-bold">انقر على المادة للتحكم بالتفاصيل</span>
+    <section class="lg:col-span-5 subject-registry" aria-labelledby="subject-registry-title">
+      <header class="subject-registry__header">
+        <div>
+          <h2 id="subject-registry-title">سجل المواد الدراسية ({{ filteredSubjects().length }})</h2>
+          <p>اختر مادة للتحكم في تفاصيلها.</p>
+        </div>
+        @if (searchQuery() || statusFilter() !== 'all') {
+          <ui-button size="sm" variant="ghost" (activated)="resetFilters()">مسح الفلاتر</ui-button>
+        }
+      </header>
+
+      <div class="subject-registry__filters">
+        <label class="subject-registry__search" for="subject-registry-search">
+          <span>البحث عن مادة</span>
+          <input
+            id="subject-registry-search"
+            type="search"
+            [value]="searchQuery()"
+            (input)="searchQuery.set($any($event.target).value)"
+            placeholder="ابحث باسم المادة..." />
+        </label>
+        <label class="subject-registry__status" for="subject-registry-status">
+          <span>الحالة</span>
+          <select id="subject-registry-status" [value]="statusFilter()" (change)="statusFilter.set($any($event.target).value)">
+            <option value="all">كل الحالات</option>
+            <option value="active">مفعّلة</option>
+            <option value="inactive">غير مفعّلة</option>
+          </select>
+        </label>
       </div>
 
-      <div class="space-y-3 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
+      <div class="subject-registry__grid">
         @for (subject of filteredSubjects(); track subject.id) {
-        @let colorScheme = getSubjectColor(subject.nameAr);
           @let topicsCount = getSubjectTopics(subject.id).length;
           @let skillsCount = getSubjectSkills(subject.id).length;
           @let isSelected = selectedSubject().id === subject.id;
 
-          <div
+          <article
+            class="subject-card"
+            [class.subject-card--selected]="isSelected"
             (click)="selectSubject(subject.id)"
             (keydown.enter)="selectSubject(subject.id)"
+            (keydown.space)="$event.preventDefault(); selectSubject(subject.id)"
             tabindex="0"
-            [class]="isSelected ? 'bg-white border-[#00236f] ring-2 ring-[#00236f]/10 shadow-md' : 'bg-white border-slate-200/80 hover:border-slate-300 hover:shadow-xs'"
-            class="p-4 rounded-2xl border transition-all cursor-pointer relative group"
-          >
-            <!-- Top Status Row -->
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <span [class]="colorScheme.bg" class="w-2.5 h-2.5 rounded-full inline-block"></span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span [class]="subject.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' : 'bg-slate-100 text-slate-500 border-slate-200'" class="px-2 py-0.5 rounded-md text-[10px] font-black border">
-                  {{ subject.isActive ? 'مفعلة' : 'غير مفعلة' }}
-                </span>
-              </div>
+            role="button"
+            [attr.aria-current]="isSelected ? 'true' : null">
+            <div class="subject-card__header">
+              <h3>{{ subject.nameAr }}</h3>
+              <ui-badge [tone]="subject.isActive ? 'success' : 'neutral'">
+                {{ subject.isActive ? 'مفعّلة' : 'غير مفعّلة' }}
+              </ui-badge>
             </div>
 
-            <!-- Subject Title -->
-            <div class="flex items-center justify-between">
-              <h3 class="text-sm font-black text-slate-800 group-hover:text-[#00236f] transition-colors">
-                {{ subject.nameAr }}
-              </h3>
-              <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                <button
-                  type="button"
-                  (click)="$event.stopPropagation(); openEditSubjectModal(subject)"
-                  aria-label="تعديل المادة {{ subject.nameAr }}"
-                  title="تعديل المادة"
-                  class="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-[#00236f] transition-all cursor-pointer"
-                >
-                  <mat-icon class="text-base block">edit</mat-icon>
-                </button>
-                <button
-                  type="button"
-                  (click)="$event.stopPropagation(); confirmDelete('subject', subject.id, subject.nameAr)"
-                  aria-label="أرشفة المادة {{ subject.nameAr }}"
-                  title="أرشفة المادة"
-                  class="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
-                >
-                  <mat-icon class="text-base block">archive</mat-icon>
-                </button>
+            @if (subject.nameHe) {
+              <p class="subject-card__secondary-name" dir="rtl">{{ subject.nameHe }}</p>
+            }
+
+            <div class="subject-card__footer">
+              <div class="subject-card__counts" aria-label="إحصاءات المادة">
+                <ui-badge tone="neutral">{{ topicsCount }} موضوع</ui-badge>
+                <ui-badge tone="neutral">{{ skillsCount }} مهارة ومخرج</ui-badge>
               </div>
+              <ui-table-actions (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+                <ui-button size="sm" variant="ghost" [iconOnly]="true" [hidden]="!canUpdate()" [ariaLabel]="'تعديل المادة ' + subject.nameAr" (activated)="openEditSubjectModal(subject)">
+                  <mat-icon aria-hidden="true">edit</mat-icon>
+                </ui-button>
+                <ui-button size="sm" variant="danger-ghost" [iconOnly]="true" [hidden]="!canDelete()" [ariaLabel]="'أرشفة المادة ' + subject.nameAr" (activated)="confirmDelete('subject', subject.id, subject.nameAr)">
+                  <mat-icon aria-hidden="true">archive</mat-icon>
+                </ui-button>
+              </ui-table-actions>
             </div>
 
-            <!-- Stats badges -->
-            <div class="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
-              <span class="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md font-bold">
-                <mat-icon class="text-xs text-slate-400 block">list_alt</mat-icon>
-                <span>{{ topicsCount }} موضوع</span>
-              </span>
-              <span class="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md font-bold">
-                <mat-icon class="text-xs text-slate-400 block">psychology</mat-icon>
-                <span>{{ skillsCount }} مهارة ومخرج</span>
-              </span>
-            </div>
-          </div>
+            @if (isSelected) {
+              <p class="subject-card__selected-note">هذه هي المادة المفتوحة في لوحة التفاصيل.</p>
+            }
+          </article>
         } @empty {
-          <div class="bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-3">
-            <mat-icon class="text-4xl text-slate-300">menu_book</mat-icon>
-            <p class="text-xs font-bold text-slate-500">لا توجد مواد دراسية تطابق خيارات البحث الحالية.</p>
-          </div>
+          <ui-empty-state [compact]="true" icon="menu_book" title="لا توجد مواد تطابق البحث" description="غيّر عبارة البحث أو الحالة لعرض مواد أخرى." />
         }
       </div>
-    </div>
+    </section>
 
     <!-- Right Column: scalable curriculum management for the selected subject -->
     <div class="lg:col-span-7 curriculum-detail">

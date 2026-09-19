@@ -1,4 +1,4 @@
-import { GradeLevel, SkillItem, TopicItem } from '../../../core/models/api.models';
+import { GradeLevel, SkillItem, SubjectItem, TopicItem } from '../../../core/models/api.models';
 
 export type CurriculumStatusFilter = 'all' | 'active' | 'inactive';
 export type CurriculumFilterItem = Pick<TopicItem | SkillItem, 'gradeLevelId' | 'nameAr' | 'nameHe' | 'isActive'>;
@@ -13,6 +13,29 @@ export interface CurriculumGradeGroup<T extends CurriculumFilterItem> {
   grade: GradeLevel | null;
   gradeLevelId: string;
   items: T[];
+}
+
+export interface SubjectRegistryFilters {
+  academicYearId: string;
+  status: CurriculumStatusFilter;
+  search: string;
+}
+
+export function filterSubjectRegistry<T extends Pick<SubjectItem, 'academicYearId' | 'archivedAt' | 'nameAr' | 'nameHe' | 'isActive'>>(
+  subjects: readonly T[],
+  filters: SubjectRegistryFilters,
+): T[] {
+  const term = filters.search.trim().toLocaleLowerCase();
+  return subjects.filter(subject => {
+    const yearMatches = !filters.academicYearId || subject.academicYearId === filters.academicYearId;
+    const searchMatches = !term
+      || subject.nameAr.toLocaleLowerCase().includes(term)
+      || (subject.nameHe || '').toLocaleLowerCase().includes(term);
+    const statusMatches = filters.status === 'all'
+      || (filters.status === 'active' && subject.isActive)
+      || (filters.status === 'inactive' && !subject.isActive);
+    return !subject.archivedAt && yearMatches && searchMatches && statusMatches;
+  });
 }
 
 export function filterCurriculumItems<T extends CurriculumFilterItem>(items: readonly T[], filters: CurriculumFilters): T[] {

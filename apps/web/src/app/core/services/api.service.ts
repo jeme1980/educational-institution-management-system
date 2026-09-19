@@ -183,7 +183,7 @@ export class ApiService extends BaseApiService {
   deleteExam(id: string) { return this.examsApi.deleteExam(id); }
   loadExamResults(examId: string) { return this.examsApi.loadExamResults(examId); }
   loadExamAnalysis(examId: string) { return this.examsApi.loadExamAnalysis(examId); }
-  loadProgressTracking(params: { academicYearId: string; subjectId: string; studyGroupId: string }) { return this.examsApi.loadProgressTracking(params); }
+  loadProgressTracking(params: { academicYearId: string; subjectId: string; gradeLevelId: string; studyGroupId?: string }) { return this.examsApi.loadProgressTracking(params); }
   loadActionCenter(params: { academicYearId: string; subjectId?: string; studyGroupId?: string }) { return this.examsApi.loadActionCenter(params); }
   loadSchoolDashboard(params: { academicYearId: string; subjectId?: string }) { return this.examsApi.loadSchoolDashboard(params); }
   loadProgressTrackingStudyGroups(params: { academicYearId: string; subjectId: string }) { return this.examsApi.loadProgressTrackingStudyGroups(params); }

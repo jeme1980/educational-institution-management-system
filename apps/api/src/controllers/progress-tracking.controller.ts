@@ -20,8 +20,23 @@ export async function getProgressTrackingStudyGroups(req: ContextRequest, res: R
   if (!academicYear || !subject) return res.status(404).json({ error: 'The selected progress tracking context is not available.' });
 
   return res.json(await prisma.studyGroup.findMany({
-    where: { institutionId, academicYearId, subjectId, archivedAt: null, isActive: true },
-    select: { id: true, nameAr: true, nameHe: true, classId: true, subjectId: true, classRoom: { select: { id: true, nameAr: true } } },
+    where: { institutionId, academicYearId, subjectId, archivedAt: null, isActive: true, classId: { not: null }, classRoom: { archivedAt: null } },
+    select: {
+      id: true,
+      nameAr: true,
+      nameHe: true,
+      classId: true,
+      subjectId: true,
+      classRoom: {
+        select: {
+          id: true,
+          nameAr: true,
+          nameHe: true,
+          gradeLevelId: true,
+          gradeLevel: { select: { id: true, nameAr: true, nameHe: true, sortOrder: true } },
+        },
+      },
+    },
     orderBy: { nameAr: 'asc' },
   }));
 }
@@ -103,36 +118,73 @@ export async function getProgressTracking(req: ContextRequest, res: Response): P
   const institutionId = req.context?.institutionId || '';
   const academicYearId = String(req.query.academicYearId || req.context?.academicYearId || '');
   const subjectId = String(req.query.subjectId || '');
-  const studyGroupId = String(req.query.studyGroupId || '');
-  if (!institutionId || !isUuid(academicYearId) || !isUuid(subjectId) || !isUuid(studyGroupId)) {
-    return res.status(400).json({ error: 'Academic year, subject, and study group are required.' });
+  const gradeLevelId = String(req.query.gradeLevelId || '');
+  const studyGroupId = req.query.studyGroupId ? String(req.query.studyGroupId) : '';
+  if (!institutionId || !isUuid(academicYearId) || !isUuid(subjectId) || !isUuid(gradeLevelId) || (studyGroupId && !isUuid(studyGroupId))) {
+    return res.status(400).json({ error: 'Academic year, subject, and grade level are required.' });
   }
 
-  const [academicYear, subject, studyGroup] = await Promise.all([
+  const [academicYear, subject, gradeLevel] = await Promise.all([
     prisma.academicYear.findFirst({ where: { id: academicYearId, institutionId, archivedAt: null }, select: { id: true, yearLabel: true } }),
     prisma.subject.findFirst({ where: { id: subjectId, institutionId, academicYearId, archivedAt: null, isActive: true }, select: { id: true, nameAr: true, nameHe: true } }),
-    prisma.studyGroup.findFirst({ where: { id: studyGroupId, institutionId, academicYearId, subjectId, archivedAt: null, isActive: true }, select: { id: true, nameAr: true, classId: true, subjectId: true } }),
+    prisma.gradeLevel.findUnique({ where: { id: gradeLevelId }, select: { id: true, nameAr: true, nameHe: true, sortOrder: true } }),
   ]);
-  if (!academicYear || !subject || !studyGroup) return res.status(404).json({ error: 'The selected progress tracking context is not available.' });
+  if (!academicYear || !subject || !gradeLevel) return res.status(404).json({ error: 'The selected progress tracking context is not available.' });
+
+  const availableStudyGroups = await prisma.studyGroup.findMany({
+    where: {
+      institutionId,
+      academicYearId,
+      subjectId,
+      archivedAt: null,
+      isActive: true,
+      classRoom: { institutionId, academicYearId, gradeLevelId, archivedAt: null },
+    },
+    select: { id: true, nameAr: true, nameHe: true, classId: true, subjectId: true },
+    orderBy: [{ nameAr: 'asc' }, { id: 'asc' }],
+  });
+  if (!availableStudyGroups.length) return res.status(404).json({ error: 'No classes are available for the selected grade level.' });
+  const studyGroup = studyGroupId ? availableStudyGroups.find((group) => group.id === studyGroupId) || null : null;
+  if (studyGroupId && !studyGroup) return res.status(404).json({ error: 'The selected class is not available in this grade level.' });
+  const studyGroupIds = studyGroup ? [studyGroup.id] : availableStudyGroups.map((group) => group.id);
 
   const memberships = await prisma.studyGroupStudent.findMany({
-    where: { institutionId, studyGroupId, studentEnrollment: { institutionId, academicYearId, isActive: true, isDeleted: false, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { institutionId, isActive: true } } },
-    select: { studentEnrollment: { select: { studentId: true } } },
+    where: { institutionId, studyGroupId: { in: studyGroupIds }, studentEnrollment: { institutionId, academicYearId, isActive: true, isDeleted: false, enrollmentStatus: { isActive: true, isFinalStatus: false }, student: { institutionId, isActive: true } } },
+    select: { studyGroupId: true, studentEnrollment: { select: { studentId: true } } },
   });
-  const eligibleStudentIds = memberships.map((membership) => membership.studentEnrollment.studentId);
+  const eligibleStudentIds = [...new Set(memberships.map((membership) => membership.studentEnrollment.studentId))];
+  const eligibleStudentIdsByGroup = new Map<string, Set<string>>();
+  for (const membership of memberships) {
+    const groupStudents = eligibleStudentIdsByGroup.get(membership.studyGroupId) || new Set<string>();
+    groupStudents.add(membership.studentEnrollment.studentId);
+    eligibleStudentIdsByGroup.set(membership.studyGroupId, groupStudents);
+  }
 
   const exams = await prisma.exam.findMany({
-    where: { institutionId, academicYearId, subjectId, archivedAt: null, examGroups: { some: { institutionId, studyGroupId } } },
+    where: { institutionId, academicYearId, subjectId, archivedAt: null, examGroups: { some: { institutionId, studyGroupId: { in: studyGroupIds } } } },
     orderBy: [{ examDate: 'asc' }, { id: 'asc' }],
-    select: { id: true, titleAr: true, examDate: true, maxScore: true, examType: { select: { id: true, nameAr: true } }, studentExamResults: { where: { institutionId, studentId: { in: eligibleStudentIds } }, select: { studentId: true, totalScore: true, isAbsence: true } } },
+    select: {
+      id: true,
+      titleAr: true,
+      examDate: true,
+      maxScore: true,
+      examType: { select: { id: true, nameAr: true } },
+      examGroups: { where: { institutionId, studyGroupId: { in: studyGroupIds } }, select: { studyGroupId: true } },
+      studentExamResults: { where: { institutionId, studentId: { in: eligibleStudentIds } }, select: { studentId: true, totalScore: true, isAbsence: true } },
+    },
   });
-  const points = buildProgressTrackingPoints(exams.map((exam) => ({ ...exam, maxScore: Number(exam.maxScore), results: exam.studentExamResults.map((result) => ({ ...result, totalScore: Number(result.totalScore) })), eligibleStudentIds })));
+  const points = buildProgressTrackingPoints(exams.map((exam) => ({
+    ...exam,
+    maxScore: Number(exam.maxScore),
+    results: exam.studentExamResults.map((result) => ({ ...result, totalScore: Number(result.totalScore) })),
+    eligibleStudentIds: [...new Set(exam.examGroups.flatMap((examGroup) => [...(eligibleStudentIdsByGroup.get(examGroup.studyGroupId) || [])]))],
+  })));
   const usable = points.filter((point) => point.averagePercentage !== null);
   const first = usable[0] || null;
   const latest = usable[usable.length - 1] || null;
   const averageChange = first && latest ? Number((latest.averagePercentage! - first.averagePercentage!).toFixed(2)) : null;
   return res.json({
-    context: { academicYear, subject, studyGroup },
+    context: { academicYear, subject, gradeLevel, studyGroup, studyGroupsCount: studyGroupIds.length },
     summary: { examsCount: points.length, firstAverage: first?.averagePercentage ?? null, latestAverage: latest?.averagePercentage ?? null, averageChange },
     points,
   });

@@ -15,7 +15,9 @@ export interface ProgressTrackingResponse {
   context: {
     academicYear: { id: string; yearLabel: string };
     subject: { id: string; nameAr: string; nameHe?: string | null };
-    studyGroup: { id: string; nameAr: string; classId?: string | null; subjectId: string };
+    gradeLevel: { id: string; nameAr: string; nameHe?: string | null; sortOrder: number };
+    studyGroup: { id: string; nameAr: string; classId?: string | null; subjectId: string } | null;
+    studyGroupsCount: number;
   };
   summary: { examsCount: number; firstAverage: number | null; latestAverage: number | null; averageChange: number | null };
   points: ProgressTrackingPoint[];
@@ -34,7 +36,11 @@ export interface StudentProgressPoint extends ProgressTrackingPoint {
 }
 
 export interface StudentProgressResponse {
-  context: ProgressTrackingResponse['context'];
+  context: {
+    academicYear: { id: string; yearLabel: string };
+    subject: { id: string; nameAr: string; nameHe?: string | null };
+    studyGroup: { id: string; nameAr: string; classId?: string | null; subjectId: string };
+  };
   student: { id: string; firstNameAr: string; lastNameAr: string; nationalId?: string | null };
   summary: { examsCount: number; completedCount: number; firstPercentage: number | null; latestPercentage: number | null; change: number | null; currentGroupGap: number | null };
   points: StudentProgressPoint[];
@@ -64,7 +70,7 @@ export interface AvailableDimension {
 }
 
 export interface DimensionProgressResponse {
-  context: ProgressTrackingResponse['context'];
+  context: StudentProgressResponse['context'];
   dimensionType: DimensionType;
   availableDimensions: AvailableDimension[];
   selectedDimension: (AvailableDimension & { firstMastery: number | null; latestMastery: number | null; change: number | null }) | null;

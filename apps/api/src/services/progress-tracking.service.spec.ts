@@ -24,6 +24,19 @@ test('progress tracking marks zero-data exams without turning them into zero per
   assert.equal(point.passRate, null);
 });
 
+test('grade aggregate weights actual student results instead of averaging class averages', () => {
+  const results = [
+    ...Array.from({ length: 10 }, (_, index) => ({ studentId: `high-${index}`, totalScore: 100, isAbsence: false })),
+    ...Array.from({ length: 30 }, (_, index) => ({ studentId: `low-${index}`, totalScore: 50, isAbsence: false })),
+  ];
+  const [point] = buildProgressTrackingPoints([{
+    id: 'grade-exam', titleAr: 'Grade exam', examDate: date('2026-01-01'), maxScore: 100, examType: null,
+    eligibleStudentIds: results.map((result) => result.studentId), results,
+  }]);
+  assert.equal(point.averagePercentage, 62.5);
+  assert.equal(point.participantCount, 40);
+});
+
 test('student progress preserves absent/missing status and calculates group gaps', () => {
   const points = buildProgressTrackingPoints([
     { id: 'one', titleAr: 'One', examDate: date('2026-01-01'), maxScore: 20, examType: null, eligibleStudentIds: ['student', 'other'], results: [{ studentId: 'student', totalScore: 12, isAbsence: false }, { studentId: 'other', totalScore: 10, isAbsence: false }] },

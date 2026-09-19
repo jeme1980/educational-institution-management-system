@@ -17,16 +17,44 @@ import { StudentProgressTrendChartComponent } from '../components/student-progre
 import { DimensionProgressResponse, DimensionProgressStatus, DimensionType, ProgressTrackingResponse, StudentParticipationStatus, StudentProgressResponse } from '../models/progress-tracking.model';
 import { DimensionProgressTrendChartComponent } from '../components/dimension-progress-trend-chart.component';
 
+export const ALL_GRADE_CLASSES = 'ALL';
+
+interface ProgressGradeLevel {
+  id: string;
+  nameAr: string;
+  nameHe?: string | null;
+  sortOrder: number;
+}
+
+interface ProgressStudyGroup {
+  id: string;
+  nameAr: string;
+  nameHe?: string | null;
+  classId: string;
+  subjectId: string;
+  classRoom: {
+    id: string;
+    nameAr: string;
+    nameHe?: string | null;
+    gradeLevelId: string;
+    gradeLevel: ProgressGradeLevel;
+  };
+}
+
 export function usableProgressPoints(points: ProgressTrackingResponse['points']) {
   return points.filter((point) => !point.noData && point.averagePercentage !== null);
 }
 
-export function classContextComplete(yearId: string, subjectId: string, studyGroupId: string): boolean {
-  return Boolean(yearId && subjectId && studyGroupId);
+export function classContextComplete(yearId: string, subjectId: string, gradeLevelId: string, studyGroupId: string): boolean {
+  return Boolean(yearId && subjectId && gradeLevelId && studyGroupId);
 }
 
-export function studentContextComplete(yearId: string, subjectId: string, studyGroupId: string, studentId: string): boolean {
-  return classContextComplete(yearId, subjectId, studyGroupId) && Boolean(studentId);
+export function isSpecificStudyGroup(studyGroupId: string): boolean {
+  return Boolean(studyGroupId && studyGroupId !== ALL_GRADE_CLASSES);
+}
+
+export function studentContextComplete(yearId: string, subjectId: string, gradeLevelId: string, studyGroupId: string, studentId: string): boolean {
+  return classContextComplete(yearId, subjectId, gradeLevelId, studyGroupId) && isSpecificStudyGroup(studyGroupId) && Boolean(studentId);
 }
 
 export function progressSummaryText(points: ProgressTrackingResponse['points']): string {
@@ -65,15 +93,18 @@ export function dimensionCanShowTrend(measured: number): boolean { return measur
   styleUrl: './progress-tracking.component.css',
 })
 export class ProgressTrackingComponent {
+  readonly isSpecificStudyGroup = isSpecificStudyGroup;
+  readonly allGradeClasses = ALL_GRADE_CLASSES;
   readonly api = inject(ApiService);
   private readonly router = inject(Router);
   readonly selectedYearId = signal('');
   readonly selectedSubjectId = signal('');
+  readonly selectedGradeLevelId = signal('');
   readonly selectedStudyGroupId = signal('');
   readonly selectedStudentId = signal('');
   readonly mode = signal<'class' | 'student' | 'dimensions'>('class');
   readonly dimensionType = signal<DimensionType>('skill');
-  readonly availableStudyGroups = signal<any[]>([]);
+  readonly availableStudyGroups = signal<ProgressStudyGroup[]>([]);
   readonly groupsLoading = signal(false);
   readonly groupMembers = signal<any[]>([]);
   readonly loading = signal(false);
@@ -84,9 +115,21 @@ export class ProgressTrackingComponent {
   private readonly route = inject(ActivatedRoute);
   private requestSequence = 0;
   private groupRequestSequence = 0;
+  private memberRequestSequence = 0;
 
   readonly subjectsForYear = computed(() => this.api.subjects().filter((subject: any) => subject.academicYearId === this.selectedYearId() && subject.isActive !== false && !subject.archivedAt));
-  readonly groupsForSubject = computed(() => this.availableStudyGroups());
+  readonly gradeOptions = computed(() => {
+    const grades = new Map<string, ProgressGradeLevel>();
+    for (const group of this.availableStudyGroups()) grades.set(group.classRoom.gradeLevel.id, group.classRoom.gradeLevel);
+    return [...grades.values()].sort((left, right) => left.sortOrder - right.sortOrder || left.nameAr.localeCompare(right.nameAr, 'ar'));
+  });
+  readonly groupsForSelectedGrade = computed(() => this.availableStudyGroups().filter((group) => group.classRoom.gradeLevelId === this.selectedGradeLevelId()));
+  readonly progressContextLabel = computed(() => {
+    const grade = this.gradeOptions().find((item) => item.id === this.selectedGradeLevelId());
+    const group = this.groupsForSelectedGrade().find((item) => item.id === this.selectedStudyGroupId());
+    if (!grade) return '';
+    return `${grade.nameAr} · ${this.selectedStudyGroupId() === ALL_GRADE_CLASSES ? 'كل الصفوف' : group?.classRoom.nameAr || group?.nameAr || ''}`;
+  });
   readonly points = computed(() => this.response()?.points || []);
   readonly hasTrend = computed(() => usableProgressPoints(this.points()).length >= 2);
   readonly firstAverage = computed(() => this.response()?.summary.firstAverage);
@@ -115,25 +158,33 @@ export class ProgressTrackingComponent {
   }
 
   onModeChange(value: 'class' | 'student' | 'dimensions'): void {
-    this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set('');
-    if (value === 'class' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.load();
-    if (value === 'student' && this.selectedStudyGroupId()) void this.loadGroupMembers(this.selectedStudyGroupId());
-    if (value === 'dimensions' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.loadDimensions();
+    this.requestSequence++; this.loading.set(false); this.error.set(''); this.mode.set(value); this.response.set(null); this.studentResponse.set(null); this.selectedStudentId.set('');
+    if (value === 'class' && classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedGradeLevelId(), this.selectedStudyGroupId())) void this.load();
+    if (value === 'student' && isSpecificStudyGroup(this.selectedStudyGroupId())) void this.loadGroupMembers(this.selectedStudyGroupId());
+    if (value === 'dimensions' && isSpecificStudyGroup(this.selectedStudyGroupId())) void this.loadDimensions();
     void this.router.navigate([], { queryParams: { mode: value === 'class' ? null : value }, queryParamsHandling: 'merge' });
   }
-  onYearChange(value: string): void { this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); }
-  onSubjectChange(value: string): void { this.selectedSubjectId.set(value); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); void this.loadStudyGroupsForSelection(); }
+  onYearChange(value: string): void { this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.error.set(''); this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedGradeLevelId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); }
+  onSubjectChange(value: string): void { this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.error.set(''); this.selectedSubjectId.set(value); this.selectedGradeLevelId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); void this.loadStudyGroupsForSelection(); }
+  onGradeLevelChange(value: string): void {
+    this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.selectedGradeLevelId.set(value); this.selectedStudyGroupId.set(value ? ALL_GRADE_CLASSES : ''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); this.error.set('');
+    if (value && this.mode() === 'class') void this.load();
+  }
   onStudyGroupChange(value: string): void {
-    this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null);
+    this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.selectedStudyGroupId.set(value); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); this.error.set('');
     if (!value) return;
     if (this.mode() === 'class') void this.load();
-    else if (this.mode() === 'student') void this.loadGroupMembers(value);
-    else void this.loadDimensions();
+    else if (this.mode() === 'student' && isSpecificStudyGroup(value)) void this.loadGroupMembers(value);
+    else if (this.mode() === 'dimensions' && isSpecificStudyGroup(value)) void this.loadDimensions();
   }
-  onDimensionTypeChange(value: DimensionType): void { this.dimensionType.set(value); this.dimensionResponse.set(null); if (classContextComplete(this.selectedYearId(), this.selectedSubjectId(), this.selectedStudyGroupId())) void this.loadDimensions(); }
+  onDimensionTypeChange(value: DimensionType): void { this.dimensionType.set(value); this.dimensionResponse.set(null); if (isSpecificStudyGroup(this.selectedStudyGroupId())) void this.loadDimensions(); }
   onDimensionChange(value: string): void { if (value) void this.loadDimensions(value); }
   onStudentChange(value: string): void { this.selectedStudentId.set(value); void this.loadStudent(); }
-  async loadGroupMembers(groupId: string): Promise<void> { this.groupMembers.set(await this.api.loadGroupMembers(groupId)); }
+  async loadGroupMembers(groupId: string): Promise<void> {
+    const sequence = ++this.memberRequestSequence;
+    const members = await this.api.loadGroupMembers(groupId);
+    if (sequence === this.memberRequestSequence && this.selectedStudyGroupId() === groupId) this.groupMembers.set(members);
+  }
   async loadStudyGroupsForSelection(): Promise<void> {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();
@@ -150,12 +201,13 @@ export class ProgressTrackingComponent {
   async load(): Promise<void> {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();
+    const gradeLevelId = this.selectedGradeLevelId();
     const studyGroupId = this.selectedStudyGroupId();
-    if (this.mode() !== 'class' || !classContextComplete(academicYearId, subjectId, studyGroupId)) { this.response.set(null); return; }
+    if (this.mode() !== 'class' || !classContextComplete(academicYearId, subjectId, gradeLevelId, studyGroupId)) { this.response.set(null); return; }
     const sequence = ++this.requestSequence;
     this.loading.set(true); this.error.set('');
     try {
-      const payload = await this.api.loadProgressTracking({ academicYearId, subjectId, studyGroupId });
+      const payload = await this.api.loadProgressTracking({ academicYearId, subjectId, gradeLevelId, ...(isSpecificStudyGroup(studyGroupId) ? { studyGroupId } : {}) });
       if (sequence !== this.requestSequence) return;
       if (!payload) throw new Error('load failed');
       this.response.set(payload as ProgressTrackingResponse);
@@ -165,9 +217,10 @@ export class ProgressTrackingComponent {
   async loadStudent(): Promise<void> {
     const academicYearId = this.selectedYearId();
     const subjectId = this.selectedSubjectId();
+    const gradeLevelId = this.selectedGradeLevelId();
     const studyGroupId = this.selectedStudyGroupId();
     const studentId = this.selectedStudentId();
-    if (this.mode() !== 'student' || !studentContextComplete(academicYearId, subjectId, studyGroupId, studentId)) { this.studentResponse.set(null); return; }
+    if (this.mode() !== 'student' || !studentContextComplete(academicYearId, subjectId, gradeLevelId, studyGroupId, studentId)) { this.studentResponse.set(null); return; }
     const sequence = ++this.requestSequence;
     this.loading.set(true); this.error.set('');
     try {
@@ -180,7 +233,7 @@ export class ProgressTrackingComponent {
   }
   async loadDimensions(dimensionId = ''): Promise<void> {
     const academicYearId = this.selectedYearId(); const subjectId = this.selectedSubjectId(); const studyGroupId = this.selectedStudyGroupId();
-    if (this.mode() !== 'dimensions' || !classContextComplete(academicYearId, subjectId, studyGroupId)) { this.dimensionResponse.set(null); return; }
+    if (this.mode() !== 'dimensions' || !isSpecificStudyGroup(studyGroupId)) { this.dimensionResponse.set(null); return; }
     const sequence = ++this.requestSequence; this.loading.set(true); this.error.set('');
     try {
       const payload = await this.api.loadProgressTrackingDimensions({ academicYearId, subjectId, studyGroupId, dimension: this.dimensionType(), ...(dimensionId ? { dimensionId } : {}) });

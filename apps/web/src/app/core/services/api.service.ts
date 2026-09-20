@@ -162,6 +162,7 @@ export class ApiService extends BaseApiService {
 
   // Subjects, Topics, Skills
   loadSubjects() { return this.subjectsApi.loadSubjects(); }
+  loadSubjectsForAcademicYear(academicYearId: string) { return this.subjectsApi.loadSubjectsForAcademicYear(academicYearId); }
   createSubject(subjectData: any) { return this.subjectsApi.createSubject(subjectData); }
   updateSubject(id: string, subjectData: any) { return this.subjectsApi.updateSubject(id, subjectData); }
   deleteSubject(id: string) { return this.subjectsApi.deleteSubject(id); }

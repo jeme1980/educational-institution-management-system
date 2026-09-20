@@ -32,6 +32,13 @@ export class SubjectsApiService extends BaseApiService {
     }
   }
 
+  async loadSubjectsForAcademicYear(academicYearId: string): Promise<SubjectItem[]> {
+    const query = new URLSearchParams({ academicYearId }).toString();
+    const res = await this.apiFetch(`/api/subjects?${query}`, { headers: this.headers });
+    if (!res.ok) throw new Error(await this.readApiError(res));
+    return this.lookupItems<SubjectItem>(await res.json());
+  }
+
   async createSubject(subjectData: any) {
     this.error.set('');
     try {

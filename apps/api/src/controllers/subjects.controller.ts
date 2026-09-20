@@ -41,8 +41,12 @@ async function skillResponse(institutionId: string, academicYearId: string) {
 }
 
 export async function getSubjects(req: ContextRequest, res: Response) {
+  const institutionId = institutionIdFrom(req);
+  const academicYearId = String(req.query.academicYearId || academicYearIdFrom(req));
+  if (!uuid(institutionId) || !uuid(academicYearId)) return res.status(400).json({ error: 'السنة الدراسية مطلوبة.' });
+  if (!(await validAcademicYear(institutionId, academicYearId))) return res.status(404).json({ error: 'السنة الدراسية غير متاحة للمؤسسة الحالية.' });
   const subjects = await prisma.subject.findMany({
-    where: { institutionId: institutionIdFrom(req), academicYearId: academicYearIdFrom(req) },
+    where: { institutionId, academicYearId },
     orderBy: { createdAt: 'desc' },
   });
   return res.json(subjects);

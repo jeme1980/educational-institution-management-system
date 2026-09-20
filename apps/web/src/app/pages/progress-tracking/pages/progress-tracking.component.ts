@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { ApiService } from '../../../core/services/api.service';
+import { ApiService, SubjectItem } from '../../../core/services/api.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiEmptyStateComponent } from '../../../shared/components/ui-empty-state/ui-empty-state.component';
 import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
@@ -43,6 +43,14 @@ interface ProgressStudyGroup {
 
 export function usableProgressPoints(points: ProgressTrackingResponse['points']) {
   return points.filter((point) => !point.noData && point.averagePercentage !== null);
+}
+
+export function progressSubjectOptions(subjects: SubjectItem[], academicYearId: string): SubjectItem[] {
+  return subjects.filter((subject) => subject.academicYearId === academicYearId && subject.isActive !== false && !subject.archivedAt);
+}
+
+export function progressFilterAvailability(yearId: string, subjectId: string, gradeLevelId: string) {
+  return { subjectEnabled: Boolean(yearId), gradeEnabled: Boolean(subjectId), classEnabled: Boolean(gradeLevelId) };
 }
 
 export function classContextComplete(yearId: string, subjectId: string, gradeLevelId: string, studyGroupId: string): boolean {
@@ -105,6 +113,10 @@ export class ProgressTrackingComponent {
   readonly mode = signal<'class' | 'student' | 'dimensions'>('class');
   readonly dimensionType = signal<DimensionType>('skill');
   readonly availableStudyGroups = signal<ProgressStudyGroup[]>([]);
+  readonly availableSubjects = signal<SubjectItem[]>([]);
+  readonly subjectsLoading = signal(false);
+  readonly subjectsLoaded = signal(false);
+  readonly subjectsError = signal('');
   readonly groupsLoading = signal(false);
   readonly groupMembers = signal<any[]>([]);
   readonly loading = signal(false);
@@ -114,10 +126,12 @@ export class ProgressTrackingComponent {
   readonly dimensionResponse = signal<DimensionProgressResponse | null>(null);
   private readonly route = inject(ActivatedRoute);
   private requestSequence = 0;
+  private subjectRequestSequence = 0;
   private groupRequestSequence = 0;
   private memberRequestSequence = 0;
 
-  readonly subjectsForYear = computed(() => this.api.subjects().filter((subject: any) => subject.academicYearId === this.selectedYearId() && subject.isActive !== false && !subject.archivedAt));
+  readonly subjectsForYear = computed(() => progressSubjectOptions(this.availableSubjects(), this.selectedYearId()));
+  readonly filterAvailability = computed(() => progressFilterAvailability(this.selectedYearId(), this.selectedSubjectId(), this.selectedGradeLevelId()));
   readonly gradeOptions = computed(() => {
     const grades = new Map<string, ProgressGradeLevel>();
     for (const group of this.availableStudyGroups()) grades.set(group.classRoom.gradeLevel.id, group.classRoom.gradeLevel);
@@ -155,6 +169,7 @@ export class ProgressTrackingComponent {
     this.mode.set(routeMode === 'student' || routeMode === 'dimensions' ? routeMode : 'class');
     const currentYear = this.api.selectedAcademicYearId() || this.api.academicYears().find((year: any) => year.isCurrent)?.id || this.api.academicYears()[0]?.id || '';
     this.selectedYearId.set(currentYear);
+    void this.loadSubjectsForSelection();
   }
 
   onModeChange(value: 'class' | 'student' | 'dimensions'): void {
@@ -164,7 +179,7 @@ export class ProgressTrackingComponent {
     if (value === 'dimensions' && isSpecificStudyGroup(this.selectedStudyGroupId())) void this.loadDimensions();
     void this.router.navigate([], { queryParams: { mode: value === 'class' ? null : value }, queryParamsHandling: 'merge' });
   }
-  onYearChange(value: string): void { this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.error.set(''); this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedGradeLevelId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); }
+  onYearChange(value: string): void { this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.error.set(''); this.selectedYearId.set(value); this.selectedSubjectId.set(''); this.selectedGradeLevelId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.availableSubjects.set([]); this.subjectsLoaded.set(false); this.subjectsError.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.groupsLoading.set(false); this.groupRequestSequence++; this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); void this.loadSubjectsForSelection(); }
   onSubjectChange(value: string): void { this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.error.set(''); this.selectedSubjectId.set(value); this.selectedGradeLevelId.set(''); this.selectedStudyGroupId.set(''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.availableStudyGroups.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); void this.loadStudyGroupsForSelection(); }
   onGradeLevelChange(value: string): void {
     this.requestSequence++; this.memberRequestSequence++; this.loading.set(false); this.selectedGradeLevelId.set(value); this.selectedStudyGroupId.set(value ? ALL_GRADE_CLASSES : ''); this.selectedStudentId.set(''); this.groupMembers.set([]); this.response.set(null); this.studentResponse.set(null); this.dimensionResponse.set(null); this.error.set('');
@@ -184,6 +199,27 @@ export class ProgressTrackingComponent {
     const sequence = ++this.memberRequestSequence;
     const members = await this.api.loadGroupMembers(groupId);
     if (sequence === this.memberRequestSequence && this.selectedStudyGroupId() === groupId) this.groupMembers.set(members);
+  }
+  async loadSubjectsForSelection(): Promise<void> {
+    const academicYearId = this.selectedYearId();
+    const sequence = ++this.subjectRequestSequence;
+    if (!academicYearId) { this.availableSubjects.set([]); this.subjectsLoaded.set(false); this.subjectsLoading.set(false); return; }
+    this.subjectsLoading.set(true); this.subjectsError.set('');
+    try {
+      const subjects = await this.api.loadSubjectsForAcademicYear(academicYearId);
+      if (sequence === this.subjectRequestSequence && academicYearId === this.selectedYearId()) {
+        this.availableSubjects.set(subjects);
+        this.subjectsLoaded.set(true);
+      }
+    } catch {
+      if (sequence === this.subjectRequestSequence && academicYearId === this.selectedYearId()) {
+        this.availableSubjects.set([]);
+        this.subjectsLoaded.set(false);
+        this.subjectsError.set('تعذر تحميل مواد السنة المختارة.');
+      }
+    } finally {
+      if (sequence === this.subjectRequestSequence) this.subjectsLoading.set(false);
+    }
   }
   async loadStudyGroupsForSelection(): Promise<void> {
     const academicYearId = this.selectedYearId();

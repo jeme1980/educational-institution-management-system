@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { getProgressTracking, getProgressTrackingDimensions, getProgressTrackingStudyGroups, getStudentProgressTracking } from '../controllers/progress-tracking.controller';
+import { getSubjects } from '../controllers/subjects.controller';
 import { testAdminPrisma as prisma } from '../db/test-admin-prisma';
 import { withRlsContext } from '../middleware/rls-request.middleware';
 
@@ -35,6 +36,17 @@ async function dimensionsResponse(query: Record<string, string>, institutionId: 
     json(value: unknown) { body = value; return this; },
   } as any;
   await withRlsContext(institutionId, () => getProgressTrackingDimensions({ context: { institutionId, academicYearId }, query } as any, response));
+  return { statusCode, body };
+}
+
+async function subjectsResponse(query: Record<string, string>, institutionId: string, academicYearId: string) {
+  let statusCode = 200;
+  let body: any;
+  const response = {
+    status(code: number) { statusCode = code; return this; },
+    json(value: unknown) { body = value; return this; },
+  } as any;
+  await withRlsContext(institutionId, () => getSubjects({ context: { institutionId, academicYearId }, query } as any, response));
   return { statusCode, body };
 }
 
@@ -163,6 +175,12 @@ async function main() {
     assert.equal(availableGroups.body.find((group: any) => group.id === groupA.id).classRoom.gradeLevel.id, grade.id);
     const foreignGroups = await studyGroupsResponse({ academicYearId: yearA.id, subjectId: subjectB.id }, institutionA.id, yearA.id);
     assert.equal(foreignGroups.statusCode, 404);
+
+    const yearSubjects = await subjectsResponse({ academicYearId: yearA.id }, institutionA.id, yearA.id);
+    assert.equal(yearSubjects.statusCode, 200, JSON.stringify(yearSubjects.body));
+    assert.deepEqual(yearSubjects.body.map((subject: any) => subject.id), [subjectA.id]);
+    const foreignYearSubjects = await subjectsResponse({ academicYearId: yearB.id }, institutionA.id, yearA.id);
+    assert.equal(foreignYearSubjects.statusCode, 404);
 
     const valid = await responseFor({ academicYearId: yearA.id, subjectId: subjectA.id, gradeLevelId: grade.id, studyGroupId: groupA.id }, institutionA.id, yearA.id);
     assert.equal(valid.statusCode, 200, JSON.stringify(valid.body));

@@ -1,6 +1,19 @@
 import type { SchoolDashboardData } from './school-dashboard.component';
 
-export function schoolDashboardKpiValues(data: SchoolDashboardData | null): Array<number | string> {
+const ALL = 'ALL';
+
+export function selectedDashboardIds(ids: readonly string[]): string[] {
+  return ids.includes(ALL) ? [] : ids.filter((id) => id !== ALL);
+}
+
+export function pruneDashboardSelection(selected: readonly string[], validIds: readonly string[]): string[] {
+  if (selected.includes(ALL)) return [ALL];
+  const valid = new Set(validIds);
+  const pruned = selected.filter((id) => valid.has(id));
+  return pruned.length ? pruned : [ALL];
+}
+
+export function schoolDashboardKpiValues(data: SchoolDashboardData | null): (number | string)[] {
   const summary = data?.summary;
   return [summary?.schoolAverage == null ? '—' : `${summary.schoolAverage}%`, summary?.examCount || 0, summary?.participatingStudentCount || 0, summary?.subjectCount || 0, summary?.studyGroupCount || 0];
 }

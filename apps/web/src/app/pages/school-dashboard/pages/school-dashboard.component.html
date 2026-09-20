@@ -1,26 +1,81 @@
 <main class="school-dashboard" dir="rtl">
-  <ui-page-header eyebrow="الإدارة والتحليل" title="لوحة المدرسة" description="نظرة شاملة على أداء المدرسة وتغطية بيانات التقييم." />
-  <ui-filter-panel title="اختيار السياق" icon="filter_alt">
+  <ui-page-header eyebrow="الإدارة والتحليل" title="لوحة المدرسة" description="قارن الأداء الأكاديمي عبر السنوات والمراحل والصفوف وأنواع الامتحانات ضمن سياق واحد." />
+
+  <ui-filter-panel title="سياق المقارنة" icon="filter_alt" [resetLabel]="hasNonDefaultFilters() ? 'مسح التصفية' : ''" (reset)="resetFilters()">
     <div class="filters">
-      <label>السنة الدراسية<ui-select [(ngModel)]="academicYearId" (ngModelChange)="yearChanged()" ariaLabel="السنة الدراسية"><option value="">اختر السنة</option>@for (year of years(); track year.id) { <option [value]="year.id">{{ year.yearLabel }}</option> }</ui-select></label>
-      <label>المادة<ui-select [(ngModel)]="subjectId" (ngModelChange)="subjectChanged()" ariaLabel="المادة"><option value="">كل المواد</option>@for (subject of subjects(); track subject.id) { @if (subject.academicYearId === academicYearId) { <option [value]="subject.id">{{ subject.nameAr }}</option> } }</ui-select></label>
+      <label>السنة الدراسية
+        <ui-multi-select [options]="yearOptions()" [selectedIds]="selectedYearIds()" (selectedIdsChange)="yearsChanged($event)" ariaLabel="اختيار السنوات الدراسية" allLabel="كل السنوات" />
+      </label>
+      <label>المادة
+        <ui-select [ngModel]="subjectKey()" (ngModelChange)="subjectChanged($event)" ariaLabel="اختيار المادة" [disabled]="loading()">
+          <option value="">كل المواد</option>
+          @for (subject of data()?.options?.subjects || []; track subject.key) { <option [value]="subject.key">{{ subject.label }}</option> }
+        </ui-select>
+      </label>
+      <label>المرحلة
+        <ui-multi-select [options]="gradeOptions()" [selectedIds]="selectedGradeIds()" (selectedIdsChange)="gradesChanged($event)" ariaLabel="اختيار المراحل" allLabel="كل المراحل" [disabled]="loading()" />
+      </label>
+      <label>الصف
+        <ui-multi-select [options]="classOptions()" [selectedIds]="selectedClassIds()" (selectedIdsChange)="classesChanged($event)" ariaLabel="اختيار الصفوف" allLabel="كل الصفوف" [disabled]="loading() || !classOptions().length" />
+      </label>
+      <label>نوع الامتحان
+        <ui-multi-select [options]="examTypeOptions()" [selectedIds]="selectedExamTypeIds()" (selectedIdsChange)="examTypesChanged($event)" ariaLabel="اختيار أنواع الامتحانات" allLabel="كل أنواع الامتحانات" [disabled]="loading()" />
+      </label>
     </div>
+    @if (contextSummary()) { <p class="context-summary"><mat-icon aria-hidden="true">tune</mat-icon><span>{{ contextSummary() }}</span></p> }
   </ui-filter-panel>
 
-  @if (loading()) { <div class="state" role="status"><mat-icon>progress_activity</mat-icon><h2>جارٍ تحميل لوحة المدرسة</h2></div> }
-  @else if (error()) { <div class="state state--error" role="alert"><mat-icon>error_outline</mat-icon><h2>{{ error() }}</h2><ui-button variant="secondary" (activated)="load()">إعادة المحاولة</ui-button></div> }
-  @else if (!academicYearId) { <div class="state" role="status"><mat-icon>insights</mat-icon><h2>اختر السنة الدراسية لعرض اللوحة</h2></div> }
-  @else if (data(); as dashboard) {
-    <section class="kpi-grid" aria-label="ملخص لوحة المدرسة">@for (kpi of kpis(); track kpi.label) { <ui-stat-card [label]="kpi.label" [value]="kpi.value" [icon]="kpi.icon" [tone]="kpi.tone" /> }</section>
-    @if (!dashboard.summary.examCount) { <div class="state" role="status"><mat-icon>analytics</mat-icon><h2>لا توجد بيانات تقييم كافية لهذه السنة الدراسية.</h2><p>ستظهر مؤشرات الأداء والمقارنات عند توفر امتحانات ونتائج مؤهلة.</p></div> }
-    @else { <section class="dashboard-grid">
-      <ui-section-card title="الأداء حسب المادة" description="متوسط الأداء الموزون حسب النتائج المؤهلة."><div class="chart"><canvas baseChart type="bar" [data]="subjectChartData()" [options]="chartOptions()" role="img" aria-label="مقارنة متوسط الأداء حسب المادة"></canvas></div></ui-section-card>
-      @if (dashboard.byGroup.length >= 2) { <ui-section-card title="الأداء حسب الشعبة" description="مقارنة الشعب ضمن السنة الدراسية الحالية."><div class="chart chart--groups"><canvas baseChart type="bar" [data]="groupChartData()" [options]="groupChartOptions()" role="img" aria-label="مقارنة متوسط الأداء حسب الشعبة"></canvas></div></ui-section-card> } @else { <ui-section-card title="الأداء حسب الشعبة"><div class="empty-note">تظهر مقارنة الشعب عند توفر أكثر من شعبة مرتبطة بالتحليل.</div></ui-section-card> }
-    </section>
-    <ui-section-card title="تغطية البيانات" description="حقائق عن توفر بيانات التقييم المستخدمة في التجميع."><div class="coverage-grid"><div><strong>{{ dashboard.coverage.subjectsWithExams }}</strong><span>مواد لها امتحانات</span></div><div><strong>{{ dashboard.coverage.studyGroupsWithExams }}</strong><span>شعب لها امتحانات</span></div><div><strong>{{ dashboard.coverage.subjectsWithTwoExams }}</strong><span>مواد لها امتحانان فأكثر</span></div><div><strong>{{ dashboard.coverage.studyGroupsWithTwoExams }}</strong><span>شعب لها امتحانان فأكثر</span></div><div><strong>{{ dashboard.coverage.examsWithQuestionDetail }}</strong><span>امتحانات بتفاصيل أسئلة</span></div><div><strong>{{ dashboard.coverage.examsWithoutQuestionDetail }}</strong><span>امتحانات بلا تفاصيل أسئلة</span></div></div></ui-section-card>
-    @if (subjectId && selectedGroups().length) { <ui-section-card title="مقارنة الشعب في المادة"><div class="table-wrap"><table><thead><tr><th>الشعبة</th><th>الامتحانات</th><th>الطلاب المشاركون</th><th>متوسط الأداء</th><th>الإجراء</th></tr></thead><tbody>@for (group of selectedGroups(); track group.id) { <tr><td>{{ group.name }}</td><td>{{ group.examCount }}</td><td>{{ group.participatingStudents }}</td><td>{{ group.averagePerformance === null ? '—' : group.averagePerformance + '%' }}</td><td><a class="detail-link" [routerLink]="['/progress-tracking']" [queryParams]="{ mode: 'class', academicYearId: dashboard.context.academicYear.id, subjectId: subjectId, studyGroupId: group.id }">فتح مسار الشعبة</a></td></tr> }</tbody></table></div></ui-section-card> }
-    @if (dashboard.bySubject.length) { <ui-section-card title="التفصيل حسب المادة"><div class="table-wrap"><table><thead><tr><th>المادة</th><th>الامتحانات</th><th>الطلاب المشاركون</th><th>متوسط الأداء</th><th>الشعب</th><th>الإجراء</th></tr></thead><tbody>@for (row of dashboard.bySubject; track row.id) { <tr><td>{{ row.subjectName }}</td><td>{{ row.examCount }}</td><td>{{ row.participatingStudents }}</td><td>{{ row.averagePerformance === null ? '—' : row.averagePerformance + '%' }}</td><td>{{ row.studyGroupCount }}</td><td><a class="detail-link" [routerLink]="['/progress-tracking']" [queryParams]="{ mode: 'class', academicYearId: dashboard.context.academicYear.id, subjectId: row.id }">فتح مسار التقدم</a></td></tr> }</tbody></table></div></ui-section-card> }
+  @if (loading()) {
+    <div class="state" role="status" aria-live="polite"><mat-icon class="spin">progress_activity</mat-icon><h2>جارٍ تحديث سياق المقارنة</h2><p>تُحدّث المؤشرات والرسوم والجداول معًا.</p></div>
+  } @else if (error()) {
+    <div class="state state--error" role="alert"><mat-icon>error_outline</mat-icon><h2>{{ error() }}</h2><ui-button variant="secondary" (activated)="load()">إعادة المحاولة</ui-button></div>
+  } @else if (data(); as dashboard) {
+    @if (!dashboard.summary.examCount) {
+      <div class="state" role="status"><mat-icon>analytics</mat-icon><h2>لا توجد بيانات تحليلية تطابق السياق المحدد.</h2><p>غيّر أحد المرشحات أو أعد ضبط السياق.</p></div>
+    } @else {
+      <section class="kpi-grid" aria-label="ملخص الأداء">
+        @for (kpi of kpis(); track kpi.label) { <ui-stat-card [label]="kpi.label" [value]="kpi.value" [icon]="kpi.icon" [tone]="kpi.tone" /> }
+      </section>
+
+      <section class="dashboard-grid">
+        <ui-section-card title="الأداء حسب المادة" description="مقارنة متوسط الأداء لكل مادة عبر السنوات المحددة.">
+          @if (dashboard.bySubject.length) { <div class="chart"><canvas baseChart type="bar" [data]="subjectChartData()" [options]="subjectChartOptions()" role="img" aria-label="رسم مقارنة الأداء حسب المادة والسنة"></canvas></div> }
+          @else { <div class="empty-note">لا تتوفر نتائج مواد ضمن السياق المحدد.</div> }
+        </ui-section-card>
+        <ui-section-card [title]="comparisonTitle()" description="يتحول العرض إلى الصفوف عند تحديد مرحلة واحدة.">
+          @if (comparisonRows().length) { <div class="chart"><canvas baseChart type="bar" [data]="comparisonChartData()" [options]="comparisonChartOptions()" role="img" aria-label="رسم مقارنة الأداء حسب المرحلة أو الصف"></canvas></div> }
+          @else { <div class="empty-note">لا تتوفر نتائج للمقارنة ضمن هذا السياق.</div> }
+        </ui-section-card>
+        <ui-section-card class="dashboard-grid__wide" title="تطور الأداء عبر الزمن والامتحانات" description="كل خط يمثل نوع امتحان، ومحور الزمن يمثل السنوات المحددة.">
+          @if (dashboard.byExamType.length) { <div class="chart"><canvas baseChart type="line" [data]="temporalChartData()" [options]="lineChartOptions()" role="img" aria-label="رسم تطور الأداء حسب نوع الامتحان والسنة"></canvas></div> }
+          @else { <div class="empty-note">لا تتوفر نتائج زمنية ضمن السياق المحدد.</div> }
+        </ui-section-card>
+      </section>
+
+      <ui-section-card title="تغطية البيانات" description="مؤشرات اكتمال بيانات التقييم المستخدمة في التحليل.">
+        <div class="coverage-grid">
+          <div><strong>{{ dashboard.coverage.subjectsWithExams }}</strong><span>مواد لها امتحانات</span></div>
+          <div><strong>{{ dashboard.coverage.studyGroupsWithExams }}</strong><span>شعب لها امتحانات</span></div>
+          <div><strong>{{ dashboard.coverage.subjectsWithTwoExams }}</strong><span>مواد لها امتحانان فأكثر</span></div>
+          <div><strong>{{ dashboard.coverage.studyGroupsWithTwoExams }}</strong><span>شعب لها امتحانان فأكثر</span></div>
+          <div><strong>{{ dashboard.coverage.examsWithQuestionDetail }}</strong><span>امتحانات بتفاصيل أسئلة</span></div>
+          <div><strong>{{ dashboard.coverage.examsWithoutQuestionDetail }}</strong><span>امتحانات بلا تفاصيل أسئلة</span></div>
+        </div>
+      </ui-section-card>
+
+      <ui-section-card title="تفصيل المواد" description="الامتحانات والمشاركة ومتوسط الأداء لكل مادة وسنة.">
+        <div class="table-wrap"><table>
+          <thead><tr><th>المادة</th><th>السنة</th><th>الامتحانات</th><th>الطلاب المشاركون</th><th>متوسط الأداء</th><th>الشعب</th><th>الإجراء</th></tr></thead>
+          <tbody>@for (row of dashboard.bySubject; track row.academicYearId + ':' + row.subjectKey) {
+            <tr><td>{{ row.subjectName }}</td><td>{{ row.yearLabel }}</td><td>{{ row.examCount }}</td><td>{{ row.participatingStudents }}</td><td>{{ row.averagePerformance === null ? '—' : row.averagePerformance + '%' }}</td><td>{{ row.studyGroupCount }}</td><td><a class="detail-link" routerLink="/progress-tracking" [queryParams]="{ mode: 'class' }">فتح مسار التقدم</a></td></tr>
+          }</tbody>
+        </table></div>
+      </ui-section-card>
     }
-    <div class="dashboard-links"><a routerLink="/action-center"><mat-icon>fact_check</mat-icon><span><strong>عرض أولويات المتابعة</strong><small>انتقل إلى مركز المتابعة التربوية</small></span></a><a routerLink="/progress-tracking"><mat-icon>trending_up</mat-icon><span><strong>فتح مسار التقدم</strong><small>تابع الأداء عبر الامتحانات</small></span></a></div>
+
+    <div class="dashboard-links">
+      <a routerLink="/action-center"><mat-icon>fact_check</mat-icon><span><strong>عرض أولويات المتابعة</strong><small>انتقل إلى مركز المتابعة التربوية</small></span></a>
+      <a routerLink="/progress-tracking"><mat-icon>trending_up</mat-icon><span><strong>فتح مسار التقدم</strong><small>تابع الأداء عبر الامتحانات</small></span></a>
+    </div>
   }
 </main>

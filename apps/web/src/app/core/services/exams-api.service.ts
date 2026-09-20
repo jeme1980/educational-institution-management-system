@@ -184,9 +184,13 @@ export class ExamsApiService extends BaseApiService {
     return null;
   }
 
-  async loadSchoolDashboard(params: { academicYearId: string; subjectId?: string }) {
+  async loadSchoolDashboard(params: { academicYearIds?: string[]; subjectKey?: string; gradeLevelIds?: string[]; classIds?: string[]; examTypeIds?: string[] }) {
     try {
-      const query = new URLSearchParams(Object.entries(params).filter(([, value]) => Boolean(value)) as [string, string][]).toString();
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) {
+        if (Array.isArray(value) && value.length) query.set(key, value.join(','));
+        else if (typeof value === 'string' && value) query.set(key, value);
+      }
       const res = await this.apiFetch(`/api/school-dashboard?${query}`, { headers: this.headers });
       if (res.ok) return await res.json();
     } catch (e) { console.error('Failed to load school dashboard', e); }

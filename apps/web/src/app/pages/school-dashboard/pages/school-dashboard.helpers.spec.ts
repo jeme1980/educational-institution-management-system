@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compactChartLabel, schoolDashboardKpiValues, selectCurrentAcademicYear, shouldShowGroupComparison } from './school-dashboard.helpers';
+import { compactChartLabel, pruneDashboardSelection, schoolDashboardKpiValues, selectCurrentAcademicYear, selectedDashboardIds, shouldShowGroupComparison } from './school-dashboard.helpers';
 
 describe('School dashboard helpers', () => {
   it('selects the current academic year without falling back to an arbitrary year', () => {
@@ -15,5 +15,14 @@ describe('School dashboard helpers', () => {
   it('compacts only the chart display label while preserving a readable prefix', () => {
     expect(compactChartLabel('الصف التجريبي — الرياضيات', 16)).toHaveLength(16);
     expect(compactChartLabel('علوم')).toBe('علوم');
+  });
+  it('represents all explicitly while omitting it from API filters', () => {
+    expect(selectedDashboardIds(['ALL'])).toEqual([]);
+    expect(selectedDashboardIds(['year-a', 'year-b'])).toEqual(['year-a', 'year-b']);
+  });
+  it('prunes dependent selections and falls back to all when none remain', () => {
+    expect(pruneDashboardSelection(['class-a', 'class-b'], ['class-b', 'class-c'])).toEqual(['class-b']);
+    expect(pruneDashboardSelection(['class-a'], ['class-b'])).toEqual(['ALL']);
+    expect(pruneDashboardSelection(['ALL'], ['class-b'])).toEqual(['ALL']);
   });
 });

@@ -113,7 +113,11 @@ export class SchoolDashboardComponent implements OnInit {
 
   readonly temporalChartData = computed<ChartData<'line'>>(() => {
     const colors = readAcademicChartColors(); const rows = this.trendRows(); const showYear = new Set(rows.map((row) => row.academicYearId)).size > 1;
-    return { labels: rows.map((row) => `${this.formatExamDate(row.examDate)}${showYear ? ` · ${row.yearLabel}` : ''}`), datasets: this.trendExamTypes().map((type, index) => ({ label: type.nameAr, data: rows.map((row) => row.examTypeId === type.id ? row.averagePerformance : null), borderColor: this.chartColor(index, colors), backgroundColor: this.chartColor(index, colors), pointRadius: 4, pointHoverRadius: 6, tension: 0.25, spanGaps: true })) };
+    return { labels: rows.map((row) => `${this.formatExamDate(row.examDate)}${showYear ? ` · ${row.yearLabel}` : ''}`), datasets: this.trendExamTypes().map((type, index) => {
+      const data = rows.map((row) => row.examTypeId === type.id ? row.averagePerformance : null);
+      const hasConnectedPath = data.filter((value) => value !== null).length >= 2;
+      return { label: type.nameAr, data, borderColor: this.chartColor(index, colors), backgroundColor: this.chartColor(index, colors), borderWidth: hasConnectedPath ? 2 : 0, pointRadius: 4, pointHoverRadius: 6, tension: 0.25, showLine: hasConnectedPath, spanGaps: hasConnectedPath };
+    }) };
   });
 
   readonly subjectChartOptions = computed<ChartOptions<'bar'>>(() => this.buildChartOptions<'bar'>('متوسط الأداء حسب المادة', (datasetIndex, dataIndex) => {

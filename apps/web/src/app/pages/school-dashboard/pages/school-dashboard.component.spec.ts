@@ -114,6 +114,10 @@ describe('SchoolDashboardComponent context controls', () => {
     expect(fixture.componentInstance.comparisonChartData().labels).toEqual(['الأول أ', 'متوسط المرحلة الأولى']);
     expect(fixture.componentInstance.trendRows().map((row) => row.examId)).toEqual(['exam-1', 'exam-2', 'exam-3']);
     expect(fixture.componentInstance.temporalChartData().datasets[0].data).toEqual([70, null, 74]);
+    expect(fixture.componentInstance.temporalChartData().datasets[0].showLine).toBe(true);
+    expect(fixture.componentInstance.temporalChartData().datasets[0].borderWidth).toBe(2);
+    expect(fixture.componentInstance.temporalChartData().datasets[1].showLine).toBe(false);
+    expect(fixture.componentInstance.temporalChartData().datasets[1].borderWidth).toBe(0);
     expect(String(fixture.componentInstance.temporalChartData().labels?.[0])).toContain(year.yearLabel);
 
     const current = fixture.componentInstance.data()!;

@@ -3,24 +3,24 @@
 
   <ui-filter-panel title="سياق المقارنة" icon="filter_alt" [resetLabel]="hasNonDefaultFilters() ? 'مسح التصفية' : ''" (reset)="resetFilters()">
     <div class="filters">
-      <label>السنة الدراسية
-        <ui-multi-select [options]="yearOptions()" [selectedIds]="selectedYearIds()" (selectedIdsChange)="yearsChanged($event)" ariaLabel="اختيار السنوات الدراسية" allLabel="كل السنوات" />
-      </label>
-      <label>المادة
+      <div class="filter-field"><span>السنة الدراسية</span>
+        <ui-multi-select [options]="yearOptions()" [selectedIds]="selectedYearIds()" (selectedIdsChange)="yearsChanged($event)" ariaLabel="اختيار السنوات الدراسية" allLabel="كل السنوات" countLabel="سنوات" />
+      </div>
+      <div class="filter-field"><span>المادة</span>
         <ui-select [ngModel]="subjectKey()" (ngModelChange)="subjectChanged($event)" ariaLabel="اختيار المادة" [disabled]="loading()">
           <option value="">كل المواد</option>
           @for (subject of data()?.options?.subjects || []; track subject.key) { <option [value]="subject.key">{{ subject.label }}</option> }
         </ui-select>
-      </label>
-      <label>المرحلة
-        <ui-multi-select [options]="gradeOptions()" [selectedIds]="selectedGradeIds()" (selectedIdsChange)="gradesChanged($event)" ariaLabel="اختيار المراحل" allLabel="كل المراحل" [disabled]="loading()" />
-      </label>
-      <label>الصف
-        <ui-multi-select [options]="classOptions()" [selectedIds]="selectedClassIds()" (selectedIdsChange)="classesChanged($event)" ariaLabel="اختيار الصفوف" allLabel="كل الصفوف" [disabled]="loading() || !classOptions().length" />
-      </label>
-      <label>نوع الامتحان
-        <ui-multi-select [options]="examTypeOptions()" [selectedIds]="selectedExamTypeIds()" (selectedIdsChange)="examTypesChanged($event)" ariaLabel="اختيار أنواع الامتحانات" allLabel="كل أنواع الامتحانات" [disabled]="loading()" />
-      </label>
+      </div>
+      <div class="filter-field"><span>المرحلة</span>
+        <ui-multi-select [options]="gradeOptions()" [selectedIds]="selectedGradeIds()" (selectedIdsChange)="gradesChanged($event)" ariaLabel="اختيار المراحل" allLabel="كل المراحل" countLabel="مراحل" [disabled]="!gradeOptions().length" />
+      </div>
+      <div class="filter-field"><span>الصف</span>
+        <ui-multi-select [options]="classOptions()" [selectedIds]="selectedClassIds()" (selectedIdsChange)="classesChanged($event)" ariaLabel="اختيار الصفوف" allLabel="كل الصفوف" countLabel="صفوف" [disabled]="!classOptions().length" />
+      </div>
+      <div class="filter-field"><span>نوع الامتحان</span>
+        <ui-multi-select [options]="examTypeOptions()" [selectedIds]="selectedExamTypeIds()" (selectedIdsChange)="examTypesChanged($event)" ariaLabel="اختيار أنواع الامتحانات" allLabel="كل أنواع الامتحانات" countLabel="أنواع امتحانات" [disabled]="!examTypeOptions().length" />
+      </div>
     </div>
     @if (contextSummary()) { <p class="context-summary"><mat-icon aria-hidden="true">tune</mat-icon><span>{{ contextSummary() }}</span></p> }
   </ui-filter-panel>

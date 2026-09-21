@@ -57,7 +57,10 @@ export class SchoolDashboardComponent implements OnInit {
 
   readonly yearOptions = computed<UiMultiSelectOption[]>(() => this.years().map((year) => ({ id: year.id, label: year.yearLabel })));
   readonly gradeOptions = computed<UiMultiSelectOption[]>(() => (this.data()?.options.gradeLevels || []).map((grade) => ({ id: grade.id, label: grade.nameAr })));
-  readonly classOptions = computed<UiMultiSelectOption[]>(() => (this.data()?.options.classes || []).map((item) => ({ id: item.id, label: `${item.nameAr} · ${item.gradeLevelName} · ${item.yearLabel}` })));
+  readonly classOptions = computed<UiMultiSelectOption[]>(() => {
+    const gradeIds = selectedDashboardIds(this.selectedGradeIds());
+    return (this.data()?.options.classes || []).filter((item) => !gradeIds.length || gradeIds.includes(item.gradeLevelId)).map((item) => ({ id: item.id, label: `${item.nameAr} · ${item.gradeLevelName} · ${item.yearLabel}` }));
+  });
   readonly examTypeOptions = computed<UiMultiSelectOption[]>(() => (this.data()?.options.examTypes || []).map((type) => ({ id: type.id, label: type.nameAr })));
   readonly comparisonRows = computed(() => selectedDashboardIds(this.selectedGradeIds()).length === 1 ? this.data()?.byClass || [] : this.data()?.byGrade || []);
   readonly comparisonTitle = computed(() => selectedDashboardIds(this.selectedGradeIds()).length === 1 ? 'الأداء حسب الصفوف' : 'الأداء حسب المراحل');
@@ -129,7 +132,7 @@ export class SchoolDashboardComponent implements OnInit {
   async resetFilters(): Promise<void> { const current = selectCurrentAcademicYear(this.years()) || this.years()[0]; this.selectedYearIds.set(current ? [current.id] : [MULTI_SELECT_ALL]); this.subjectKey.set(''); this.resetDependencies(); await this.load(); }
 
   async load(): Promise<void> {
-    const sequence = ++this.requestSequence; this.loading.set(true); this.error.set(''); this.data.set(null);
+    const sequence = ++this.requestSequence; this.loading.set(true); this.error.set('');
     const result = await this.api.loadSchoolDashboard({ academicYearIds: selectedDashboardIds(this.selectedYearIds()), subjectKey: this.subjectKey() || undefined, gradeLevelIds: selectedDashboardIds(this.selectedGradeIds()), classIds: selectedDashboardIds(this.selectedClassIds()), examTypeIds: selectedDashboardIds(this.selectedExamTypeIds()) });
     if (sequence !== this.requestSequence) return;
     if (!result) { this.error.set('تعذّر تحميل سياق المقارنة. حاول مرة أخرى.'); this.loading.set(false); return; }

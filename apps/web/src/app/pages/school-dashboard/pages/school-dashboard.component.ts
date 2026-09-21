@@ -15,7 +15,7 @@ import { UiButtonComponent } from '../../../shared/components/ui-button/ui-butto
 import { MULTI_SELECT_ALL, UiMultiSelectComponent, UiMultiSelectOption } from '../../../shared/components/ui-multi-select/ui-multi-select.component';
 import { AcademicChartThemeService } from '../../../shared/charts/academic-chart-theme.service';
 import { academicChartOptions, readAcademicChartColors } from '../../../shared/charts/academic-chart-theme';
-import { compactChartLabel, pruneDashboardSelection, selectCurrentAcademicYear, selectedDashboardIds } from './school-dashboard.helpers';
+import { buildDashboardComparisonEntities, compactChartLabel, DashboardComparisonEntity, pruneDashboardSelection, selectCurrentAcademicYear, selectedDashboardIds, sortDashboardExamTrend } from './school-dashboard.helpers';
 
 interface DashboardYear { id: string; yearLabel: string; isCurrent?: boolean }
 interface SubjectOption { key: string; nameAr: string; label: string; subjectIds: string[]; academicYearIds: string[] }
@@ -23,6 +23,7 @@ interface GradeOption { id: string; nameAr: string; sortOrder: number }
 interface ClassOption { id: string; nameAr: string; gradeLevelId: string; gradeLevelName: string; academicYearId: string; yearLabel: string }
 interface ExamTypeOption { id: string; nameAr: string; sortOrder: number }
 interface PerformanceRow { examCount: number; participatingStudents: number; averagePerformance: number | null }
+interface ExamTypePerformanceRow extends PerformanceRow { examTypeId: string; examTypeName: string; sortOrder: number }
 
 export interface SchoolDashboardData {
   context: { academicYears: DashboardYear[]; subject: { key: string; nameAr: string } | null };
@@ -33,6 +34,9 @@ export interface SchoolDashboardData {
   byClass: (PerformanceRow & ClassOption & { subjectCount: number })[];
   byGrade: (PerformanceRow & { id: string; nameAr: string; sortOrder: number; subjectCount: number })[];
   byExamType: (PerformanceRow & { academicYearId: string; yearLabel: string; examTypeId: string; examTypeName: string; sortOrder: number })[];
+  byClassExamType: (ExamTypePerformanceRow & ClassOption)[];
+  byGradeExamType: (ExamTypePerformanceRow & { id: string; nameAr: string; gradeSortOrder: number })[];
+  examTrend: (ExamTypePerformanceRow & { examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string })[];
 }
 
 @Component({
@@ -62,8 +66,16 @@ export class SchoolDashboardComponent implements OnInit {
     return (this.data()?.options.classes || []).filter((item) => !gradeIds.length || gradeIds.includes(item.gradeLevelId)).map((item) => ({ id: item.id, label: `${item.nameAr} · ${item.gradeLevelName} · ${item.yearLabel}` }));
   });
   readonly examTypeOptions = computed<UiMultiSelectOption[]>(() => (this.data()?.options.examTypes || []).map((type) => ({ id: type.id, label: type.nameAr })));
-  readonly comparisonRows = computed(() => selectedDashboardIds(this.selectedGradeIds()).length === 1 ? this.data()?.byClass || [] : this.data()?.byGrade || []);
-  readonly comparisonTitle = computed(() => selectedDashboardIds(this.selectedGradeIds()).length === 1 ? 'الأداء حسب الصفوف' : 'الأداء حسب المراحل');
+  readonly comparisonEntities = computed<DashboardComparisonEntity[]>(() => {
+    const dashboard = this.data(); if (!dashboard) return [];
+    const selectedClasses = selectedDashboardIds(this.selectedClassIds());
+    const grades = selectedClasses.length ? dashboard.options.gradeLevels : [...new Map(dashboard.byGradeExamType.map((row) => [row.id, { id: row.id, nameAr: row.nameAr, sortOrder: row.gradeSortOrder }])).values()];
+    return buildDashboardComparisonEntities(this.selectedClassIds(), dashboard.options.classes, grades);
+  });
+  readonly comparisonExamTypes = computed(() => this.availableExamTypes(this.data()?.byClassExamType || [], this.data()?.byGradeExamType || []));
+  readonly trendRows = computed(() => sortDashboardExamTrend(this.data()?.examTrend || []));
+  readonly trendExamTypes = computed(() => this.availableExamTypes(this.trendRows()));
+  readonly comparisonTitle = computed(() => selectedDashboardIds(this.selectedClassIds()).length ? 'مقارنة أداء الصفوف بمتوسط الطبقة' : 'الأداء حسب المراحل');
   readonly hasNonDefaultFilters = computed(() => {
     const current = selectCurrentAcademicYear(this.years()) || this.years()[0];
     const years = selectedDashboardIds(this.selectedYearIds());
@@ -95,25 +107,28 @@ export class SchoolDashboardComponent implements OnInit {
   });
 
   readonly comparisonChartData = computed<ChartData<'bar'>>(() => {
-    const colors = readAcademicChartColors(); const rows = this.comparisonRows();
-    return { labels: rows.map((row) => compactChartLabel('yearLabel' in row ? `${row.nameAr} · ${row.yearLabel}` : row.nameAr)), datasets: [{ label: 'متوسط الأداء', data: rows.map((row) => row.averagePerformance), backgroundColor: colors.success, borderRadius: 5, maxBarThickness: 38 }] };
+    const colors = readAcademicChartColors(); const entities = this.comparisonEntities();
+    return { labels: entities.map((entity) => compactChartLabel(entity.label, 24)), datasets: this.comparisonExamTypes().map((type, index) => ({ label: type.nameAr, data: entities.map((entity) => this.comparisonRow(entity, type.id)?.averagePerformance ?? null), backgroundColor: this.chartColor(index, colors), borderRadius: 5, maxBarThickness: 34 })) };
   });
 
   readonly temporalChartData = computed<ChartData<'line'>>(() => {
-    const colors = readAcademicChartColors(); const dashboard = this.data(); const types = dashboard?.options.examTypes || [];
-    const years = dashboard?.context.academicYears || [];
-    return { labels: years.map((year) => year.yearLabel), datasets: types.map((type, index) => ({ label: type.nameAr, data: years.map((year) => dashboard?.byExamType.find((row) => row.academicYearId === year.id && row.examTypeId === type.id)?.averagePerformance ?? null), borderColor: this.chartColor(index, colors), backgroundColor: this.chartColor(index, colors), tension: 0.25, spanGaps: true })) };
+    const colors = readAcademicChartColors(); const rows = this.trendRows(); const showYear = new Set(rows.map((row) => row.academicYearId)).size > 1;
+    return { labels: rows.map((row) => `${this.formatExamDate(row.examDate)}${showYear ? ` · ${row.yearLabel}` : ''}`), datasets: this.trendExamTypes().map((type, index) => ({ label: type.nameAr, data: rows.map((row) => row.examTypeId === type.id ? row.averagePerformance : null), borderColor: this.chartColor(index, colors), backgroundColor: this.chartColor(index, colors), pointRadius: 4, pointHoverRadius: 6, tension: 0.25, spanGaps: true })) };
   });
 
   readonly subjectChartOptions = computed<ChartOptions<'bar'>>(() => this.buildChartOptions<'bar'>('متوسط الأداء حسب المادة', (datasetIndex, dataIndex) => {
     const dashboard = this.data(); const year = dashboard?.context.academicYears[datasetIndex];
     const subjectKey = [...new Map((dashboard?.bySubject || []).map((row) => [row.subjectKey, row.subjectName])).keys()][dataIndex];
-    return dashboard?.bySubject.find((row) => row.academicYearId === year?.id && row.subjectKey === subjectKey)?.participatingStudents;
+    const row = dashboard?.bySubject.find((item) => item.academicYearId === year?.id && item.subjectKey === subjectKey);
+    return row ? [`الطلاب المشاركون: ${row.participatingStudents}`, `الامتحانات: ${row.examCount}`] : undefined;
   }));
-  readonly comparisonChartOptions = computed<ChartOptions<'bar'>>(() => this.buildChartOptions<'bar'>('متوسط الأداء حسب المرحلة أو الصف', (_datasetIndex, dataIndex) => this.comparisonRows()[dataIndex]?.participatingStudents));
+  readonly comparisonChartOptions = computed<ChartOptions<'bar'>>(() => this.buildChartOptions<'bar'>(this.comparisonTitle(), (datasetIndex, dataIndex) => {
+    const entity = this.comparisonEntities()[dataIndex]; const type = this.comparisonExamTypes()[datasetIndex]; const row = entity && type ? this.comparisonRow(entity, type.id) : undefined;
+    return row ? [`الطلاب المشاركون: ${row.participatingStudents}`, `الامتحانات: ${row.examCount}`] : undefined;
+  }));
   readonly lineChartOptions = computed<ChartOptions<'line'>>(() => this.buildChartOptions<'line'>('تطور الأداء حسب نوع الامتحان', (datasetIndex, dataIndex) => {
-    const dashboard = this.data(); const type = dashboard?.options.examTypes[datasetIndex]; const year = dashboard?.context.academicYears[dataIndex];
-    return dashboard?.byExamType.find((row) => row.examTypeId === type?.id && row.academicYearId === year?.id)?.participatingStudents;
+    const row = this.trendRows()[dataIndex]; const type = this.trendExamTypes()[datasetIndex];
+    return row && row.examTypeId === type?.id ? [row.examTitle, `السنة الدراسية: ${row.yearLabel}`, `الطلاب المشاركون: ${row.participatingStudents}`, `الامتحانات: ${row.examCount}`] : undefined;
   }));
 
   async ngOnInit(): Promise<void> {
@@ -146,8 +161,21 @@ export class SchoolDashboardComponent implements OnInit {
   private resetDependencies(): void { this.selectedGradeIds.set([MULTI_SELECT_ALL]); this.selectedClassIds.set([MULTI_SELECT_ALL]); this.selectedExamTypeIds.set([MULTI_SELECT_ALL]); }
   private selectionSummary(ids: string[], options: UiMultiSelectOption[], allLabel: string): string { const selected = selectedDashboardIds(ids); if (!selected.length) return allLabel; const labels = options.filter((option) => selected.includes(option.id)).map((option) => option.label); return labels.length <= 2 ? labels.join('، ') : `${labels.length} محددة`; }
   private chartColor(index: number, colors: ReturnType<typeof readAcademicChartColors>): string { return [colors.primary, colors.success, colors.warning, colors.danger][index % 4]; }
-  private buildChartOptions<T extends 'bar' | 'line'>(title: string, participantCount?: (datasetIndex: number, dataIndex: number) => number | undefined): ChartOptions<T> {
+  private availableExamTypes(...rows: ExamTypePerformanceRow[][]): ExamTypeOption[] {
+    const availableIds = new Set(rows.flat().map((row) => row.examTypeId));
+    return (this.data()?.options.examTypes || []).filter((type) => availableIds.has(type.id));
+  }
+  private comparisonRow(entity: DashboardComparisonEntity, examTypeId: string): ExamTypePerformanceRow | undefined {
+    const dashboard = this.data();
+    return entity.kind === 'class'
+      ? dashboard?.byClassExamType.find((row) => row.id === entity.id && row.examTypeId === examTypeId)
+      : dashboard?.byGradeExamType.find((row) => row.id === entity.id && row.examTypeId === examTypeId);
+  }
+  private formatExamDate(value: string): string {
+    return new Intl.DateTimeFormat('ar', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(value));
+  }
+  private buildChartOptions<T extends 'bar' | 'line'>(title: string, details?: (datasetIndex: number, dataIndex: number) => string | string[] | undefined): ChartOptions<T> {
     this.theme.revision(); const colors = readAcademicChartColors(); const base = academicChartOptions<T>(this.theme, title); const plugins = base?.plugins;
-    return { ...(base || {}), plugins: { ...plugins, legend: { ...plugins?.legend, display: true, position: 'bottom', rtl: true }, tooltip: { ...plugins?.tooltip, callbacks: { ...plugins?.tooltip?.callbacks, label: (context: TooltipItem<T>) => `${(context.dataset as { label?: string }).label || 'الأداء'}: ${context.formattedValue}%`, afterLabel: (context: TooltipItem<T>) => { const count = participantCount?.(context.datasetIndex, context.dataIndex); return count == null ? '' : `الطلاب المشاركون: ${count}`; } } } }, scales: { x: { ticks: { color: colors.onSurfaceVariant, autoSkip: true, maxRotation: 0, minRotation: 0 }, grid: { display: false } }, y: { beginAtZero: true, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } } as unknown as ChartOptions<T>;
+    return { ...(base || {}), plugins: { ...plugins, legend: { ...plugins?.legend, display: true, position: 'bottom', rtl: true }, tooltip: { ...plugins?.tooltip, callbacks: { ...plugins?.tooltip?.callbacks, label: (context: TooltipItem<T>) => `${(context.dataset as { label?: string }).label || 'الأداء'}: ${context.formattedValue}%`, afterLabel: (context: TooltipItem<T>) => details?.(context.datasetIndex, context.dataIndex) || '' } } }, scales: { x: { ticks: { color: colors.onSurfaceVariant, autoSkip: true, maxRotation: 0, minRotation: 0 }, grid: { display: false } }, y: { beginAtZero: true, max: 100, ticks: { color: colors.onSurfaceVariant, callback: (value: string | number) => `${value}%` }, grid: { color: colors.outline } } } } as unknown as ChartOptions<T>;
   }
 }

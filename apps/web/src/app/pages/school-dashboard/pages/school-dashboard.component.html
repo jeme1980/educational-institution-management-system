@@ -42,13 +42,13 @@
           @if (dashboard.bySubject.length) { <div class="chart"><canvas baseChart type="bar" [data]="subjectChartData()" [options]="subjectChartOptions()" role="img" aria-label="رسم مقارنة الأداء حسب المادة والسنة"></canvas></div> }
           @else { <div class="empty-note">لا تتوفر نتائج مواد ضمن السياق المحدد.</div> }
         </ui-section-card>
-        <ui-section-card [title]="comparisonTitle()" description="يتحول العرض إلى الصفوف عند تحديد مرحلة واحدة.">
-          @if (comparisonRows().length) { <div class="chart"><canvas baseChart type="bar" [data]="comparisonChartData()" [options]="comparisonChartOptions()" role="img" aria-label="رسم مقارنة الأداء حسب المرحلة أو الصف"></canvas></div> }
-          @else { <div class="empty-note">لا تتوفر نتائج للمقارنة ضمن هذا السياق.</div> }
+        <ui-section-card [title]="comparisonTitle()" description="يعرض كل نوع امتحان بصورة مستقلة، ويقارن الصفوف المحددة بمتوسط طبقتها.">
+          @if (comparisonEntities().length && comparisonExamTypes().length) { <div class="chart"><canvas baseChart type="bar" [data]="comparisonChartData()" [options]="comparisonChartOptions()" role="img" aria-label="رسم مقارنة أداء الصفوف بمتوسط الطبقة حسب نوع الامتحان"></canvas></div> }
+          @else { <div class="empty-note">لا توجد بيانات كافية لعرض المقارنة ضمن السياق المحدد.</div> }
         </ui-section-card>
-        <ui-section-card class="dashboard-grid__wide" title="تطور الأداء عبر الزمن والامتحانات" description="كل خط يمثل نوع امتحان، ومحور الزمن يمثل السنوات المحددة.">
-          @if (dashboard.byExamType.length) { <div class="chart"><canvas baseChart type="line" [data]="temporalChartData()" [options]="lineChartOptions()" role="img" aria-label="رسم تطور الأداء حسب نوع الامتحان والسنة"></canvas></div> }
-          @else { <div class="empty-note">لا تتوفر نتائج زمنية ضمن السياق المحدد.</div> }
+        <ui-section-card class="dashboard-grid__wide" title="تطور الأداء عبر الزمن حسب نوع الامتحان" description="كل خط يمثل نوع امتحان، ومحور الزمن يعرض تواريخ الامتحانات الفعلية بترتيبها الزمني.">
+          @if (trendRows().length) { <div class="chart"><canvas baseChart type="line" [data]="temporalChartData()" [options]="lineChartOptions()" role="img" aria-label="رسم تطور الأداء حسب نوع الامتحان وتاريخ الامتحان"></canvas></div> }
+          @else { <div class="empty-note">لا توجد بيانات كافية لعرض المقارنة ضمن السياق المحدد.</div> }
         </ui-section-card>
       </section>
 

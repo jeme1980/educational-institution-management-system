@@ -86,15 +86,16 @@ export async function getSchoolDashboard(institutionId: string, filters: SchoolD
   if (filters.classIds.some((id) => !classOptionsMap.has(id))) throw new SchoolDashboardFilterError(404, 'One or more classes are not available in this context.');
   const scopedGroups = filters.classIds.length ? gradeScopedGroups.filter((group) => group.classId && filters.classIds.includes(group.classId)) : gradeScopedGroups;
   const scopedGroupIds = scopedGroups.map((group) => group.id);
+  const gradeScopedGroupIds = gradeScopedGroups.map((group) => group.id);
   const restrictByGroup = Boolean(filters.gradeLevelIds.length || filters.classIds.length);
 
   const candidateExams = await prisma.exam.findMany({
     where: { institutionId, academicYearId: { in: requestedYearIds }, subjectId: { in: selectedSubjectIds }, archivedAt: null, ...(restrictByGroup ? { examGroups: { some: { institutionId, studyGroupId: { in: scopedGroupIds } } } } : {}) },
     orderBy: [{ examDate: 'asc' }, { id: 'asc' }],
     select: {
-      id: true, academicYearId: true, subjectId: true, examTypeId: true, examDate: true, maxScore: true,
+      id: true, titleAr: true, academicYearId: true, subjectId: true, examTypeId: true, examDate: true, maxScore: true,
       academicYear: { select: { yearLabel: true } }, subject: { select: { nameAr: true } }, examType: { select: { id: true, nameAr: true, sortOrder: true } },
-      examQuestions: { select: { id: true } }, examGroups: { where: { institutionId, studyGroupId: { in: scopedGroupIds } }, select: { studyGroupId: true } },
+      examQuestions: { select: { id: true } }, examGroups: { where: { institutionId, studyGroupId: { in: gradeScopedGroupIds } }, select: { studyGroupId: true } },
       studentExamResults: { where: { institutionId }, select: { studentId: true, totalScore: true, isAbsence: true } },
     },
   });
@@ -104,32 +105,45 @@ export async function getSchoolDashboard(institutionId: string, filters: SchoolD
   if (filters.examTypeIds.some((id) => !examTypeOptionsMap.has(id))) throw new SchoolDashboardFilterError(404, 'One or more exam types are not available in this context.');
   const exams = filters.examTypeIds.length ? candidateExams.filter((exam) => filters.examTypeIds.includes(exam.examTypeId)) : candidateExams;
 
-  const groupMap = new Map(scopedGroups.map((group) => [group.id, { ...group, studentIds: new Set(group.students.map((item) => item.studentEnrollment.studentId)) }]));
+  const toDashboardGroup = (group: typeof gradeScopedGroups[number]) => ({ ...group, studentIds: new Set(group.students.map((item) => item.studentEnrollment.studentId)) });
+  const groupMap = new Map(scopedGroups.map((group) => [group.id, toDashboardGroup(group)]));
+  const gradeGroupMap = new Map(gradeScopedGroups.map((group) => [group.id, toDashboardGroup(group)]));
   const overall = createDashboardAccumulator(); const subjectRows = new Map<string, DashboardAccumulator>(); const classRows = new Map<string, DashboardAccumulator>(); const gradeRows = new Map<string, DashboardAccumulator>(); const examTypeRows = new Map<string, DashboardAccumulator>();
+  const classExamTypeRows = new Map<string, DashboardAccumulator>(); const gradeExamTypeRows = new Map<string, DashboardAccumulator>();
+  const examTrend: Array<{ examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string; examTypeId: string; examTypeName: string; sortOrder: number; examCount: number; averagePerformance: number | null; participatingStudents: number }> = [];
   const linkedGroupIds = new Set<string>(); const subjectExamIds = new Map<string, Set<string>>(); const groupExamIds = new Map<string, Set<string>>();
   for (const exam of exams) {
     const examGroups = exam.examGroups.map((link) => groupMap.get(link.studyGroupId)).filter(Boolean) as NonNullable<ReturnType<typeof groupMap.get>>[];
+    const gradeExamGroups = exam.examGroups.map((link) => gradeGroupMap.get(link.studyGroupId)).filter(Boolean) as NonNullable<ReturnType<typeof gradeGroupMap.get>>[];
     const eligible = new Set(examGroups.flatMap((group) => [...group.studentIds]));
     addNormalizedResults(overall, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible);
     const subjectKey = subjectKeyById.get(exam.subjectId) || exam.subjectId; overall.subjectKeys.add(subjectKey);
     const subjectRowKey = `${exam.academicYearId}:${subjectKey}`; const subjectRow = subjectRows.get(subjectRowKey) || createDashboardAccumulator(); subjectRow.subjectKeys.add(subjectKey); addNormalizedResults(subjectRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible); subjectRows.set(subjectRowKey, subjectRow);
     const examTypeKey = `${exam.academicYearId}:${exam.examTypeId}`; const examTypeRow = examTypeRows.get(examTypeKey) || createDashboardAccumulator(); addNormalizedResults(examTypeRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible); examTypeRows.set(examTypeKey, examTypeRow);
+    const trendRow = createDashboardAccumulator(); addNormalizedResults(trendRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible);
+    if (trendRow.count) examTrend.push({ examId: exam.id, examDate: exam.examDate.toISOString(), examTitle: exam.titleAr, academicYearId: exam.academicYearId, yearLabel: exam.academicYear.yearLabel, examTypeId: exam.examTypeId, examTypeName: exam.examType.nameAr, sortOrder: exam.examType.sortOrder, examCount: 1, averagePerformance: dashboardAverage(trendRow), participatingStudents: trendRow.studentIds.size });
     const subjectExams = subjectExamIds.get(subjectKey) || new Set<string>(); subjectExams.add(exam.id); subjectExamIds.set(subjectKey, subjectExams);
     for (const group of examGroups) {
       linkedGroupIds.add(group.id); const groupExams = groupExamIds.get(group.id) || new Set<string>(); groupExams.add(exam.id); groupExamIds.set(group.id, groupExams);
       const classRow = classRows.get(group.classRoom!.id) || createDashboardAccumulator(); classRow.subjectKeys.add(subjectKey); addNormalizedResults(classRow, exam.id, Number(exam.maxScore), exam.studentExamResults, group.studentIds); classRows.set(group.classRoom!.id, classRow);
+      const classExamTypeKey = `${group.classRoom!.id}:${exam.examTypeId}`; const classExamTypeRow = classExamTypeRows.get(classExamTypeKey) || createDashboardAccumulator(); classExamTypeRow.subjectKeys.add(subjectKey); addNormalizedResults(classExamTypeRow, exam.id, Number(exam.maxScore), exam.studentExamResults, group.studentIds); classExamTypeRows.set(classExamTypeKey, classExamTypeRow);
+    }
+    for (const group of gradeExamGroups) {
       const gradeRow = gradeRows.get(group.classRoom!.gradeLevelId) || createDashboardAccumulator(); gradeRow.subjectKeys.add(subjectKey); addNormalizedResults(gradeRow, exam.id, Number(exam.maxScore), exam.studentExamResults, group.studentIds); gradeRows.set(group.classRoom!.gradeLevelId, gradeRow);
+      const gradeExamTypeKey = `${group.classRoom!.gradeLevelId}:${exam.examTypeId}`; const gradeExamTypeRow = gradeExamTypeRows.get(gradeExamTypeKey) || createDashboardAccumulator(); gradeExamTypeRow.subjectKeys.add(subjectKey); addNormalizedResults(gradeExamTypeRow, exam.id, Number(exam.maxScore), exam.studentExamResults, group.studentIds); gradeExamTypeRows.set(gradeExamTypeKey, gradeExamTypeRow);
     }
   }
   const bySubject = [...subjectRows.entries()].map(([compoundKey, row]) => { const [academicYearId, subjectKey] = compoundKey.split(':'); const member = selectedYearSubjects.find((subject) => subject.academicYearId === academicYearId && subjectKeyById.get(subject.id) === subjectKey); return { id: member?.id || subjectKey, subjectKey, subjectName: member?.nameAr || '—', academicYearId, yearLabel: yearLabelById.get(academicYearId) || '—', examCount: row.examIds.size, participatingStudents: row.studentIds.size, averagePerformance: dashboardAverage(row), studyGroupCount: new Set(scopedGroups.filter((group) => group.academicYearId === academicYearId && subjectKeyById.get(group.subjectId) === subjectKey && linkedGroupIds.has(group.id)).map((group) => group.id)).size }; }).sort((left, right) => left.yearLabel.localeCompare(right.yearLabel) || left.subjectName.localeCompare(right.subjectName, 'ar'));
   const byClass = [...classRows.entries()].map(([id, row]) => { const option = classOptionsMap.get(id)!; return { ...option, examCount: row.examIds.size, averagePerformance: dashboardAverage(row), subjectCount: row.subjectKeys.size, participatingStudents: row.studentIds.size }; }).sort((left, right) => left.yearLabel.localeCompare(right.yearLabel) || left.nameAr.localeCompare(right.nameAr, 'ar'));
   const byGrade = [...gradeRows.entries()].map(([id, row]) => ({ id, nameAr: grades.get(id)?.nameAr || '—', sortOrder: grades.get(id)?.sortOrder || 0, examCount: row.examIds.size, averagePerformance: dashboardAverage(row), subjectCount: row.subjectKeys.size, participatingStudents: row.studentIds.size })).sort((left, right) => left.sortOrder - right.sortOrder);
   const byExamType = [...examTypeRows.entries()].map(([compoundKey, row]) => { const [academicYearId, examTypeId] = compoundKey.split(':'); const type = examTypeOptionsMap.get(examTypeId)!; return { academicYearId, yearLabel: yearLabelById.get(academicYearId) || '—', examTypeId, examTypeName: type.nameAr, sortOrder: type.sortOrder, examCount: row.examIds.size, averagePerformance: dashboardAverage(row), participatingStudents: row.studentIds.size }; }).sort((left, right) => left.yearLabel.localeCompare(right.yearLabel) || left.sortOrder - right.sortOrder);
+  const byClassExamType = [...classExamTypeRows.entries()].map(([compoundKey, row]) => { const [id, examTypeId] = compoundKey.split(':'); const option = classOptionsMap.get(id)!; const type = examTypeOptionsMap.get(examTypeId)!; return { ...option, examTypeId, examTypeName: type.nameAr, sortOrder: type.sortOrder, examCount: row.examIds.size, averagePerformance: dashboardAverage(row), participatingStudents: row.studentIds.size }; }).sort((left, right) => left.yearLabel.localeCompare(right.yearLabel) || left.nameAr.localeCompare(right.nameAr, 'ar') || left.sortOrder - right.sortOrder);
+  const byGradeExamType = [...gradeExamTypeRows.entries()].map(([compoundKey, row]) => { const [id, examTypeId] = compoundKey.split(':'); const grade = grades.get(id); const type = examTypeOptionsMap.get(examTypeId)!; return { id, nameAr: grade?.nameAr || '—', gradeSortOrder: grade?.sortOrder || 0, examTypeId, examTypeName: type.nameAr, sortOrder: type.sortOrder, examCount: row.examIds.size, averagePerformance: dashboardAverage(row), participatingStudents: row.studentIds.size }; }).sort((left, right) => left.gradeSortOrder - right.gradeSortOrder || left.sortOrder - right.sortOrder);
   return {
     context: { academicYears: selectedYears.map(({ startDate: _startDate, endDate: _endDate, ...year }) => year), subject: selectedSubject ? { key: selectedSubject.key, nameAr: selectedSubject.nameAr } : null },
     options: { academicYears: years.map(({ startDate: _startDate, endDate: _endDate, ...year }) => year), subjects: subjectOptions, gradeLevels: gradeOptions, classes: classOptions, examTypes: examTypeOptions },
     summary: { schoolAverage: dashboardAverage(overall), examCount: overall.examIds.size, participatingStudentCount: overall.studentIds.size, subjectCount: overall.subjectKeys.size, studyGroupCount: linkedGroupIds.size },
     coverage: { subjectsWithExams: subjectExamIds.size, studyGroupsWithExams: groupExamIds.size, subjectsWithTwoExams: [...subjectExamIds.values()].filter((ids) => ids.size >= 2).length, studyGroupsWithTwoExams: [...groupExamIds.values()].filter((ids) => ids.size >= 2).length, examsWithQuestionDetail: exams.filter((exam) => exam.examQuestions.length > 0).length, examsWithoutQuestionDetail: exams.filter((exam) => exam.examQuestions.length === 0).length },
-    bySubject, byClass, byGrade, byExamType,
+    bySubject, byClass, byGrade, byExamType, byClassExamType, byGradeExamType, examTrend,
   };
 }

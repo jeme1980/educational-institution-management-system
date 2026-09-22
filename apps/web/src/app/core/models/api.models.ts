@@ -176,6 +176,27 @@ export interface StaffDevelopment {
   staffMember?: { id: string; firstNameAr: string; familyNameAr: string; nationalId?: string | null; specialization?: { id: string; nameAr: string; nameHe?: string | null } | null } | null;
 }
 
+export type StaffDevelopmentParticipationStatus = 'all' | 'participated' | 'not_participated';
+export interface StaffDevelopmentAnalysisAggregate { label: string; code?: string; hours: number; records: number; staff: number }
+export interface StaffDevelopmentAnalysisRow {
+  staffId: string;
+  firstNameAr: string;
+  familyNameAr: string;
+  specialization: { id: string; nameAr: string } | null;
+  participated: boolean;
+  developmentCount: number;
+  totalHours: number;
+  lastDevelopmentDate: string | null;
+  lastDevelopmentName: string | null;
+  lastProvider: string | null;
+}
+export interface StaffDevelopmentAnalysis {
+  summary: { activeStaff: number; participatingStaff: number; nonParticipatingStaff: number; totalRecords: number; totalHours: number; averageHours: number; distinctProviders: number; distinctCompletions: number };
+  rows: StaffDevelopmentAnalysisRow[];
+  aggregates: { specialties: StaffDevelopmentAnalysisAggregate[]; providers: StaffDevelopmentAnalysisAggregate[]; completions: StaffDevelopmentAnalysisAggregate[]; yearly: StaffDevelopmentAnalysisAggregate[] };
+  options: { completions: { code: string; label: string }[] };
+}
+
 export interface ClassItem {
   id: string;
   institutionId: string;

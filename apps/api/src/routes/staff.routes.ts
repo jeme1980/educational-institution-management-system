@@ -19,6 +19,7 @@ router.get('/staff-assignments', requireAuth, requirePermission('teachers', 'rea
 router.post('/staff-assignments', requireAuth, requirePermission('teachers', 'create'), asyncHandler(controller.createStaffAssignments));
 router.put('/staff-assignments/:id', requireAuth, requirePermission('teachers', 'update'), asyncHandler(controller.updateStaffAssignmentsById));
 router.delete('/staff-assignments/:id', requireAuth, requirePermission('teachers', 'delete'), asyncHandler(controller.deleteStaffAssignmentsById));
+router.get('/staff-development-analysis', requireAuth, requirePermission('teachers', 'read'), asyncHandler(controller.getStaffDevelopmentAnalysis));
 router.get('/staff-developments', requireAuth, requirePermission('teachers', 'read'), asyncHandler(controller.getStaffDevelopments));
 router.post('/staff-developments', requireAuth, requirePermission('teachers', 'create'), asyncHandler(controller.createStaffDevelopment));
 router.put('/staff-developments/:id', requireAuth, requirePermission('teachers', 'update'), asyncHandler(controller.updateStaffDevelopment));

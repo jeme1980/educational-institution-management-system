@@ -123,6 +123,7 @@ export class ApiService extends BaseApiService {
   updateStaff(id: string, staffData: any) { return this.usersApi.updateStaff(id, staffData); }
   deleteStaff(id: string) { return this.usersApi.deleteStaff(id); }
   loadStaffDevelopments() { return this.usersApi.loadStaffDevelopments(); }
+  loadStaffDevelopmentAnalysis(params: Parameters<UsersApiService['loadStaffDevelopmentAnalysis']>[0]) { return this.usersApi.loadStaffDevelopmentAnalysis(params); }
   createStaffDevelopment(data: any) { return this.usersApi.createStaffDevelopment(data); }
   updateStaffDevelopment(id: string, data: any) { return this.usersApi.updateStaffDevelopment(id, data); }
   deleteStaffDevelopment(id: string) { return this.usersApi.deleteStaffDevelopment(id); }

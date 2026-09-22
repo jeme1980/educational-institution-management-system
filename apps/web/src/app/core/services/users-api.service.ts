@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import { StaffMember, JobRole, StaffAssignment, StaffDevelopment } from '../models/api.models';
+import { StaffMember, JobRole, StaffAssignment, StaffDevelopment, StaffDevelopmentAnalysis, StaffDevelopmentParticipationStatus } from '../models/api.models';
 
 @Injectable({
   providedIn: 'root',
@@ -113,6 +113,18 @@ export class UsersApiService extends BaseApiService {
       const res = await this.apiFetch('/api/staff-developments', { headers: this.headers });
       if (res.ok) this.staffDevelopments.set(await res.json());
     } catch (e) { console.error('Failed to load staff developments', e); }
+  }
+
+  async loadStaffDevelopmentAnalysis(params: { specializationId?: string; staffMemberId?: string; providerId?: string; courseCode?: string; startDate?: string; endDate?: string; participationStatus?: StaffDevelopmentParticipationStatus }): Promise<StaffDevelopmentAnalysis | null> {
+    try {
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
+      const res = await this.apiFetch(`/api/staff-development-analysis?${query.toString()}`, { headers: this.headers });
+      return res.ok ? await res.json() as StaffDevelopmentAnalysis : null;
+    } catch (error) {
+      console.error('Failed to load staff development analysis', error);
+      return null;
+    }
   }
 
   async createStaffDevelopment(data: Partial<StaffDevelopment>) {

@@ -4,6 +4,7 @@ import { prisma } from '../db/prisma';
 import { ContextRequest } from '../middleware/context';
 import { AuthRequest } from '../middleware/auth';
 import { recordAuditEvent } from '../services/audit.service';
+import { getStaffDevelopmentAnalysis as getStaffDevelopmentAnalysisData, ParticipationStatus } from '../services/staff-development-analysis.service';
 
 const institutionIdFrom = (req: { institutionId?: string; context?: { institutionId?: string } }) =>
   req.institutionId || req.context?.institutionId || '';
@@ -383,6 +384,23 @@ function developmentData(body: Record<string, unknown>) {
 
 export async function getStaffDevelopments(req: ContextRequest, res: Response): Promise<any> {
   return res.json(await developmentResponse(institutionIdFrom(req)));
+}
+
+export async function getStaffDevelopmentAnalysis(req: ContextRequest, res: Response): Promise<any> {
+  const institutionId = institutionIdFrom(req);
+  const optionalId = (value: unknown): string | undefined => String(value || '').trim() || undefined;
+  const specializationId = optionalId(req.query.specializationId);
+  const staffMemberId = optionalId(req.query.staffMemberId);
+  const providerId = optionalId(req.query.providerId);
+  const courseCode = String(req.query.courseCode || '').trim() || undefined;
+  const search = String(req.query.search || '').trim() || undefined;
+  const participationStatus = String(req.query.participationStatus || 'all') as ParticipationStatus;
+  const startDate = req.query.startDate ? validDate(req.query.startDate) : undefined;
+  const endDate = req.query.endDate ? validDate(req.query.endDate) : undefined;
+  if (!uuid(institutionId) || [specializationId, staffMemberId, providerId].some((id) => id && !uuid(id)) || !['all', 'participated', 'not_participated'].includes(participationStatus) || (req.query.startDate && !startDate) || (req.query.endDate && !endDate) || (startDate && endDate && startDate > endDate)) {
+    return res.status(400).json({ error: 'عوامل تصفية تحليل الاستكمالات غير صحيحة.' });
+  }
+  return res.json(await getStaffDevelopmentAnalysisData(institutionId, { specializationId, staffMemberId, providerId, courseCode, search, startDate: startDate || undefined, endDate: endDate || undefined, participationStatus }));
 }
 
 export async function createStaffDevelopment(req: AuthRequest, res: Response): Promise<any> {

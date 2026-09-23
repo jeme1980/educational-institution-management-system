@@ -9,24 +9,24 @@
 
     @if (pageError()) {<div class="classes-page-error"><span><mat-icon aria-hidden="true">error_outline</mat-icon>{{ pageError() }}</span><button type="button" (click)="refresh()">إعادة المحاولة</button></div>}
 
-    <section class="classes-filter-panel" aria-label="تصفية الصفوف والشعب">
-      <h2>تصفية الصفوف والشعب</h2>
+    <ui-filter-panel title="تصفية الصفوف والشعب" [resetLabel]="searchTerm() || stageFilter() || typeFilter() ? 'مسح الفلاتر' : ''" (reset)="clearFilters()">
       <div class="classes-filter-panel__grid">
-        <label class="classes-filter-panel__search">البحث<input type="search" [value]="searchTerm()" (input)="updateSearch($event)" placeholder="ابحث باسم الشعبة أو الصف أو المرحلة..." aria-label="البحث في الصفوف والشعب" /></label>
-        <label>المرحلة<select [value]="stageFilter()" (change)="onStageFilterChange($event)" aria-label="تصفية حسب المرحلة"><option value="">كل المراحل</option>@for (stage of educationStages(); track stage.id) {<option [value]="stage.id">{{ stage.nameAr }}</option>}</select></label>
-        <label>نوع الصف<select [value]="typeFilter()" (change)="onTypeFilterChange($event)" aria-label="تصفية حسب نوع الصف"><option value="">كل أنواع الصفوف</option>@for (type of classTypes(); track type.id) {<option [value]="type.id">{{ type.nameAr }}</option>}</select></label>
+        <label class="classes-filter-panel__search"><span>البحث</span><ui-input type="search" [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="ابحث باسم الشعبة أو الصف أو المرحلة..." ariaLabel="البحث في الصفوف والشعب" /></label>
+        <label><span>المرحلة</span><ui-select [ngModel]="stageFilter()" (ngModelChange)="stageFilter.set($event)" ariaLabel="تصفية حسب المرحلة"><option value="">كل المراحل</option>@for (stage of educationStages(); track stage.id) {<option [value]="stage.id">{{ stage.nameAr }}</option>}</ui-select></label>
+        <label><span>نوع الصف</span><ui-select [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)" ariaLabel="تصفية حسب نوع الصف"><option value="">كل أنواع الصفوف</option>@for (type of classTypes(); track type.id) {<option [value]="type.id">{{ type.nameAr }}</option>}</ui-select></label>
       </div>
-      @if (searchTerm() || stageFilter() || typeFilter()) {<button type="button" (click)="clearFilters()" class="classes-filter-panel__reset">مسح الفلاتر</button>}
-    </section>
+    </ui-filter-panel>
 
-    <section class="classes-table-card">
-      @if (isLoading()) {<div class="space-y-3 p-6"><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div></div>}
-      @else {
-        <div class="classes-table-scroll"><table class="classes-table"><thead><tr><th scope="col">الشعبة والصف</th><th scope="col">المرحلة</th><th scope="col">الشعبة</th><th scope="col">نوع الصف / التركيبة</th><th scope="col" class="text-center">عدد الطلاب</th><th scope="col" class="text-center">الإجراءات</th></tr></thead><tbody>
-          @for (item of filteredClasses(); track item.id) {<tr class="class-row"><td class="class-name-cell"><strong>{{ item.nameAr }}</strong><span>{{ getGradeLabel(item) }} @if (item.nameHe) {<bdi dir="ltr"> · {{ item.nameHe }}</bdi>}</span></td><td>{{ getStageLabel(item.stageId) }}</td><td><span class="class-parallel">شعبة {{ item.parallelNumber }}</span></td><td><strong>{{ getTypeLabel(item.typeId) }}</strong><span class="class-secondary">{{ getCompositionLabel(item.compositionId) }}</span></td><td class="text-center"><span class="student-count">{{ getStudentCount(item) }}</span></td><td class="actions-cell"><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="viewClassDetails(item)" [ariaLabel]="'عرض الشعبة ' + item.nameAr" title="عرض الشعبة"><mat-icon aria-hidden="true">visibility</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="openEditModal(item)" [ariaLabel]="'تعديل الشعبة ' + item.nameAr" title="تعديل الشعبة"><mat-icon aria-hidden="true">edit</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="danger-ghost" (activated)="deleteClass(item)" [disabled]="isDeleting() === item.id" [ariaLabel]="'حذف الشعبة ' + item.nameAr" title="حذف الشعبة"><mat-icon aria-hidden="true">{{ isDeleting() === item.id ? 'hourglass_top' : 'delete_outline' }}</mat-icon></ui-button></ui-table-actions></td></tr>}
-          @empty {<tr><td colspan="6" class="classes-empty-state"><mat-icon aria-hidden="true">meeting_room</mat-icon><p>لا توجد شعب مطابقة للفلاتر الحالية.</p>@if (canCreate()) {<button type="button" (click)="openAddModal()">إضافة شعبة</button>}</td></tr>}
-        </tbody></table></div>
-      }
+    <section class="classes-table-section">
+      <div class="core-table-wrap">
+        @if (isLoading()) {<div class="space-y-3 p-6"><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div><div class="h-10 animate-pulse rounded-lg bg-slate-100"></div></div>}
+        @else {
+          <table class="core-table classes-table"><thead><tr><th scope="col">الشعبة والصف</th><th scope="col">المرحلة</th><th scope="col">الشعبة</th><th scope="col">نوع الصف / التركيبة</th><th scope="col" class="text-center">عدد الطلاب</th><th scope="col" class="text-center">الإجراءات</th></tr></thead><tbody>
+            @for (item of filteredClasses(); track item.id) {<tr class="class-row"><td class="class-name-cell"><strong>{{ item.nameAr }}</strong><span>{{ getGradeLabel(item) }} @if (item.nameHe) {<bdi dir="ltr"> · {{ item.nameHe }}</bdi>}</span></td><td>{{ getStageLabel(item.stageId) }}</td><td><span class="class-parallel">شعبة {{ item.parallelNumber }}</span></td><td><strong>{{ getTypeLabel(item.typeId) }}</strong><span class="class-secondary">{{ getCompositionLabel(item.compositionId) }}</span></td><td class="text-center"><ui-badge tone="success">{{ getStudentCount(item) }}</ui-badge></td><td class="actions-cell"><ui-table-actions><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="viewClassDetails(item)" [ariaLabel]="'عرض الشعبة ' + item.nameAr" title="عرض الشعبة"><mat-icon aria-hidden="true">visibility</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="ghost" (activated)="openEditModal(item)" [ariaLabel]="'تعديل الشعبة ' + item.nameAr" title="تعديل الشعبة"><mat-icon aria-hidden="true">edit</mat-icon></ui-button><ui-button size="sm" [iconOnly]="true" variant="danger-ghost" (activated)="deleteClass(item)" [disabled]="isDeleting() === item.id" [ariaLabel]="'حذف الشعبة ' + item.nameAr" title="حذف الشعبة"><mat-icon aria-hidden="true">{{ isDeleting() === item.id ? 'hourglass_top' : 'delete_outline' }}</mat-icon></ui-button></ui-table-actions></td></tr>}
+            @empty {<tr><td colspan="6" class="classes-empty-state"><mat-icon aria-hidden="true">meeting_room</mat-icon><p>لا توجد شعب مطابقة للفلاتر الحالية.</p>@if (canCreate()) {<button type="button" (click)="openAddModal()">إضافة شعبة</button>}</td></tr>}
+          </tbody></table>
+        }
+      </div>
     </section>
   </div>
 

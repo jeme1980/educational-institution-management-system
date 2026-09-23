@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { ApiService, ClassItem, ClassFormValue, LookupItem } from '../../../core/services/api.service';
 import { ConfirmDialogService } from '../../../shared/services/confirm-dialog.service';
@@ -9,12 +9,14 @@ import { UiInputComponent } from '../../../shared/components/input/ui-input.comp
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
+import { UiFilterPanelComponent } from '../../../shared/components/ui-filter-panel/ui-filter-panel.component';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-classes',
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiTableActionsComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, MatIconModule, UiButtonComponent, UiInputComponent, UiSelectComponent, UiPageHeaderComponent, UiTableActionsComponent, UiFilterPanelComponent, UiBadgeComponent],
   templateUrl: './classes.component.html',
   styleUrl: './classes.component.css',
 })

@@ -41,12 +41,9 @@
       <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-sm"><div class="flex items-center justify-between"><span class="text-xs font-bold text-emerald-800">مكتملة الرصد</span><mat-icon class="text-emerald-600">task_alt</mat-icon></div><p class="mt-2 text-2xl font-bold text-emerald-800">{{fullyRecordedExams()}}</p></div>
     </section>
 
-    <section class="rounded-xl border border-surface-border bg-surface p-4 shadow-xs" aria-labelledby="exam-filters-title">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <label class="block w-full sm:max-w-md"><span id="exam-filters-title" class="mb-1.5 block text-sm font-semibold text-on-surface">البحث</span><ui-input class="block w-full" type="search" ariaLabel="البحث في الامتحانات" placeholder="ابحث باسم الامتحان أو الموضوع" [ngModel]="search()" (ngModelChange)="search.set($event)" /></label>
-        @if(hasActiveFilters()){<ui-button size="sm" variant="secondary" (activated)="clearFilters()"><mat-icon aria-hidden="true">filter_alt_off</mat-icon>مسح التصفية</ui-button>}
-      </div>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <section class="exam-filter-panel rounded-xl border border-surface-border bg-surface shadow-xs" aria-labelledby="exam-filters-title">
+      <div class="exam-filter-grid">
+        <label class="filter-field filter-field--search"><span id="exam-filters-title">البحث</span><ui-input class="block w-full" type="search" ariaLabel="البحث في الامتحانات" placeholder="ابحث باسم الامتحان أو الموضوع..." [ngModel]="search()" (ngModelChange)="search.set($event)" /></label>
         <label class="filter-field"><span>الموضوع</span><ui-select ariaLabel="تصفية حسب الموضوع" [ngModel]="subjectFilter()" (ngModelChange)="setFilter('subject',$event)"><option [value]="'all'">كل المواضيع</option>@for(subject of apiService.subjects(); track subject.id){<option [value]="subject.id">{{subject.nameAr}}</option>}</ui-select></label>
         <label class="filter-field"><span>الطبقة</span><ui-select ariaLabel="تصفية حسب الطبقة" [ngModel]="gradeFilter()" (ngModelChange)="setFilter('grade',$event)"><option [value]="'all'">كل الطبقات</option>@for(grade of gradeOptions(); track grade.id){<option [value]="grade.id">{{grade.nameAr}}</option>}</ui-select></label>
         <label class="filter-field"><span>الصف</span><ui-select ariaLabel="تصفية حسب الصف" [ngModel]="classFilter()" (ngModelChange)="setFilter('class',$event)"><option [value]="'all'">كل الصفوف</option>@for(classRoom of visibleClassOptions(); track classRoom.id){<option [value]="classRoom.id">{{classRoom.nameAr}}</option>}</ui-select></label>
@@ -54,8 +51,11 @@
         <label class="filter-field"><span>الفترة</span><ui-select ariaLabel="تصفية حسب الفترة" [ngModel]="academicPeriodFilter()" (ngModelChange)="setFilter('period',$event)"><option [value]="'all'">كل الفترات</option>@for(period of apiService.academicPeriods(); track period.id){<option [value]="period.id">{{period.nameAr}}</option>}</ui-select></label>
         <label class="filter-field"><span>نوع الامتحان</span><ui-select ariaLabel="تصفية حسب نوع الامتحان" [ngModel]="examTypeFilter()" (ngModelChange)="setFilter('examType',$event)"><option [value]="'all'">كل أنواع الامتحانات</option>@for(type of examTypeOptions(); track type.id){<option [value]="type.id">{{type.nameAr}}</option>}</ui-select></label>
         <label class="filter-field"><span>الحالة</span><ui-select ariaLabel="تصفية حسب حالة النشر" [ngModel]="publishedFilter()" (ngModelChange)="setFilter('published',$event)"><option [value]="'all'">كل الحالات</option><option value="true">منشور</option><option value="false">مسودة</option></ui-select></label>
+        <div class="filter-summary" aria-live="polite">
+          <span>عدد النتائج: {{filteredExams().length}}</span>
+          @if(hasActiveFilters()){<ui-button size="sm" variant="secondary" (activated)="clearFilters()">مسح التصفية</ui-button>}
+        </div>
       </div>
-      <p class="mt-4 border-t border-surface-border pt-3 text-xs text-on-surface-variant">عدد النتائج: {{filteredExams().length}}</p>
     </section>
 
     @if (filteredExams(); as visibleExams) { <app-exam-table [exams]="visibleExams" (studyGroups)="openStudyGroups($event)" (questions)="openQuestions($event)" (results)="openResults($event)" (publish)="togglePublish($event)" (edit)="openEdit($event)" (remove)="remove($event)" /> }

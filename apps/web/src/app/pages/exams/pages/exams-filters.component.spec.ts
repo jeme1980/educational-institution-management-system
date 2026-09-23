@@ -57,14 +57,38 @@ describe('ExamsComponent management filters', () => {
     });
   });
 
-  it('renders all six requested filters with explicit All options and no pagination', () => {
+  it('renders all eight filters in the compact grid with explicit All options and no pagination', () => {
     const fixture = TestBed.createComponent(ExamsComponent);
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent;
-    for (const label of ['الموضوع', 'الطبقة', 'الصف', 'المعلم', 'الفترة', 'نوع الامتحان']) expect(text).toContain(label);
-    for (const option of ['كل المواضيع', 'كل الطبقات', 'كل الصفوف', 'كل المعلمين', 'كل الفترات', 'كل أنواع الامتحانات']) expect(text).toContain(option);
+    const filterGrid = fixture.nativeElement.querySelector('.exam-filter-grid');
+    expect(filterGrid).toBeTruthy();
+    expect(filterGrid.querySelectorAll('.filter-field')).toHaveLength(8);
+    for (const label of ['البحث', 'الموضوع', 'الطبقة', 'الصف', 'المعلم', 'الفترة', 'نوع الامتحان', 'الحالة']) expect(text).toContain(label);
+    for (const option of ['كل المواضيع', 'كل الطبقات', 'كل الصفوف', 'كل المعلمين', 'كل الفترات', 'كل أنواع الامتحانات', 'كل الحالات']) expect(text).toContain(option);
+    expect(filterGrid.querySelector('.filter-field--search')).toBeTruthy();
+    expect(text).toContain('عدد النتائج: 3');
     expect(text).not.toContain('تحميل المزيد');
     expect(text).not.toContain('من أصل');
+  });
+
+  it('filters by search and status, then clears all active filters from the compact action', () => {
+    const fixture = TestBed.createComponent(ExamsComponent);
+    const component = fixture.componentInstance;
+    component.search.set('امتحان A');
+    component.setFilter('published', 'false');
+    fixture.detectChanges();
+    expect(component.filteredExams().map(item => item.id)).toEqual(['A']);
+    expect(fixture.nativeElement.textContent).toContain('عدد النتائج: 1');
+    const clearButton = [...fixture.nativeElement.querySelectorAll('button')]
+      .find((button: HTMLButtonElement) => button.textContent?.includes('مسح التصفية')) as HTMLButtonElement;
+    expect(clearButton).toBeTruthy();
+    clearButton.click();
+    fixture.detectChanges();
+    expect(component.filteredExams()).toEqual(exams);
+    expect(component.search()).toBe('');
+    expect(component.publishedFilter()).toBe(EXAM_FILTER_ALL);
+    expect(fixture.nativeElement.textContent).not.toContain('مسح التصفية');
   });
 
   it('filters by real subject, period, and exam type IDs', () => {

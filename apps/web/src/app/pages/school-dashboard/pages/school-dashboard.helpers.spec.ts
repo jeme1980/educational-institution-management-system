@@ -2,6 +2,43 @@ import { describe, expect, it } from 'vitest';
 import { buildDashboardComparisonEntities, compactChartLabel, pruneDashboardSelection, schoolDashboardKpiValues, selectCurrentAcademicYear, selectedDashboardIds, shouldShowGroupComparison, sortDashboardExamTrend } from './school-dashboard.helpers';
 
 describe('School dashboard helpers', () => {
+  const gradePoint = (grade: number, date = '2025-12-20', type = 'mid') => ({
+    examId: `${type}-${7 - grade}`, examDate: date, examTypeId: type,
+    gradeLevelId: `grade-${7 - grade}`, gradeSortOrder: grade,
+    gradeLevelName: ['ثالث', 'رابع', 'خامس', 'سادس'][grade - 3],
+    averagePerformance: grade * 11 - 2,
+  });
+
+  it('sorts whole grade points by official order, independent of names and IDs', () => {
+    const input = [6, 3, 5, 4].map(grade => gradePoint(grade));
+    const rows = sortDashboardExamTrend(input);
+    expect(rows.map(row => row.gradeLevelName)).toEqual(['ثالث', 'رابع', 'خامس', 'سادس']);
+    expect(rows.map(row => row.averagePerformance)).toEqual([31, 42, 53, 64]);
+    expect(input.map(row => row.gradeSortOrder)).toEqual([6, 3, 5, 4]);
+    expect(rows[0]).toBe(input[1]);
+  });
+
+  it('orders dates across years before grades, and every exam type shares that order', () => {
+    const input = [5, 4, 6, 3].map(grade => gradePoint(grade, '2026-12-20', 'final'))
+      .concat([6, 3, 4, 5].map(grade => gradePoint(grade)));
+    const rows = sortDashboardExamTrend(input);
+    expect(rows.map(row => row.gradeSortOrder)).toEqual([3, 4, 5, 6, 3, 4, 5, 6]);
+    expect(rows.map(row => row.averagePerformance)).toEqual([31, 42, 53, 64, 31, 42, 53, 64]);
+    expect(rows.slice(0, 4).every(row => row.examDate === '2025-12-20')).toBe(true);
+  });
+
+  it('keeps only selected grades and sorts missing orders last with deterministic ties', () => {
+    expect(sortDashboardExamTrend([6, 3, 5].map(grade => gradePoint(grade))).map(row => row.gradeSortOrder)).toEqual([3, 5, 6]);
+    const rows = [
+      { examDate: '2025-12-20', examId: 'b', gradeLevelId: 'z', gradeSortOrder: null },
+      { examDate: '2025-12-20', examId: 'z', gradeLevelId: 'b', gradeSortOrder: 3 },
+      { examDate: '2025-12-20', examId: 'a', gradeLevelId: 'a' },
+      { examDate: '2025-12-20', examId: 'a', gradeLevelId: 'b', gradeSortOrder: 3 },
+      { examDate: '2025-12-20', examId: 'zero', gradeLevelId: 'zero', gradeSortOrder: 0 },
+    ];
+    expect(sortDashboardExamTrend(rows).map(row => row.examId)).toEqual(['zero', 'a', 'z', 'a', 'b']);
+    expect(sortDashboardExamTrend(rows)).toEqual(sortDashboardExamTrend([...rows].reverse()));
+  });
   it('selects the current academic year without falling back to an arbitrary year', () => {
     expect(selectCurrentAcademicYear([{ id: 'old' }, { id: 'current', isCurrent: true }])).toEqual({ id: 'current', isCurrent: true });
     expect(selectCurrentAcademicYear([{ id: 'old' }])).toBeUndefined();

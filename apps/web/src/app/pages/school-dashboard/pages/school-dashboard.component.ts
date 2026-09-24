@@ -36,7 +36,7 @@ export interface SchoolDashboardData {
   byExamType: (PerformanceRow & { academicYearId: string; yearLabel: string; examTypeId: string; examTypeName: string; sortOrder: number })[];
   byClassExamType: (ExamTypePerformanceRow & ClassOption)[];
   byGradeExamType: (ExamTypePerformanceRow & { id: string; nameAr: string; gradeSortOrder: number })[];
-  examTrend: (ExamTypePerformanceRow & { examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string })[];
+  examTrend: (ExamTypePerformanceRow & { gradeLevelId?: string | null; gradeLevelName?: string | null; gradeSortOrder?: number | null; examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string })[];
 }
 
 @Component({
@@ -113,7 +113,7 @@ export class SchoolDashboardComponent implements OnInit {
 
   readonly temporalChartData = computed<ChartData<'line'>>(() => {
     const colors = readAcademicChartColors(); const rows = this.trendRows(); const showYear = new Set(rows.map((row) => row.academicYearId)).size > 1;
-    return { labels: rows.map((row) => `${this.formatExamDate(row.examDate)}${showYear ? ` · ${row.yearLabel}` : ''}`), datasets: this.trendExamTypes().map((type, index) => {
+    return { labels: rows.map((row) => `${row.gradeLevelName ? `${row.gradeLevelName} · ` : ''}${this.formatExamDate(row.examDate)}${showYear ? ` · ${row.yearLabel}` : ''}`), datasets: this.trendExamTypes().map((type, index) => {
       const data = rows.map((row) => row.examTypeId === type.id ? row.averagePerformance : null);
       const hasConnectedPath = data.filter((value) => value !== null).length >= 2;
       return { label: type.nameAr, data, borderColor: this.chartColor(index, colors), backgroundColor: this.chartColor(index, colors), borderWidth: hasConnectedPath ? 2 : 0, pointRadius: 4, pointHoverRadius: 6, tension: 0.25, showLine: hasConnectedPath, spanGaps: hasConnectedPath };
@@ -132,7 +132,7 @@ export class SchoolDashboardComponent implements OnInit {
   }));
   readonly lineChartOptions = computed<ChartOptions<'line'>>(() => this.buildChartOptions<'line'>('تطور الأداء حسب نوع الامتحان', (datasetIndex, dataIndex) => {
     const row = this.trendRows()[dataIndex]; const type = this.trendExamTypes()[datasetIndex];
-    return row && row.examTypeId === type?.id ? [row.examTitle, `السنة الدراسية: ${row.yearLabel}`, `الطلاب المشاركون: ${row.participatingStudents}`, `الامتحانات: ${row.examCount}`] : undefined;
+    return row && row.examTypeId === type?.id ? [row.examTitle, `الطبقة: ${row.gradeLevelName || 'غير محددة'}`, `التاريخ: ${this.formatExamDate(row.examDate)}`, `السنة الدراسية: ${row.yearLabel}`, `الطلاب المشاركون: ${row.participatingStudents}`, `الامتحانات: ${row.examCount}`] : undefined;
   }));
 
   async ngOnInit(): Promise<void> {

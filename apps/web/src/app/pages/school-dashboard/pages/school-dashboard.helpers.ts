@@ -54,6 +54,11 @@ export function buildDashboardComparisonEntities(selectedClassIds: readonly stri
   return entities;
 }
 
-export function sortDashboardExamTrend<T extends { examDate: string; examId: string }>(rows: readonly T[]): T[] {
-  return [...rows].sort((left, right) => left.examDate.localeCompare(right.examDate) || left.examId.localeCompare(right.examId));
+export function sortDashboardExamTrend<T extends { examDate: string; examId: string; gradeLevelId?: string | null; gradeSortOrder?: number | null }>(rows: readonly T[]): T[] {
+  const order = (value: number | null | undefined) => value != null && Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+  // Sort complete rows once; labels, every dataset and tooltips share these slots.
+  return [...rows].sort((left, right) => left.examDate.localeCompare(right.examDate)
+    || order(left.gradeSortOrder) - order(right.gradeSortOrder)
+    || (left.gradeLevelId || '').localeCompare(right.gradeLevelId || '')
+    || left.examId.localeCompare(right.examId));
 }

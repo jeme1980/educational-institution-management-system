@@ -31,6 +31,19 @@ export function addNormalizedResults(row: DashboardAccumulator, examId: string, 
   }
 }
 
+// Preserve one aggregate per exam. A genuinely mixed-grade exam must not be
+// mislabeled as an arbitrary grade or split into new performance calculations.
+export function examTrendGrade(grades: readonly { id: string; nameAr: string; sortOrder: number }[]) {
+  const unique = [...new Map(grades.map(grade => [grade.id, grade])).values()]
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+  const grade = unique.length === 1 ? unique[0] : undefined;
+  return {
+    gradeLevelId: grade?.id ?? null,
+    gradeLevelName: unique.map(item => item.nameAr).join('، ') || null,
+    gradeSortOrder: grade?.sortOrder ?? null,
+  };
+}
+
 class UnionFind {
   private readonly parent = new Map<string, string>();
   add(id: string): void { if (!this.parent.has(id)) this.parent.set(id, id); }
@@ -110,7 +123,7 @@ export async function getSchoolDashboard(institutionId: string, filters: SchoolD
   const gradeGroupMap = new Map(gradeScopedGroups.map((group) => [group.id, toDashboardGroup(group)]));
   const overall = createDashboardAccumulator(); const subjectRows = new Map<string, DashboardAccumulator>(); const classRows = new Map<string, DashboardAccumulator>(); const gradeRows = new Map<string, DashboardAccumulator>(); const examTypeRows = new Map<string, DashboardAccumulator>();
   const classExamTypeRows = new Map<string, DashboardAccumulator>(); const gradeExamTypeRows = new Map<string, DashboardAccumulator>();
-  const examTrend: Array<{ examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string; examTypeId: string; examTypeName: string; sortOrder: number; examCount: number; averagePerformance: number | null; participatingStudents: number }> = [];
+  const examTrend: Array<ReturnType<typeof examTrendGrade> & { examId: string; examDate: string; examTitle: string; academicYearId: string; yearLabel: string; examTypeId: string; examTypeName: string; sortOrder: number; examCount: number; averagePerformance: number | null; participatingStudents: number }> = [];
   const linkedGroupIds = new Set<string>(); const subjectExamIds = new Map<string, Set<string>>(); const groupExamIds = new Map<string, Set<string>>();
   for (const exam of exams) {
     const examGroups = exam.examGroups.map((link) => groupMap.get(link.studyGroupId)).filter(Boolean) as NonNullable<ReturnType<typeof groupMap.get>>[];
@@ -121,7 +134,7 @@ export async function getSchoolDashboard(institutionId: string, filters: SchoolD
     const subjectRowKey = `${exam.academicYearId}:${subjectKey}`; const subjectRow = subjectRows.get(subjectRowKey) || createDashboardAccumulator(); subjectRow.subjectKeys.add(subjectKey); addNormalizedResults(subjectRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible); subjectRows.set(subjectRowKey, subjectRow);
     const examTypeKey = `${exam.academicYearId}:${exam.examTypeId}`; const examTypeRow = examTypeRows.get(examTypeKey) || createDashboardAccumulator(); addNormalizedResults(examTypeRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible); examTypeRows.set(examTypeKey, examTypeRow);
     const trendRow = createDashboardAccumulator(); addNormalizedResults(trendRow, exam.id, Number(exam.maxScore), exam.studentExamResults, eligible);
-    if (trendRow.count) examTrend.push({ examId: exam.id, examDate: exam.examDate.toISOString(), examTitle: exam.titleAr, academicYearId: exam.academicYearId, yearLabel: exam.academicYear.yearLabel, examTypeId: exam.examTypeId, examTypeName: exam.examType.nameAr, sortOrder: exam.examType.sortOrder, examCount: 1, averagePerformance: dashboardAverage(trendRow), participatingStudents: trendRow.studentIds.size });
+    if (trendRow.count) examTrend.push({ ...examTrendGrade(examGroups.map(group => group.classRoom!.gradeLevel)), examId: exam.id, examDate: exam.examDate.toISOString(), examTitle: exam.titleAr, academicYearId: exam.academicYearId, yearLabel: exam.academicYear.yearLabel, examTypeId: exam.examTypeId, examTypeName: exam.examType.nameAr, sortOrder: exam.examType.sortOrder, examCount: 1, averagePerformance: dashboardAverage(trendRow), participatingStudents: trendRow.studentIds.size });
     const subjectExams = subjectExamIds.get(subjectKey) || new Set<string>(); subjectExams.add(exam.id); subjectExamIds.set(subjectKey, subjectExams);
     for (const group of examGroups) {
       linkedGroupIds.add(group.id); const groupExams = groupExamIds.get(group.id) || new Set<string>(); groupExams.add(exam.id); groupExamIds.set(group.id, groupExams);

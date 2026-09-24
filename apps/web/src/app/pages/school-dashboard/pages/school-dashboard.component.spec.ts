@@ -146,6 +146,32 @@ describe('SchoolDashboardComponent context controls', () => {
     expect(fixture.componentInstance.data()?.summary.examCount).toBe(2);
   });
 
+  it('aligns shared labels, values and tooltips across exam types on the same date', () => {
+    const points = (type: string, order: number[]) => order.map(grade => ({
+      examId: `${type}-${7 - grade}`, examDate: '2025-12-20T00:00:00.000Z',
+      examTitle: `Exam ${type} ${grade}`, academicYearId: year.id, yearLabel: year.yearLabel,
+      examTypeId: type, examTypeName: type, sortOrder: type === 'type-a' ? 1 : 2,
+      gradeLevelId: `grade-${grade}`, gradeLevelName: ['ثالث', 'رابع', 'خامس', 'سادس'][grade - 3],
+      gradeSortOrder: grade, averagePerformance: grade * 11 - 2, participatingStudents: grade * 10, examCount: 1,
+    }));
+    fixture.componentInstance.data.set({ ...dashboard,
+      options: { ...dashboard.options, examTypes: [...dashboard.options.examTypes, { id: 'type-b', nameAr: 'نهائي', sortOrder: 2 }] },
+      examTrend: [...points('type-b', [5, 4, 6, 3]), ...points('type-a', [6, 3, 5, 4])],
+    });
+    const component = fixture.componentInstance;
+    const chart = component.temporalChartData();
+    expect(component.trendRows().map(row => row.gradeSortOrder)).toEqual([3, 3, 4, 4, 5, 5, 6, 6]);
+    expect(chart.datasets[0].data).toEqual([31, null, 42, null, 53, null, 64, null]);
+    expect(chart.datasets[1].data).toEqual([null, 31, null, 42, null, 53, null, 64]);
+    expect(chart.labels?.map(label => String(label).split(' · ')[0])).toEqual(['ثالث', 'ثالث', 'رابع', 'رابع', 'خامس', 'خامس', 'سادس', 'سادس']);
+    expect(chart.datasets.every(set => set.showLine && set.spanGaps)).toBe(true);
+    const callback = component.lineChartOptions().plugins?.tooltip?.callbacks?.afterLabel;
+    const tooltip = callback?.call({} as never, { dataIndex: 2, datasetIndex: 0 } as never);
+    expect(tooltip).toContain('الطبقة: رابع');
+    expect(tooltip).toContain('الطلاب المشاركون: 40');
+    expect(tooltip).toContain('Exam type-a 4');
+  });
+
   it('renders the deliberate chart empty state when the selected context has no chart data', () => {
     fixture.componentInstance.data.set({ ...dashboard, summary: { ...dashboard.summary, examCount: 1 } });
     fixture.detectChanges();

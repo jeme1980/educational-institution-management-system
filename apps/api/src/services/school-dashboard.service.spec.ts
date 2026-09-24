@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addNormalizedResults, createDashboardAccumulator, dashboardAverage } from './school-dashboard.service';
+import { addNormalizedResults, createDashboardAccumulator, dashboardAverage, examTrendGrade } from './school-dashboard.service';
+
+test('trend grade metadata uses the official order once across multiple class/group links', () => {
+  const grade = { id: 'grade-z', nameAr: 'ثالث', sortOrder: 3 };
+  assert.deepEqual(examTrendGrade([grade, grade]), { gradeLevelId: 'grade-z', gradeLevelName: 'ثالث', gradeSortOrder: 3 });
+  assert.equal(examTrendGrade([{ ...grade, sortOrder: 0 }]).gradeSortOrder, 0);
+});
+
+test('missing or mixed grades do not invent a single grade identity or order', () => {
+  assert.deepEqual(examTrendGrade([]), { gradeLevelId: null, gradeLevelName: null, gradeSortOrder: null });
+  assert.deepEqual(examTrendGrade([
+    { id: 'six', nameAr: 'سادس', sortOrder: 6 }, { id: 'three', nameAr: 'ثالث', sortOrder: 3 },
+  ]), { gradeLevelId: null, gradeLevelName: 'ثالث، سادس', gradeSortOrder: null });
+});
 
 test('school dashboard uses weighted normalized results rather than averaging exam averages', () => {
   const row = createDashboardAccumulator();

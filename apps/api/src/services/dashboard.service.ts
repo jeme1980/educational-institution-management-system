@@ -162,14 +162,83 @@ async function staffAnalytics(institutionId: string, academicYearId: string): Pr
   return { staffByRole: [...roles.values()].sort((a, b) => b.count - a.count), subjectCoverage: { total: totalSubjects, assigned: assignedSubjects.size, unassigned: Math.max(totalSubjects - assignedSubjects.size, 0) }, teacherStudentRatio: { teachers, students, studentsPerTeacher: teachers ? Number((students / teachers).toFixed(2)) : 0 } };
 }
 
-async function academicAnalytics(institutionId: string, academicYearId: string): Promise<Pick<DashboardStats, 'examStatus' | 'performance' | 'skillPerformance'>> {
+/** Dashboard completion is date + recorded results; publication is not an analytics gate. */
+export async function academicAnalytics(institutionId: string, academicYearId: string): Promise<Pick<DashboardStats, 'examStatus' | 'performance' | 'skillPerformance'>> {
   const today = new Date();
-  const exams = await prisma.exam.findMany({ where: { institutionId, academicYearId, archivedAt: null }, select: { id: true, titleAr: true, examDate: true, isPublished: true, subject: { select: { id: true, nameAr: true } }, studentExamResults: { select: { totalScore: true, isAbsence: true } }, examQuestions: { select: { id: true, skill: { select: { id: true, nameAr: true } }, topic: { select: { id: true, nameAr: true } }, studentScores: { select: { score: true } } } } } });
-  const status = new Map<string, { id: string; label: string; count: number }>(); const add = (id: string, label: string) => { const item = status.get(id); if (item) item.count += 1; else status.set(id, { id, label, count: 1 }); };
-  const subjectScores = new Map<string, { id: string; label: string; sum: number; count: number }>(); let total = 0; let graded = 0;
-  const dimensions = new Map<string, { id: string; label: string; kind: 'skill' | 'topic'; sum: number; count: number }>();
-  for (const exam of exams) { const date = new Date(exam.examDate); add(date < today && exam.studentExamResults.length ? 'completed' : date < today ? 'incomplete' : 'upcoming', date < today && exam.studentExamResults.length ? 'مكتملة' : date < today ? 'جارية أو غير مكتملة' : 'قادمة'); for (const result of exam.studentExamResults) if (!result.isAbsence) { const score = Number(result.totalScore); total += score; graded += 1; const subject = subjectScores.get(exam.subject.id); if (subject) { subject.sum += score; subject.count += 1; } else subjectScores.set(exam.subject.id, { id: exam.subject.id, label: exam.subject.nameAr, sum: score, count: 1 }); } for (const question of exam.examQuestions) for (const score of question.studentScores) { const value = Number(score.score); for (const dimension of [{ item: question.skill, kind: 'skill' as const }, { item: question.topic, kind: 'topic' as const }]) if (dimension.item) { const key = `${dimension.kind}:${dimension.item.id}`; const current = dimensions.get(key); if (current) { current.sum += value; current.count += 1; } else dimensions.set(key, { id: dimension.item.id, label: dimension.item.nameAr, kind: dimension.kind, sum: value, count: 1 }); } } }
-  return { examStatus: [...status.values()], performance: { average: graded ? Number((total / graded).toFixed(2)) : 0, gradedStudents: graded, bySubject: [...subjectScores.values()].map(item => ({ id: item.id, label: item.label, average: Number((item.sum / item.count).toFixed(2)), count: item.count })).sort((a, b) => b.average - a.average) }, skillPerformance: [...dimensions.values()].map(item => ({ id: item.id, label: item.label, kind: item.kind, average: Number((item.sum / item.count).toFixed(2)), count: item.count })).sort((a, b) => b.average - a.average).slice(0, 12) };
+  // Query exams directly: joining their study groups would multiply observations.
+  const exams = await prisma.exam.findMany({
+    where: { institutionId, academicYearId, archivedAt: null },
+    select: {
+      id: true, examDate: true,
+      subject: { select: { id: true, nameAr: true } },
+      studentExamResults: { where: { institutionId }, select: { studentId: true, totalScore: true, isAbsence: true } },
+      examQuestions: {
+        where: { institutionId },
+        select: {
+          id: true, maxScore: true,
+          skill: { select: { id: true, nameAr: true, institutionId: true, academicYearId: true } },
+          topic: { select: { id: true, nameAr: true, institutionId: true, academicYearId: true } },
+          studentScores: { where: { institutionId }, select: { studentId: true, score: true } },
+        },
+      },
+    },
+  });
+  const status = new Map<string, { id: string; label: string; count: number }>();
+  const subjectScores = new Map<string, { id: string; label: string; sum: number; count: number }>();
+  let total = 0;
+  let graded = 0;
+  const dimensions = new Map<string, { id: string; label: string; kind: 'skill' | 'topic'; earned: number; possible: number; count: number }>();
+  for (const exam of exams) {
+    const past = new Date(exam.examDate) < today;
+    const id = past && exam.studentExamResults.length ? 'completed' : past ? 'incomplete' : 'upcoming';
+    const label = id === 'completed' ? 'مكتملة' : id === 'incomplete' ? 'جارية أو غير مكتملة' : 'قادمة';
+    const currentStatus = status.get(id);
+    if (currentStatus) currentStatus.count += 1;
+    else status.set(id, { id, label, count: 1 });
+    const presentStudentIds = new Set<string>();
+    for (const result of exam.studentExamResults) {
+      if (result.isAbsence) continue;
+      presentStudentIds.add(result.studentId);
+      const score = Number(result.totalScore);
+      total += score;
+      graded += 1;
+      const subject = subjectScores.get(exam.subject.id);
+      if (subject) { subject.sum += score; subject.count += 1; }
+      else subjectScores.set(exam.subject.id, { id: exam.subject.id, label: exam.subject.nameAr, sum: score, count: 1 });
+    }
+    for (const question of exam.examQuestions) {
+      const possible = Number(question.maxScore);
+      if (!Number.isFinite(possible) || possible <= 0) continue;
+      // Scores are unique by (question, student). Missing rows are unscored, not zero.
+      for (const score of question.studentScores) {
+        if (!presentStudentIds.has(score.studentId) || score.score == null) continue;
+        const earned = Number(score.score);
+        if (!Number.isFinite(earned)) continue;
+        // Skill and Topic are independent direct question relations, not a hierarchy.
+        for (const dimension of [{ item: question.skill, kind: 'skill' as const }, { item: question.topic, kind: 'topic' as const }]) {
+          const item = dimension.item;
+          if (!item || item.institutionId !== institutionId || item.academicYearId !== academicYearId) continue;
+          const key = `${dimension.kind}:${item.id}`;
+          const current = dimensions.get(key);
+          if (current) { current.earned += earned; current.possible += possible; current.count += 1; }
+          else dimensions.set(key, { id: item.id, label: item.nameAr, kind: dimension.kind, earned, possible, count: 1 });
+        }
+      }
+    }
+  }
+  return {
+    examStatus: [...status.values()],
+    performance: {
+      average: graded ? Number((total / graded).toFixed(2)) : 0,
+      gradedStudents: graded,
+      bySubject: [...subjectScores.values()].map(item => ({ id: item.id, label: item.label, average: Number((item.sum / item.count).toFixed(2)), count: item.count })).sort((a, b) => b.average - a.average),
+    },
+    // average is normalized 0..100; count is the number of scored question observations.
+    skillPerformance: [...dimensions.values()]
+      .map(item => ({ id: item.id, label: item.label, kind: item.kind, average: Number((item.earned / item.possible * 100).toFixed(2)), count: item.count }))
+      .sort((a, b) => b.average - a.average || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id))
+      .slice(0, 12),
+  };
 }
 
 async function supportAnalytics(institutionId: string, academicYearId: string): Promise<DashboardStats['support']> {

@@ -217,71 +217,82 @@ model CompositionType {
 }
 
 model Institution {
-  id                      String                             @id @default(uuid()) @db.Uuid
-  schoolCode              String                             @unique @db.VarChar(20)
-  slug                    String                             @unique @db.VarChar(80)
-  nameAr                  String
-  nameHe                  String?
-  phoneNumber             String?                            @db.VarChar(50)
-  email                   String?                            @db.VarChar(250)
-  typeId                  String                             @db.Uuid
-  regionId                String                             @db.Uuid
-  townId                  String?                            @db.Uuid
-  statusId                String                             @db.Uuid
-  defaultLanguageId       String                             @db.Uuid
-  logoUrl                 String?
-  brandingSettings        Json?
-  createdAt               DateTime                           @default(now())
-  updatedAt               DateTime                           @updatedAt
-  archivedAt              DateTime?
-  createdBy               String?                            @db.Uuid
-  updatedBy               String?                            @db.Uuid
-  type                    EducationType                      @relation(fields: [typeId], references: [id], onDelete: Restrict)
-  region                  Region                             @relation(fields: [regionId], references: [id], onDelete: Restrict)
-  town                    Town?                              @relation(fields: [townId], references: [id], onDelete: SetNull)
-  status                  InstitutionStatus                  @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  defaultLanguage         Language                           @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
-  academicYears           AcademicYear[]
-  academicPeriods         AcademicPeriod[]
-  students                Student[]
-  staffMembers            StaffMember[]
-  staffDevelopments       StaffDevelopment[]
-  specializations         Specialization[]
-  jobRoles                JobRole[]
-  staffAssignments        StaffAssignment[]
-  staffAssignmentSubjects StaffAssignmentSubject[]
-  institutionUsers        InstitutionUser[]
-  roles                   Role[]
-  rolePermissions         RolePermission[]
-  institutionUserRoles    InstitutionUserRole[]
-  classes                 Class[]
-  studyGroups             StudyGroup[]
-  groupStudents           StudyGroupStudent[]
-  exams                   Exam[]
-  subjects                Subject[]
-  topics                  Topic[]
-  skills                  Skill[]
-  examGroups              ExamStudyGroup[]
-  examQuestions           ExamQuestion[]
-  studentScores           StudentQuestionScore[]
-  studentExamResults      StudentExamResult[]
-  examTypes               ExamType[]
-  questionTypes           QuestionType[]
-  appState                AppState?
-  guardians               Guardian[]
-  studentEnrollments      StudentEnrollment[]
-  attendances             Attendance[]
-  studentGuardians        StudentGuardian[]
-  studentMedicalProfiles  StudentMedicalProfile[]
-  institutionProfiles     InstitutionProfile[]
-  auditLogs               AuditLog[]
-  subscriptions           InstitutionSubscription[]
-  interventions           Intervention[]
-  annualSpecializations   AcademicYearSpecialization[]
-  rollovers               AcademicYearRollover[]
-  rolloverEntityMaps      AcademicYearRolloverEntityMap[]
-  rolloverDecisions       StudentRolloverDecision[]
-  rolloverClassMappings   AcademicYearRolloverClassMapping[]
+  id                         String                             @id @default(uuid()) @db.Uuid
+  schoolCode                 String                             @unique @db.VarChar(20)
+  slug                       String                             @unique @db.VarChar(80)
+  nameAr                     String
+  nameHe                     String?
+  phoneNumber                String?                            @db.VarChar(50)
+  email                      String?                            @db.VarChar(250)
+  typeId                     String                             @db.Uuid
+  regionId                   String                             @db.Uuid
+  townId                     String?                            @db.Uuid
+  statusId                   String                             @db.Uuid
+  defaultLanguageId          String                             @db.Uuid
+  logoUrl                    String?
+  brandingSettings           Json?
+  createdAt                  DateTime                           @default(now())
+  updatedAt                  DateTime                           @updatedAt
+  archivedAt                 DateTime?
+  createdBy                  String?                            @db.Uuid
+  updatedBy                  String?                            @db.Uuid
+  type                       EducationType                      @relation(fields: [typeId], references: [id], onDelete: Restrict)
+  region                     Region                             @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  town                       Town?                              @relation(fields: [townId], references: [id], onDelete: SetNull)
+  status                     InstitutionStatus                  @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  defaultLanguage            Language                           @relation(fields: [defaultLanguageId], references: [id], onDelete: Restrict)
+  academicYears              AcademicYear[]
+  academicPeriods            AcademicPeriod[]
+  students                   Student[]
+  staffMembers               StaffMember[]
+  staffDevelopments          StaffDevelopment[]
+  specializations            Specialization[]
+  jobRoles                   JobRole[]
+  staffAssignments           StaffAssignment[]
+  staffAssignmentSubjects    StaffAssignmentSubject[]
+  institutionUsers           InstitutionUser[]
+  roles                      Role[]
+  rolePermissions            RolePermission[]
+  institutionUserRoles       InstitutionUserRole[]
+  classes                    Class[]
+  studyGroups                StudyGroup[]
+  groupStudents              StudyGroupStudent[]
+  exams                      Exam[]
+  subjects                   Subject[]
+  topics                     Topic[]
+  skills                     Skill[]
+  examGroups                 ExamStudyGroup[]
+  examQuestions              ExamQuestion[]
+  studentScores              StudentQuestionScore[]
+  studentExamResults         StudentExamResult[]
+  examTypes                  ExamType[]
+  questionTypes              QuestionType[]
+  appState                   AppState?
+  guardians                  Guardian[]
+  studentEnrollments         StudentEnrollment[]
+  attendances                Attendance[]
+  studentGuardians           StudentGuardian[]
+  studentMedicalProfiles     StudentMedicalProfile[]
+  institutionProfiles        InstitutionProfile[]
+  auditLogs                  AuditLog[]
+  subscriptions              InstitutionSubscription[]
+  interventions              Intervention[]
+  annualSpecializations      AcademicYearSpecialization[]
+  rollovers                  AcademicYearRollover[]
+  rolloverEntityMaps         AcademicYearRolloverEntityMap[]
+  rolloverDecisions          StudentRolloverDecision[]
+  rolloverClassMappings      AcademicYearRolloverClassMapping[]
+  surveys                    Survey[]
+  surveySections             SurveySection[]
+  surveyDomains              SurveyDomain[]
+  surveyIndicators           SurveyIndicator[]
+  surveyRounds               SurveyRound[]
+  surveySegments             SurveySegment[]
+  surveyImportBatches        SurveyImportBatch[]
+  surveyIndicatorResults     SurveyIndicatorResult[]
+  surveyDomainResults        SurveyDomainResult[]
+  surveyDomainComparisons    SurveyDomainComparison[]
+  surveyParticipationResults SurveyParticipationResult[]
 
   @@index([statusId])
   @@index([regionId])
@@ -308,34 +319,41 @@ model AuditLog {
 }
 
 model AcademicYear {
-  id                      String                       @id @default(uuid()) @db.Uuid
-  institutionId           String                       @db.Uuid
-  yearLabel               String
-  startDate               DateTime
-  endDate                 DateTime
-  isCurrent               Boolean                      @default(false)
-  isClosed                Boolean                      @default(false)
-  createdAt               DateTime                     @default(now())
-  updatedAt               DateTime                     @updatedAt
-  archivedAt              DateTime?
-  createdBy               String?                      @db.Uuid
-  updatedBy               String?                      @db.Uuid
-  institution             Institution                  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  periods                 AcademicPeriod[]
-  classes                 Class[]
-  subjects                Subject[]
-  topics                  Topic[]
-  skills                  Skill[]
-  enrollments             StudentEnrollment[]
-  staffAssignments        StaffAssignment[]
-  studyGroups             StudyGroup[]
-  exams                   Exam[]
-  institutionProfiles     InstitutionProfile[]
-  interventions           Intervention[]
-  annualSpecializations   AcademicYearSpecialization[]
-  rolloversAsSource       AcademicYearRollover[]       @relation("RolloverSourceYear")
-  rolloversAsTarget       AcademicYearRollover[]       @relation("RolloverTargetYear")
-  rolloverTargetDecisions StudentRolloverDecision[]
+  id                         String                       @id @default(uuid()) @db.Uuid
+  institutionId              String                       @db.Uuid
+  yearLabel                  String
+  startDate                  DateTime
+  endDate                    DateTime
+  isCurrent                  Boolean                      @default(false)
+  isClosed                   Boolean                      @default(false)
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+  archivedAt                 DateTime?
+  createdBy                  String?                      @db.Uuid
+  updatedBy                  String?                      @db.Uuid
+  institution                Institution                  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  periods                    AcademicPeriod[]
+  classes                    Class[]
+  subjects                   Subject[]
+  topics                     Topic[]
+  skills                     Skill[]
+  enrollments                StudentEnrollment[]
+  staffAssignments           StaffAssignment[]
+  studyGroups                StudyGroup[]
+  exams                      Exam[]
+  institutionProfiles        InstitutionProfile[]
+  interventions              Intervention[]
+  annualSpecializations      AcademicYearSpecialization[]
+  rolloversAsSource          AcademicYearRollover[]       @relation("RolloverSourceYear")
+  rolloversAsTarget          AcademicYearRollover[]       @relation("RolloverTargetYear")
+  rolloverTargetDecisions    StudentRolloverDecision[]
+  surveys                    Survey[]
+  surveyRounds               SurveyRound[]
+  surveyImportBatches        SurveyImportBatch[]
+  surveyIndicatorResults     SurveyIndicatorResult[]
+  surveyDomainResults        SurveyDomainResult[]
+  surveyDomainComparisons    SurveyDomainComparison[]
+  surveyParticipationResults SurveyParticipationResult[]
 
   @@unique([institutionId, yearLabel])
   @@unique([institutionId, id])
@@ -799,6 +817,7 @@ model User {
   institutionUsers    InstitutionUser[]
   sessions            UserSession[]
   setupTokens         UserAccountSetupToken[]
+  surveyImportBatches SurveyImportBatch[]
 
   @@index([email])
   @@map("users")
@@ -1510,4 +1529,328 @@ model StudentExamResult {
   @@unique([examId, studentId])
   @@index([institutionId, studentId])
   @@map("student_exam_results")
+}
+
+/// Aggregate-only school survey definition. Respondent identities and individual
+/// responses are intentionally out of scope for this data model.
+model Survey {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  institutionId        String                      @db.Uuid
+  academicYearId       String                      @db.Uuid
+  nameAr               String
+  nameHe               String?
+  descriptionAr        String?                     @db.Text
+  descriptionHe        String?                     @db.Text
+  audienceType         String?                     @db.VarChar(40)
+  status               String                      @default("DRAFT") @db.VarChar(30)
+  isActive             Boolean                     @default(true)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  archivedAt           DateTime?
+  institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  sections             SurveySection[]
+  domains              SurveyDomain[]
+  indicators           SurveyIndicator[]
+  rounds               SurveyRound[]
+  segments             SurveySegment[]
+  importBatches        SurveyImportBatch[]
+  indicatorResults     SurveyIndicatorResult[]
+  domainResults        SurveyDomainResult[]
+  domainComparisons    SurveyDomainComparison[]
+  participationResults SurveyParticipationResult[]
+
+  @@unique([institutionId, id])
+  @@unique([institutionId, academicYearId, id])
+  @@index([institutionId, academicYearId])
+  @@index([institutionId, status, archivedAt])
+  @@map("surveys")
+}
+
+model SurveySection {
+  id               String                  @id @default(uuid()) @db.Uuid
+  institutionId    String                  @db.Uuid
+  surveyId         String                  @db.Uuid
+  code             String                  @db.VarChar(80)
+  nameAr           String
+  nameHe           String?
+  descriptionAr    String?                 @db.Text
+  descriptionHe    String?                 @db.Text
+  sortOrder        Int                     @default(0)
+  isOptional       Boolean                 @default(false)
+  isActive         Boolean                 @default(true)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  institution      Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  survey           Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  domains          SurveyDomain[]
+  indicatorResults SurveyIndicatorResult[]
+
+  @@unique([institutionId, surveyId, code])
+  @@unique([institutionId, surveyId, id])
+  @@index([institutionId, surveyId, sortOrder])
+  @@map("survey_sections")
+}
+
+model SurveyDomain {
+  id                String                   @id @default(uuid()) @db.Uuid
+  institutionId     String                   @db.Uuid
+  surveyId          String                   @db.Uuid
+  sectionId         String                   @db.Uuid
+  code              String                   @db.VarChar(80)
+  nameAr            String
+  nameHe            String?
+  descriptionAr     String?                  @db.Text
+  descriptionHe     String?                  @db.Text
+  sortOrder         Int                      @default(0)
+  isActive          Boolean                  @default(true)
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  institution       Institution              @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  survey            Survey                   @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  section           SurveySection            @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  indicators        SurveyIndicator[]
+  indicatorResults  SurveyIndicatorResult[]
+  domainResults     SurveyDomainResult[]
+  domainComparisons SurveyDomainComparison[]
+
+  @@unique([institutionId, surveyId, code])
+  @@unique([institutionId, surveyId, id])
+  @@index([institutionId, surveyId, sectionId, sortOrder])
+  @@map("survey_domains")
+}
+
+model SurveyIndicator {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  institutionId      String                  @db.Uuid
+  surveyId           String                  @db.Uuid
+  domainId           String                  @db.Uuid
+  code               String                  @db.VarChar(80)
+  textAr             String                  @db.Text
+  textHe             String?                 @db.Text
+  descriptionAr      String?                 @db.Text
+  descriptionHe      String?                 @db.Text
+  sortOrder          Int                     @default(0)
+  isActive           Boolean                 @default(true)
+  reportingRuleCode  String?                 @db.VarChar(50)
+  isReverseDirection Boolean                 @default(false)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  institution        Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  survey             Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  domain             SurveyDomain            @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  results            SurveyIndicatorResult[]
+
+  @@unique([institutionId, surveyId, code])
+  @@unique([institutionId, surveyId, id])
+  @@index([institutionId, surveyId, domainId, sortOrder])
+  @@map("survey_indicators")
+}
+
+model SurveyRound {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  institutionId        String                      @db.Uuid
+  academicYearId       String                      @db.Uuid
+  surveyId             String                      @db.Uuid
+  code                 String                      @db.VarChar(80)
+  nameAr               String
+  nameHe               String?
+  sequenceNumber       Int
+  startsAt             DateTime?                   @db.Date
+  endsAt               DateTime?                   @db.Date
+  measurementDate      DateTime?                   @db.Date
+  status               String                      @default("DRAFT") @db.VarChar(30)
+  closedAt             DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  importBatches        SurveyImportBatch[]
+  indicatorResults     SurveyIndicatorResult[]
+  domainResults        SurveyDomainResult[]
+  domainComparisons    SurveyDomainComparison[]    @relation("SurveyDomainComparisonRound")
+  comparisonTargets    SurveyDomainComparison[]    @relation("SurveyDomainComparisonTargetRound")
+  participationResults SurveyParticipationResult[]
+
+  @@unique([institutionId, surveyId, code])
+  @@unique([institutionId, surveyId, sequenceNumber])
+  @@unique([institutionId, surveyId, id])
+  @@index([institutionId, surveyId, sequenceNumber])
+  @@map("survey_rounds")
+}
+
+model SurveySegment {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  institutionId        String                      @db.Uuid
+  surveyId             String                      @db.Uuid
+  code                 String                      @db.VarChar(80)
+  nameAr               String
+  nameHe               String?
+  segmentType          String?                     @db.VarChar(40)
+  sortOrder            Int                         @default(0)
+  isActive             Boolean                     @default(true)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  survey               Survey                      @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  indicatorResults     SurveyIndicatorResult[]
+  domainResults        SurveyDomainResult[]
+  domainComparisons    SurveyDomainComparison[]
+  participationResults SurveyParticipationResult[]
+
+  @@unique([institutionId, surveyId, code])
+  @@unique([institutionId, surveyId, id])
+  @@index([institutionId, surveyId, sortOrder])
+  @@map("survey_segments")
+}
+
+model SurveyImportBatch {
+  id                   String                      @id @default(uuid()) @db.Uuid
+  institutionId        String                      @db.Uuid
+  academicYearId       String                      @db.Uuid
+  surveyId             String                      @db.Uuid
+  roundId              String                      @db.Uuid
+  originalFileName     String                      @db.VarChar(500)
+  fileHash             String                      @db.VarChar(128)
+  importedByUserId     String?                     @db.Uuid
+  status               String                      @default("PENDING") @db.VarChar(30)
+  rowCount             Int?
+  validRowCount        Int?
+  invalidRowCount      Int?
+  importedAt           DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  round                SurveyRound                 @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  importedByUser       User?                       @relation(fields: [importedByUserId], references: [id], onDelete: SetNull)
+  indicatorResults     SurveyIndicatorResult[]
+  domainResults        SurveyDomainResult[]
+  participationResults SurveyParticipationResult[]
+
+  @@unique([institutionId, surveyId, roundId, fileHash])
+  @@unique([institutionId, id])
+  @@unique([institutionId, surveyId, roundId, id])
+  @@index([institutionId, surveyId, roundId, createdAt])
+  @@index([importedByUserId])
+  @@map("survey_import_batches")
+}
+
+model SurveyIndicatorResult {
+  id                 String             @id @default(uuid()) @db.Uuid
+  institutionId      String             @db.Uuid
+  academicYearId     String             @db.Uuid
+  surveyId           String             @db.Uuid
+  roundId            String             @db.Uuid
+  sectionId          String             @db.Uuid
+  domainId           String             @db.Uuid
+  indicatorId        String             @db.Uuid
+  segmentId          String             @db.Uuid
+  importBatchId      String?            @db.Uuid
+  reportedPercentage Decimal?           @db.Decimal(5, 2)
+  respondentCount    Int?
+  earnedTotal        Decimal?           @db.Decimal(14, 4)
+  possibleTotal      Decimal?           @db.Decimal(14, 4)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  institution        Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear       AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey             Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  round              SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  section            SurveySection      @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  domain             SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  indicator          SurveyIndicator    @relation(fields: [institutionId, surveyId, indicatorId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  segment            SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  importBatch        SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict)
+
+  @@unique([roundId, indicatorId, segmentId])
+  @@index([institutionId, surveyId, roundId])
+  @@index([roundId, domainId])
+  @@index([roundId, indicatorId])
+  @@index([roundId, segmentId])
+  @@map("survey_indicator_results")
+}
+
+model SurveyDomainResult {
+  id              String             @id @default(uuid()) @db.Uuid
+  institutionId   String             @db.Uuid
+  academicYearId  String             @db.Uuid
+  surveyId        String             @db.Uuid
+  roundId         String             @db.Uuid
+  domainId        String             @db.Uuid
+  segmentId       String             @db.Uuid
+  importBatchId   String?            @db.Uuid
+  scorePercentage Decimal?           @db.Decimal(5, 2)
+  respondentCount Int?
+  isComparable    Boolean            @default(true)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  institution     Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear    AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey          Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  round           SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  domain          SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  segment         SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  importBatch     SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict)
+
+  @@unique([roundId, domainId, segmentId])
+  @@index([institutionId, surveyId, roundId])
+  @@map("survey_domain_results")
+}
+
+model SurveyDomainComparison {
+  id                String        @id @default(uuid()) @db.Uuid
+  institutionId     String        @db.Uuid
+  academicYearId    String        @db.Uuid
+  surveyId          String        @db.Uuid
+  roundId           String        @db.Uuid
+  domainId          String        @db.Uuid
+  segmentId         String        @db.Uuid
+  comparisonType    String        @db.VarChar(50)
+  comparisonCode    String?       @db.VarChar(50)
+  comparisonValue   Decimal?      @db.Decimal(5, 2)
+  comparisonRoundId String?       @db.Uuid
+  noteAr            String?       @db.Text
+  noteHe            String?       @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  institution       Institution   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear      AcademicYear  @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey            Survey        @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  round             SurveyRound   @relation("SurveyDomainComparisonRound", fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  domain            SurveyDomain  @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  segment           SurveySegment @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  comparisonRound   SurveyRound?  @relation("SurveyDomainComparisonTargetRound", fields: [institutionId, surveyId, comparisonRoundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+
+  @@unique([roundId, domainId, segmentId, comparisonType])
+  @@index([institutionId, surveyId, roundId])
+  @@index([institutionId, surveyId, comparisonRoundId])
+  @@map("survey_domain_comparisons")
+}
+
+model SurveyParticipationResult {
+  id               String             @id @default(uuid()) @db.Uuid
+  institutionId    String             @db.Uuid
+  academicYearId   String             @db.Uuid
+  surveyId         String             @db.Uuid
+  roundId          String             @db.Uuid
+  segmentId        String             @db.Uuid
+  participantCount Int?
+  eligibleCount    Int?
+  responseRate     Decimal?           @db.Decimal(5, 2)
+  importBatchId    String?            @db.Uuid
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  institution      Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
+  academicYear     AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  survey           Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  round            SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_participation_results_round_fkey")
+  segment          SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  importBatch      SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict, map: "survey_participation_results_batch_fkey")
+
+  @@unique([roundId, segmentId])
+  @@index([institutionId, surveyId, roundId])
+  @@map("survey_participation_results")
 }

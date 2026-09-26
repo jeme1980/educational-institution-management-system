@@ -1,0 +1,28 @@
+import { Router } from 'express';
+import { requireAuth } from '../middleware/auth';
+import { requirePermission } from '../middleware/permission.middleware';
+import { asyncHandler } from '../middleware/asyncHandler';
+import { validateRequest } from '../middleware/validate';
+import * as controller from '../controllers/surveys.controller';
+import * as schemas from '../validation/surveys.schemas';
+
+const router = Router();
+const read = [requireAuth, requirePermission('surveys', 'read')] as const;
+const update = [requireAuth, requirePermission('surveys', 'update')] as const;
+router.get('/surveys', ...read, asyncHandler(controller.listSurveys));
+router.post('/surveys', ...update, validateRequest(schemas.createSurveySchema), asyncHandler(controller.createSurvey));
+router.get('/surveys/:surveyId', ...read, asyncHandler(controller.getSurvey));
+router.patch('/surveys/:surveyId', ...update, validateRequest(schemas.updateSurveySchema), asyncHandler(controller.updateSurvey));
+router.patch('/surveys/:surveyId/archive', ...update, asyncHandler(controller.archiveSurvey));
+router.get('/surveys/:surveyId/structure', ...read, asyncHandler(controller.getStructure));
+router.post('/surveys/:surveyId/sections', ...update, validateRequest(schemas.createSectionSchema), asyncHandler(controller.createSection));
+router.patch('/surveys/:surveyId/sections/:sectionId', ...update, validateRequest(schemas.updateSectionSchema), asyncHandler(controller.updateSection));
+router.post('/surveys/:surveyId/domains', ...update, validateRequest(schemas.createDomainSchema), asyncHandler(controller.createDomain));
+router.patch('/surveys/:surveyId/domains/:domainId', ...update, validateRequest(schemas.updateDomainSchema), asyncHandler(controller.updateDomain));
+router.post('/surveys/:surveyId/indicators', ...update, validateRequest(schemas.createIndicatorSchema), asyncHandler(controller.createIndicator));
+router.patch('/surveys/:surveyId/indicators/:indicatorId', ...update, validateRequest(schemas.updateIndicatorSchema), asyncHandler(controller.updateIndicator));
+router.post('/surveys/:surveyId/rounds', ...update, validateRequest(schemas.createRoundSchema), asyncHandler(controller.createRound));
+router.patch('/surveys/:surveyId/rounds/:roundId', ...update, validateRequest(schemas.updateRoundSchema), asyncHandler(controller.updateRound));
+router.post('/surveys/:surveyId/segments', ...update, validateRequest(schemas.createSegmentSchema), asyncHandler(controller.createSegment));
+router.patch('/surveys/:surveyId/segments/:segmentId', ...update, validateRequest(schemas.updateSegmentSchema), asyncHandler(controller.updateSegment));
+export default router;

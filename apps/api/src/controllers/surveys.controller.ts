@@ -5,10 +5,11 @@ import type { ContextRequest } from '../middleware/context';
 import { HttpError } from '../middleware/errorHandler.middleware';
 import { recordAuditEvent } from '../services/audit.service';
 import { assertRoundDates, assertStructureUnlocked, canonicalSurveyCode, duplicateError, requireAcademicYear, requireEditableSurvey, requireSurvey, roundStatuses, surveyDto, surveyStatuses } from '../services/surveys.service';
-import { requireSingleXlsxFile } from '../middleware/xlsx-multipart.middleware';
+import { requireSingleXlsxFile, requireSingleXlsxUpload } from '../middleware/xlsx-multipart.middleware';
 import { parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from '../services/surveys-excel.parser';
 import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
 import { previewSurveyExcelSemantics } from '../services/surveys-excel.semantic';
+import { executeSurveyExcelImport } from '../services/surveys-excel.import';
 import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
 
 const institutionOf = (req: ContextRequest) => req.context?.institutionId || req.institutionId || '';
@@ -98,6 +99,53 @@ export async function previewSurveyResults(req: AuthRequest, res: Response) {
     context: { surveyId: semantic.survey?.id || surveyId, roundId: semantic.round?.id || roundId },
     summary: semantic.summary,
     errors: publicPreviewErrors(semantic.errors),
+  });
+}
+export async function importSurveyResults(req: AuthRequest, res: Response) {
+  const institutionId = institutionOf(req);
+  const surveyId = param(req, 'surveyId');
+  const roundId = param(req, 'roundId');
+  if (!uuid(surveyId)) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
+  if (!uuid(roundId)) throw new HttpError(404, 'Survey round was not found.', 'SURVEY_ROUND_NOT_FOUND');
+  const userId = req.user?.uid;
+  if (!userId) throw new HttpError(401, 'Authentication is required.', 'AUTHENTICATION_REQUIRED');
+  const upload = requireSingleXlsxUpload(req);
+  let parsed;
+  try {
+    parsed = await parseSurveyExcelWorkbook(upload.buffer);
+  } catch (error) {
+    if (!(error instanceof SurveyExcelWorkbookError)) throw error;
+    throw new HttpError(400, 'The spreadsheet cannot be imported.', 'SURVEY_IMPORT_PREVIEW_INVALID', { errors: publicPreviewErrors(error.errors) });
+  }
+  const syntactic = validateSurveyExcelWorkbook(parsed);
+  if (syntactic.errors.length) {
+    throw new HttpError(400, 'The spreadsheet cannot be imported.', 'SURVEY_IMPORT_PREVIEW_INVALID', { errors: publicPreviewErrors(syntactic.errors) });
+  }
+  const semantic = await previewSurveyExcelSemantics({ institutionId, surveyId, roundId, workbook: syntactic.workbook });
+  const fatal = semantic.errors.find((error) => error.scope === 'CONTEXT');
+  if (fatal) throw contextFailure(fatal);
+  if (semantic.errors.length) {
+    throw new HttpError(400, 'The spreadsheet cannot be imported.', 'SURVEY_IMPORT_PREVIEW_INVALID', { errors: publicPreviewErrors(semantic.errors) });
+  }
+  const result = await executeSurveyExcelImport({
+    institutionId,
+    surveyId,
+    roundId,
+    userId,
+    originalFileName: upload.originalFileName,
+    fileBuffer: upload.buffer,
+    preview: semantic,
+  });
+  res.status(201).json({
+    importBatchId: result.importBatchId,
+    surveyId: result.surveyId,
+    roundId: result.roundId,
+    status: result.status,
+    rowCount: result.rowCount,
+    validRowCount: result.validRowCount,
+    invalidRowCount: result.invalidRowCount,
+    fileHash: result.fileHash,
+    importedAt: result.importedAt,
   });
 }
 export async function createSection(req: AuthRequest, res: Response) { const survey = await surveyForMutation(req); const body: any = req.body; try { const value = await prisma.$transaction(async (tx) => { const created = await tx.surveySection.create({ data: { institutionId: survey.institutionId, surveyId: survey.id, code: canonicalSurveyCode(body.code), nameAr: body.nameAr, nameHe: optional(body.nameHe), descriptionAr: optional(body.descriptionAr), descriptionHe: optional(body.descriptionHe), sortOrder: body.sortOrder ?? 0, isOptional: body.isOptional ?? false, isActive: body.isActive ?? true } }); await audit(tx, req, 'SURVEY_SECTION_CREATED', 'SurveySection', created.id); return created; }); res.status(201).json(value); } catch (error) { throw duplicateError(error, 'DUPLICATE_SURVEY_SECTION_CODE'); } }

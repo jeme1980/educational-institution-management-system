@@ -25,6 +25,7 @@ router.patch('/surveys/:surveyId/indicators/:indicatorId', ...update, validateRe
 router.post('/surveys/:surveyId/rounds', ...update, validateRequest(schemas.createRoundSchema), asyncHandler(controller.createRound));
 router.patch('/surveys/:surveyId/rounds/:roundId', ...update, validateRequest(schemas.updateRoundSchema), asyncHandler(controller.updateRound));
 router.post('/surveys/:surveyId/rounds/:roundId/results/preview', ...update, xlsxMultipartBody, asyncHandler(controller.previewSurveyResults));
+router.post('/surveys/:surveyId/rounds/:roundId/results/import', ...update, xlsxMultipartBody, asyncHandler(controller.importSurveyResults));
 router.post('/surveys/:surveyId/segments', ...update, validateRequest(schemas.createSegmentSchema), asyncHandler(controller.createSegment));
 router.patch('/surveys/:surveyId/segments/:segmentId', ...update, validateRequest(schemas.updateSegmentSchema), asyncHandler(controller.updateSegment));
 export default router;

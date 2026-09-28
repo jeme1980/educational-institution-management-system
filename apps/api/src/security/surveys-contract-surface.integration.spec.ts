@@ -18,16 +18,19 @@ const surveyTables = [
   'survey_participation_results',
 ] as const;
 
-test('survey route surface permits only the read-only preview result route and preserves database boundaries', async () => {
+test('survey route surface permits only preview and atomic import result routes and preserves database boundaries', async () => {
   const routes = (surveyRouter as any).stack
     .filter((layer: any) => layer.route)
     .flatMap((layer: any) => Object.keys(layer.route.methods).map((method) => ({ method: method.toUpperCase(), path: String(layer.route.path) })));
   assert.ok(routes.length > 0);
   assert.equal(routes.some((route: any) => route.method === 'DELETE'), false);
   const resultRoutes = routes.filter((route: any) => /result|import|batch/i.test(route.path));
-  assert.deepEqual(resultRoutes, [{ method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/preview' }]);
-  assert.equal(routes.some((route: any) => /\/(?:import|execute|confirm)(?:\/|$)/i.test(route.path)), false);
-  assert.equal(routes.some((route: any) => /\/results\/(?:create|update|delete|import|execute|confirm)(?:\/|$)/i.test(route.path)), false);
+  assert.deepEqual(resultRoutes, [
+    { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/preview' },
+    { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/import' },
+  ]);
+  assert.equal(routes.some((route: any) => /\/(?:replace|execute|confirm)(?:\/|$)/i.test(route.path)), false);
+  assert.equal(routes.some((route: any) => /\/results\/(?:create|update|delete|replace|execute|confirm)(?:\/|$)/i.test(route.path)), false);
 
   const privileges = await admin.$queryRawUnsafe<Array<{
     table_name: string;

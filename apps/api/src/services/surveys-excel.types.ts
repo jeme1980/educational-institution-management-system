@@ -232,3 +232,66 @@ export interface SurveyExcelSemanticPreview {
   errors: SurveyExcelSemanticError[];
   summary: SurveyExcelSemanticPreviewSummary;
 }
+
+export type SurveyExcelPreflightErrorCode = SurveyExcelSemanticErrorCode | 'SURVEY_ROUND_RESULTS_ALREADY_EXIST';
+
+export interface SurveyExcelPreflightError {
+  sheet: string;
+  row: number;
+  column: string;
+  code: SurveyExcelPreflightErrorCode;
+  message: string;
+  scope: 'CONTEXT' | 'ROW' | 'PREFLIGHT';
+}
+
+export interface SurveyExcelImportPreflightInput {
+  institutionId: string;
+  surveyId: string;
+  roundId: string;
+  fileBuffer: Uint8Array;
+  preview: SurveyExcelSemanticPreview;
+}
+
+export interface SurveyExcelImportPreflight {
+  surveyId: string;
+  roundId: string;
+  academicYearId: string | null;
+  fileHash: string;
+  hasExistingResults: boolean;
+  duplicateImportFound: boolean;
+  canImport: boolean;
+  errors: SurveyExcelPreflightError[];
+}
+
+export type SurveyExcelImportErrorCode =
+  | 'SURVEY_NOT_FOUND'
+  | 'SURVEY_ARCHIVED'
+  | 'SURVEY_ROUND_NOT_FOUND'
+  | 'SURVEY_IMPORT_PREVIEW_INVALID'
+  | 'SURVEY_IMPORT_EMPTY'
+  | 'SURVEY_IMPORT_DUPLICATE_FILE'
+  | 'SURVEY_ROUND_RESULTS_ALREADY_EXIST';
+
+export interface SurveyExcelImportInput {
+  institutionId: string;
+  surveyId: string;
+  roundId: string;
+  userId: string;
+  originalFileName: string;
+  fileBuffer: Uint8Array;
+  preview: SurveyExcelSemanticPreview;
+}
+
+export interface SurveyExcelImportResult {
+  importBatchId: string;
+  institutionId: string;
+  academicYearId: string;
+  surveyId: string;
+  roundId: string;
+  status: 'COMPLETED';
+  fileHash: string;
+  rowCount: number;
+  validRowCount: number;
+  invalidRowCount: number;
+  importedAt: Date;
+}

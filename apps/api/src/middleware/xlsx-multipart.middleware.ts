@@ -7,6 +7,7 @@ const CRLF = Buffer.from('\r\n');
 const HEADER_SEPARATOR = Buffer.from('\r\n\r\n');
 
 type MultipartFile = { fieldName: string; fileName: string; contentType: string; buffer: Buffer };
+export type XlsxUpload = { originalFileName: string; buffer: Buffer };
 
 export const xlsxMultipartBody: RequestHandler = express.raw({
   type: 'multipart/form-data',
@@ -65,7 +66,7 @@ function parseMultipartFiles(body: Buffer, boundary: string): MultipartFile[] {
   return files;
 }
 
-export function requireSingleXlsxFile(req: Request): Buffer {
+export function requireSingleXlsxUpload(req: Request): XlsxUpload {
   const contentType = String(req.headers['content-type'] || '');
   const boundary = boundaryFrom(contentType) ?? uploadError(400, 'MULTIPART_FORM_DATA_REQUIRED', 'Upload one XLSX file using multipart/form-data.');
   if (!Buffer.isBuffer(req.body)) uploadError(400, 'SURVEY_EXCEL_FILE_REQUIRED', 'The file field is required.');
@@ -76,5 +77,9 @@ export function requireSingleXlsxFile(req: Request): Buffer {
   if (file.fieldName !== 'file') uploadError(400, 'SURVEY_EXCEL_FILE_REQUIRED', 'The file field is required.');
   if (!file.fileName.toLowerCase().endsWith('.xlsx') || file.contentType !== XLSX_MIME) uploadError(400, 'UNSUPPORTED_SPREADSHEET_TYPE', 'Only XLSX files are supported.');
   if (file.buffer.length > MAX_SPREADSHEET_FILE_BYTES) uploadError(413, 'PAYLOAD_TOO_LARGE', 'The uploaded file exceeds the 10 MB limit.');
-  return file.buffer;
+  return { originalFileName: file.fileName, buffer: file.buffer };
+}
+
+export function requireSingleXlsxFile(req: Request): Buffer {
+  return requireSingleXlsxUpload(req).buffer;
 }

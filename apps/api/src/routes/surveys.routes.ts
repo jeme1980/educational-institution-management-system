@@ -5,6 +5,7 @@ import { asyncHandler } from '../middleware/asyncHandler';
 import { validateRequest } from '../middleware/validate';
 import * as controller from '../controllers/surveys.controller';
 import * as schemas from '../validation/surveys.schemas';
+import { xlsxMultipartBody } from '../middleware/xlsx-multipart.middleware';
 
 const router = Router();
 const read = [requireAuth, requirePermission('surveys', 'read')] as const;
@@ -23,6 +24,7 @@ router.post('/surveys/:surveyId/indicators', ...update, validateRequest(schemas.
 router.patch('/surveys/:surveyId/indicators/:indicatorId', ...update, validateRequest(schemas.updateIndicatorSchema), asyncHandler(controller.updateIndicator));
 router.post('/surveys/:surveyId/rounds', ...update, validateRequest(schemas.createRoundSchema), asyncHandler(controller.createRound));
 router.patch('/surveys/:surveyId/rounds/:roundId', ...update, validateRequest(schemas.updateRoundSchema), asyncHandler(controller.updateRound));
+router.post('/surveys/:surveyId/rounds/:roundId/results/preview', ...update, xlsxMultipartBody, asyncHandler(controller.previewSurveyResults));
 router.post('/surveys/:surveyId/segments', ...update, validateRequest(schemas.createSegmentSchema), asyncHandler(controller.createSegment));
 router.patch('/surveys/:surveyId/segments/:segmentId', ...update, validateRequest(schemas.updateSegmentSchema), asyncHandler(controller.updateSegment));
 export default router;

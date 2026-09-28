@@ -5,6 +5,11 @@ import type { ContextRequest } from '../middleware/context';
 import { HttpError } from '../middleware/errorHandler.middleware';
 import { recordAuditEvent } from '../services/audit.service';
 import { assertRoundDates, assertStructureUnlocked, canonicalSurveyCode, duplicateError, requireAcademicYear, requireEditableSurvey, requireSurvey, roundStatuses, surveyDto, surveyStatuses } from '../services/surveys.service';
+import { requireSingleXlsxFile } from '../middleware/xlsx-multipart.middleware';
+import { parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from '../services/surveys-excel.parser';
+import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
+import { previewSurveyExcelSemantics } from '../services/surveys-excel.semantic';
+import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
 
 const institutionOf = (req: ContextRequest) => req.context?.institutionId || req.institutionId || '';
 const actorOf = (req: AuthRequest) => req.user?.uid || null;
@@ -19,6 +24,23 @@ async function ensureIndicator(institutionId: string, surveyId: string, id: stri
 async function ensureRound(institutionId: string, surveyId: string, id: string) { const item = await prisma.surveyRound.findFirst({ where: { id, institutionId, surveyId } }); if (!item) throw new HttpError(404, 'Survey round was not found.', 'SURVEY_ROUND_NOT_FOUND'); return item; }
 async function ensureSegment(institutionId: string, surveyId: string, id: string) { const item = await prisma.surveySegment.findFirst({ where: { id, institutionId, surveyId } }); if (!item) throw new HttpError(404, 'Survey segment was not found.', 'SURVEY_SEGMENT_NOT_FOUND'); return item; }
 function identityChanged(existing: any, body: any, fields: string[]) { return fields.some((field) => body[field] !== undefined && body[field] !== existing[field]); }
+const uuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+const previewSummary = (workbook: SurveyExcelValidatedWorkbook | null, errorCount: number) => ({
+  indicatorRowsTotal: workbook?.indicatorResults.length ?? 0,
+  indicatorRowsValid: 0,
+  domainRowsTotal: workbook?.domainResults.length ?? 0,
+  domainRowsValid: 0,
+  comparisonRowsTotal: workbook?.comparisons.length ?? 0,
+  comparisonRowsValid: 0,
+  participationRowsTotal: workbook?.participation.length ?? 0,
+  participationRowsValid: 0,
+  errorCount,
+});
+const publicPreviewErrors = (errors: Array<{ sheet: string; row: number; column: string; code: string; message: string }>) => errors.map(({ sheet, row, column, code, message }) => ({ sheet, row, column, code, message }));
+const contextFailure = (error: SurveyExcelSemanticError): HttpError => {
+  const status = error.code === 'SURVEY_ARCHIVED' ? 409 : 404;
+  return new HttpError(status, error.message, error.code);
+};
 
 export async function listSurveys(req: ContextRequest, res: Response) {
   const institutionId = institutionOf(req); const academicYearId = String(req.query.academicYearId || '');
@@ -47,6 +69,36 @@ export async function getStructure(req: ContextRequest, res: Response) {
   const survey = await requireSurvey(institutionOf(req), param(req, 'surveyId'), true);
   const structure = await prisma.survey.findUniqueOrThrow({ where: { id: survey.id }, include: { sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], include: { domains: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], include: { indicators: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } } } } }, rounds: { orderBy: [{ sequenceNumber: 'asc' }, { measurementDate: 'asc' }, { id: 'asc' }] }, segments: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } } });
   res.json({ survey: surveyDto(structure), sections: structure.sections, rounds: structure.rounds, segments: structure.segments });
+}
+export async function previewSurveyResults(req: AuthRequest, res: Response) {
+  const institutionId = institutionOf(req);
+  const surveyId = param(req, 'surveyId');
+  const roundId = param(req, 'roundId');
+  if (!uuid(surveyId)) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
+  if (!uuid(roundId)) throw new HttpError(404, 'Survey round was not found.', 'SURVEY_ROUND_NOT_FOUND');
+  const file = requireSingleXlsxFile(req);
+  let parsed;
+  try {
+    parsed = await parseSurveyExcelWorkbook(file);
+  } catch (error) {
+    if (!(error instanceof SurveyExcelWorkbookError)) throw error;
+    const malformed = error.errors.find((item) => item.code === 'MALFORMED_WORKBOOK');
+    if (malformed) throw new HttpError(400, malformed.message, malformed.code);
+    return res.json({ valid: false, context: { surveyId, roundId }, summary: previewSummary(null, error.errors.length), errors: publicPreviewErrors(error.errors) });
+  }
+  const syntactic = validateSurveyExcelWorkbook(parsed);
+  if (syntactic.errors.length) {
+    return res.json({ valid: false, context: { surveyId, roundId }, summary: previewSummary(syntactic.workbook, syntactic.errors.length), errors: publicPreviewErrors(syntactic.errors) });
+  }
+  const semantic = await previewSurveyExcelSemantics({ institutionId, surveyId, roundId, workbook: syntactic.workbook });
+  const fatal = semantic.errors.find((error) => error.scope === 'CONTEXT');
+  if (fatal) throw contextFailure(fatal);
+  return res.json({
+    valid: semantic.errors.length === 0,
+    context: { surveyId: semantic.survey?.id || surveyId, roundId: semantic.round?.id || roundId },
+    summary: semantic.summary,
+    errors: publicPreviewErrors(semantic.errors),
+  });
 }
 export async function createSection(req: AuthRequest, res: Response) { const survey = await surveyForMutation(req); const body: any = req.body; try { const value = await prisma.$transaction(async (tx) => { const created = await tx.surveySection.create({ data: { institutionId: survey.institutionId, surveyId: survey.id, code: canonicalSurveyCode(body.code), nameAr: body.nameAr, nameHe: optional(body.nameHe), descriptionAr: optional(body.descriptionAr), descriptionHe: optional(body.descriptionHe), sortOrder: body.sortOrder ?? 0, isOptional: body.isOptional ?? false, isActive: body.isActive ?? true } }); await audit(tx, req, 'SURVEY_SECTION_CREATED', 'SurveySection', created.id); return created; }); res.status(201).json(value); } catch (error) { throw duplicateError(error, 'DUPLICATE_SURVEY_SECTION_CODE'); } }
 export async function updateSection(req: AuthRequest, res: Response) { const survey = await surveyForMutation(req); const existing = await ensureSection(survey.institutionId, survey.id, param(req, 'sectionId')); const body: any = req.body; await assertStructureUnlocked(survey.id, identityChanged(existing, body, ['code'])); try { const value = await prisma.$transaction(async (tx) => { const updated = await tx.surveySection.update({ where: { id: existing.id }, data: { ...(body.code !== undefined ? { code: canonicalSurveyCode(body.code) } : {}), ...(body.nameAr !== undefined ? { nameAr: body.nameAr } : {}), ...(body.nameHe !== undefined ? { nameHe: optional(body.nameHe) } : {}), ...(body.descriptionAr !== undefined ? { descriptionAr: optional(body.descriptionAr) } : {}), ...(body.descriptionHe !== undefined ? { descriptionHe: optional(body.descriptionHe) } : {}), ...(body.sortOrder !== undefined ? { sortOrder: body.sortOrder } : {}), ...(body.isOptional !== undefined ? { isOptional: body.isOptional } : {}), ...(body.isActive !== undefined ? { isActive: body.isActive } : {}) } }); await audit(tx, req, 'SURVEY_SECTION_UPDATED', 'SurveySection', updated.id); return updated; }); res.json(value); } catch (error) { throw duplicateError(error, 'DUPLICATE_SURVEY_SECTION_CODE'); } }

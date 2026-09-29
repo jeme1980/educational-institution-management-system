@@ -52,8 +52,8 @@
                 <thead><tr><th scope="col">المجال</th><th scope="col">الرمز</th><th scope="col">الترتيب</th>@if (canUpdate()) { <th scope="col">إجراءات</th> }</tr></thead>
                 <tbody>
                   @for (domain of section.domains; track domain.id) {
-                    <tr>
-                      <td class="structure-name">{{ domain.nameAr }}</td>
+                    <tr [class.structure-selected]="selectedDomainId() === domain.id">
+                      <td><button class="structure-select" type="button" [attr.aria-pressed]="selectedDomainId() === domain.id" (click)="selectDomain(domain)">{{ domain.nameAr }}</button></td>
                       <td class="structure-code" dir="ltr">{{ domain.code }}</td>
                       <td class="structure-number">{{ domain.sortOrder }}</td>
                       @if (canUpdate()) {
@@ -68,6 +68,39 @@
         </section>
       }
     </div>
+    <section class="structure-panel structure-indicators" aria-label="مؤشرات المجال">
+      <div class="structure-panel-heading">
+        <h2>{{ selectedDomain() ? 'مؤشرات: ' + selectedDomain()?.nameAr : 'المؤشرات' }}</h2>
+        @if (canUpdate() && selectedDomain()) { <ui-button variant="secondary" size="sm" (activated)="openCreateIndicator()">مؤشر جديد</ui-button> }
+      </div>
+      @if (selectedDomain(); as domain) {
+        @if (!domain.indicators.length) {
+          <ui-empty-state title="لا توجد مؤشرات في هذا المجال." icon="fact_check" />
+        } @else {
+          <div class="structure-table-scroll">
+            <table class="structure-indicator-table">
+              <thead><tr><th scope="col">المؤشر</th><th scope="col">الرمز</th><th scope="col">قاعدة التقرير</th><th scope="col">الاتجاه</th><th scope="col">الترتيب</th>@if (canUpdate()) { <th scope="col">إجراءات</th> }</tr></thead>
+              <tbody>
+                @for (indicator of domain.indicators; track indicator.id) {
+                  <tr>
+                    <td class="structure-indicator-text">{{ indicator.textAr }}</td>
+                    <td class="structure-code" dir="ltr">{{ indicator.code }}</td>
+                    <td>{{ reportingRuleLabel(indicator.reportingRuleCode) }}</td>
+                    <td>@if (indicator.isReverseDirection) { <ui-badge tone="neutral">معكوس الاتجاه</ui-badge> } @else { — }</td>
+                    <td class="structure-number">{{ indicator.sortOrder }}</td>
+                    @if (canUpdate()) {
+                      <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل المؤشر ' + indicator.textAr" (activated)="openEditIndicator(indicator)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      } @else {
+        <p class="structure-indicators-empty">لا توجد مجالات لعرض المؤشرات.</p>
+      }
+    </section>
   }
 
   <ui-modal [open]="modalOpen()" [title]="mode() === 'section' ? (editingSection() ? 'تعديل القسم' : 'قسم جديد') : (editingDomain() ? 'تعديل المجال' : 'مجال جديد')" size="md" [dismissible]="!saving()" (closed)="closeModal()">
@@ -88,6 +121,29 @@
     <div ui-modal-footer class="structure-modal-actions">
       <ui-button variant="secondary" [disabled]="saving()" (activated)="closeModal()">إلغاء</ui-button>
       <ui-button type="submit" form="structure-form" [disabled]="form.invalid || saving()" [loading]="saving()">حفظ</ui-button>
+    </div>
+  </ui-modal>
+
+  <ui-modal [open]="indicatorModalOpen()" [title]="editingIndicator() ? 'تعديل المؤشر' : 'مؤشر جديد'" size="md" [dismissible]="!indicatorSaving()" (closed)="closeIndicatorModal()">
+    <form ui-modal-body id="indicator-form" [formGroup]="indicatorForm" (ngSubmit)="saveIndicator()" class="structure-form indicator-form">
+      <div class="structure-field"><label for="indicator-code">الرمز *</label><ui-input id="indicator-code" formControlName="code" [required]="true" [maxLength]="80" [invalid]="indicatorForm.controls.code.invalid && indicatorForm.controls.code.touched" />@if (indicatorForm.controls.code.invalid && indicatorForm.controls.code.touched) { <span class="structure-field-error">الرمز مطلوب، وبحد أقصى 80 حرفًا.</span> }</div>
+      <div class="structure-field"><label for="indicator-order">الترتيب</label><ui-input id="indicator-order" type="number" formControlName="sortOrder" [min]="0" [max]="1000000" [invalid]="indicatorForm.controls.sortOrder.invalid && indicatorForm.controls.sortOrder.touched" />@if (indicatorForm.controls.sortOrder.invalid && indicatorForm.controls.sortOrder.touched) { <span class="structure-field-error">أدخل عددًا صحيحًا بين 0 و1000000.</span> }</div>
+      <div class="structure-field"><label for="indicator-text-ar">نص المؤشر بالعربية *</label><ui-textarea id="indicator-text-ar" formControlName="textAr" [required]="true" [maxLength]="10000" [invalid]="indicatorForm.controls.textAr.invalid && indicatorForm.controls.textAr.touched" />@if (indicatorForm.controls.textAr.invalid && indicatorForm.controls.textAr.touched) { <span class="structure-field-error">نص المؤشر بالعربية مطلوب، وبحد أقصى 10000 حرف.</span> }</div>
+      <div class="structure-field"><label for="indicator-text-he">نص المؤشر بالعبرية</label><ui-textarea id="indicator-text-he" formControlName="textHe" [maxLength]="10000" /></div>
+      <div class="structure-field"><label for="indicator-description-ar">الوصف بالعربية</label><ui-textarea id="indicator-description-ar" formControlName="descriptionAr" [maxLength]="10000" /></div>
+      <div class="structure-field"><label for="indicator-description-he">الوصف بالعبرية</label><ui-textarea id="indicator-description-he" formControlName="descriptionHe" [maxLength]="10000" /></div>
+      <div class="structure-indicator-options structure-wide">
+        <div class="structure-field"><label for="indicator-rule">قاعدة التقرير</label><ui-select id="indicator-rule" formControlName="reportingRuleCode"><option value="">بدون قاعدة محددة</option>@for (rule of reportingRules; track rule) { <option [value]="rule">{{ reportingRuleLabel(rule) }}</option> }</ui-select></div>
+        <div class="structure-indicator-checks">
+          <label class="structure-check"><input type="checkbox" formControlName="isReverseDirection" />عكس اتجاه المؤشر عند التفسير</label>
+          <label class="structure-check"><input type="checkbox" formControlName="isActive" />نشط</label>
+        </div>
+      </div>
+      @if (indicatorSaveError()) { <p class="structure-save-error structure-wide" role="alert">{{ indicatorSaveError() }}</p> }
+    </form>
+    <div ui-modal-footer class="structure-modal-actions">
+      <ui-button variant="secondary" [disabled]="indicatorSaving()" (activated)="closeIndicatorModal()">إلغاء</ui-button>
+      <ui-button type="submit" form="indicator-form" [disabled]="indicatorForm.invalid || indicatorSaving()" [loading]="indicatorSaving()">حفظ</ui-button>
     </div>
   </ui-modal>
 </main>

@@ -86,7 +86,41 @@ export interface SurveyDomain {
   descriptionHe: string | null;
   sortOrder: number;
   isActive: boolean;
+  indicators: SurveyIndicator[];
 }
+
+export const SURVEY_INDICATOR_REPORTING_RULES = ['AGREEMENT_TOP_2', 'FREQUENCY_TOP_2', 'FREQUENCY_TOP_3', 'DIRECT_PERCENT'] as const;
+export type SurveyIndicatorReportingRule = typeof SURVEY_INDICATOR_REPORTING_RULES[number];
+
+export interface SurveyIndicator {
+  id: string;
+  surveyId: string;
+  domainId: string;
+  code: string;
+  textAr: string;
+  textHe: string | null;
+  descriptionAr: string | null;
+  descriptionHe: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  reportingRuleCode: SurveyIndicatorReportingRule | null;
+  isReverseDirection: boolean;
+}
+
+export interface CreateSurveyIndicatorRequest {
+  domainId: string;
+  code: string;
+  textAr: string;
+  textHe?: string | null;
+  descriptionAr?: string | null;
+  descriptionHe?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  reportingRuleCode?: SurveyIndicatorReportingRule | null;
+  isReverseDirection?: boolean;
+}
+
+export type UpdateSurveyIndicatorRequest = Partial<CreateSurveyIndicatorRequest>;
 
 export interface SurveySection {
   id: string;

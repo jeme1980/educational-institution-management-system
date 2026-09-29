@@ -7,11 +7,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../../../app.routes';
 import { AuthService } from '../../../core/services/auth.service';
 import { SurveyWriteError, SurveysApiService } from '../../../core/services/surveys-api.service';
-import type { SurveyDetail, SurveyDomain, SurveySection, SurveyStructureResponse } from '../models/survey.model';
+import { SURVEY_INDICATOR_REPORTING_RULES } from '../models/survey.model';
+import type { SurveyDetail, SurveyDomain, SurveyIndicator, SurveySection, SurveyStructureResponse } from '../models/survey.model';
 import { SurveyStructureComponent } from './survey-structure.component';
 
 const survey: SurveyDetail = { id: 'survey-1', academicYearId: 'year-1', nameAr: 'استبيان', nameHe: null, descriptionAr: null, descriptionHe: null, audienceType: null, status: 'ACTIVE', isActive: true, archivedAt: null, createdAt: '', updatedAt: '' };
-const domain = (id: string, sectionId: string): SurveyDomain => ({ id, surveyId: survey.id, sectionId, code: `D_${id}`, nameAr: `مجال ${id}`, nameHe: null, descriptionAr: null, descriptionHe: null, sortOrder: 0, isActive: true });
+const indicator = (id: string, domainId: string): SurveyIndicator => ({ id, surveyId: survey.id, domainId, code: `I_${id}`, textAr: `مؤشر ${id}`, textHe: null, descriptionAr: null, descriptionHe: null, sortOrder: 0, isActive: true, reportingRuleCode: 'DIRECT_PERCENT', isReverseDirection: false });
+const domain = (id: string, sectionId: string, indicators: SurveyIndicator[] = []): SurveyDomain => ({ id, surveyId: survey.id, sectionId, code: `D_${id}`, nameAr: `مجال ${id}`, nameHe: null, descriptionAr: null, descriptionHe: null, sortOrder: 0, isActive: true, indicators });
 const section = (id: string, domains: SurveyDomain[] = []): SurveySection => ({ id, surveyId: survey.id, code: `S_${id}`, nameAr: `قسم ${id}`, nameHe: null, descriptionAr: null, descriptionHe: null, sortOrder: 0, isOptional: false, isActive: true, domains });
 const sections = [section('first', [domain('one', 'first')]), section('second', [domain('two', 'second')])];
 
@@ -23,6 +25,8 @@ describe('SurveyStructureComponent', () => {
   const updateSurveySection = vi.fn();
   const createSurveyDomain = vi.fn();
   const updateSurveyDomain = vi.fn();
+  const createSurveyIndicator = vi.fn();
+  const updateSurveyIndicator = vi.fn();
   const paramMap = convertToParamMap({ surveyId: survey.id });
   const render = async () => {
     fixture = TestBed.createComponent(SurveyStructureComponent);
@@ -38,12 +42,14 @@ describe('SurveyStructureComponent', () => {
     updateSurveySection.mockReset().mockResolvedValue(section('first'));
     createSurveyDomain.mockReset().mockResolvedValue(domain('new', 'first'));
     updateSurveyDomain.mockReset().mockResolvedValue(domain('one', 'first'));
+    createSurveyIndicator.mockReset().mockResolvedValue(indicator('new', 'one'));
+    updateSurveyIndicator.mockReset().mockResolvedValue(indicator('one', 'one'));
     await TestBed.configureTestingModule({
       imports: [SurveyStructureComponent],
       providers: [provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap }, paramMap: of(paramMap) } },
         { provide: AuthService, useValue: { hasPermission: (permission: string) => permission === 'surveys:update' && canUpdate() } },
-        { provide: SurveysApiService, useValue: { getSurveyStructure, createSurveySection, updateSurveySection, createSurveyDomain, updateSurveyDomain } },
+        { provide: SurveysApiService, useValue: { getSurveyStructure, createSurveySection, updateSurveySection, createSurveyDomain, updateSurveyDomain, createSurveyIndicator, updateSurveyIndicator } },
       ],
     }).compileComponents();
   });
@@ -168,5 +174,158 @@ describe('SurveyStructureComponent', () => {
     fixture.componentInstance.form.patchValue({ code: 'dup', nameAr: 'مجال' });
     await fixture.componentInstance.save();
     expect(fixture.componentInstance.saveError()).toContain('رمز المجال مستخدم');
+  });
+
+  it('selects the first Domain by default and follows Section changes', async () => {
+    const withIndicators = [section('first', [domain('one', 'first', [indicator('a', 'one')])]), section('second', [domain('two', 'second', [indicator('b', 'two')])])];
+    getSurveyStructure.mockResolvedValue({ survey, sections: withIndicators, rounds: [] });
+    await render();
+    expect(fixture.componentInstance.selectedDomainId()).toBe('one');
+    expect(fixture.nativeElement.textContent).toContain('مؤشر a');
+    fixture.componentInstance.selectSection(withIndicators[1]);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selectedDomainId()).toBe('two');
+    expect(fixture.nativeElement.textContent).toContain('مؤشر b');
+    expect(fixture.nativeElement.textContent).not.toContain('مؤشر a');
+  });
+
+  it('selecting a Domain changes Indicators without changing backend order', async () => {
+    const withIndicators = [section('first', [
+      domain('one', 'first', [indicator('late', 'one'), indicator('early', 'one')]),
+      domain('other', 'first', [{ ...indicator('reverse', 'other'), isReverseDirection: true, reportingRuleCode: null }]),
+    ])];
+    getSurveyStructure.mockResolvedValue({ survey, sections: withIndicators, rounds: [] });
+    await render();
+    expect(fixture.nativeElement.textContent).toContain('مؤشر late');
+    expect(fixture.nativeElement.textContent.indexOf('مؤشر late')).toBeLessThan(fixture.nativeElement.textContent.indexOf('مؤشر early'));
+    fixture.componentInstance.selectDomain(withIndicators[0].domains[1]);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.selectedDomainId()).toBe('other');
+    expect(fixture.nativeElement.textContent).toContain('مؤشر reverse');
+    expect(fixture.nativeElement.textContent).toContain('معكوس الاتجاه');
+    expect(fixture.nativeElement.textContent).toContain('بدون قاعدة محددة');
+    expect(fixture.nativeElement.textContent).not.toContain('مؤشر late');
+    expect(fixture.debugElement.query(By.css('ui-pagination'))).toBeNull();
+  });
+
+  it('shows neutral no-Domain and empty-Indicators states without a second CTA', async () => {
+    getSurveyStructure.mockResolvedValue({ survey, sections: [section('first')], rounds: [] });
+    canUpdate.set(true);
+    await render();
+    expect(fixture.nativeElement.textContent).toContain('لا توجد مجالات لعرض المؤشرات.');
+    expect(fixture.nativeElement.textContent).not.toContain('مؤشر جديد');
+    getSurveyStructure.mockResolvedValue({ survey, sections: [section('first', [domain('one', 'first')])], rounds: [] });
+    await fixture.componentInstance.retry();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('لا توجد مؤشرات في هذا المجال.');
+    expect(fixture.debugElement.queryAll(By.css('button')).filter(button => button.nativeElement.textContent.includes('مؤشر جديد')).length).toBe(1);
+  });
+
+  it('shows Indicator mutations only with update permission and an unarchived Survey', async () => {
+    const withIndicator = [section('first', [domain('one', 'first', [indicator('a', 'one')])])];
+    getSurveyStructure.mockResolvedValue({ survey, sections: withIndicator, rounds: [] });
+    await render();
+    expect(fixture.nativeElement.textContent).not.toContain('مؤشر جديد');
+    expect(fixture.debugElement.query(By.css('button[aria-label="تعديل المؤشر مؤشر a"]'))).toBeNull();
+    canUpdate.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('مؤشر جديد');
+    expect(fixture.debugElement.query(By.css('button[aria-label="تعديل المؤشر مؤشر a"]'))).not.toBeNull();
+    getSurveyStructure.mockResolvedValue({ survey: { ...survey, archivedAt: '2026-01-01' }, sections: withIndicator, rounds: [] });
+    await fixture.componentInstance.retry();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('مؤشر a');
+    expect(fixture.nativeElement.textContent).not.toContain('مؤشر جديد');
+    expect(fixture.debugElement.query(By.css('button[aria-label="تعديل المؤشر مؤشر a"]'))).toBeNull();
+  });
+
+  it('uses all backend reporting rules plus nullable option with Arabic labels', async () => {
+    canUpdate.set(true);
+    await render();
+    fixture.componentInstance.openCreateIndicator();
+    fixture.detectChanges();
+    const select = fixture.debugElement.query(By.css('#indicator-rule select')).nativeElement as HTMLSelectElement;
+    expect(Array.from(select.options, option => option.value)).toEqual(['', ...SURVEY_INDICATOR_REPORTING_RULES]);
+    expect(Array.from(select.options, option => option.textContent?.trim())).toEqual([
+      'بدون قاعدة محددة', 'أعلى درجتي اتفاق', 'أعلى درجتي تكرار', 'أعلى ثلاث درجات تكرار', 'نسبة مباشرة',
+    ]);
+    expect(fixture.componentInstance.indicatorForm.controls.reportingRuleCode.value).toBe('');
+  });
+
+  it('creates Indicator under selected Domain, sends supported metadata, and retains selections after reload', async () => {
+    canUpdate.set(true);
+    const withDomains = [section('first', [domain('one', 'first'), domain('other', 'first')])];
+    getSurveyStructure.mockResolvedValue({ survey, sections: withDomains, rounds: [] });
+    await render();
+    fixture.componentInstance.selectDomain(withDomains[0].domains[1]);
+    fixture.componentInstance.openCreateIndicator();
+    fixture.componentInstance.indicatorForm.patchValue({ code: ' raw ', textAr: ' نص المؤشر ', reportingRuleCode: 'FREQUENCY_TOP_3', isReverseDirection: true, sortOrder: '4' });
+    await fixture.componentInstance.saveIndicator();
+    expect(createSurveyIndicator).toHaveBeenCalledWith(survey.id, expect.objectContaining({ domainId: 'other', code: 'raw', textAr: 'نص المؤشر', reportingRuleCode: 'FREQUENCY_TOP_3', isReverseDirection: true, sortOrder: 4 }));
+    expect(createSurveyIndicator.mock.calls[0][1]).not.toHaveProperty('academicYearId');
+    expect(createSurveyIndicator.mock.calls[0][1]).not.toHaveProperty('surveyId');
+    expect(getSurveyStructure).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.selectedSectionId()).toBe('first');
+    expect(fixture.componentInstance.selectedDomainId()).toBe('other');
+    expect(fixture.componentInstance.indicatorModalOpen()).toBe(false);
+  });
+
+  it('retains Section and Domain selection after existing Section mutation', async () => {
+    canUpdate.set(true);
+    const withDomains = [section('first', [domain('one', 'first'), domain('other', 'first')])];
+    getSurveyStructure.mockResolvedValue({ survey, sections: withDomains, rounds: [] });
+    await render();
+    fixture.componentInstance.selectDomain(withDomains[0].domains[1]);
+    fixture.componentInstance.openEditSection(withDomains[0]);
+    fixture.componentInstance.form.patchValue({ nameAr: 'اسم معدل' });
+    await fixture.componentInstance.save();
+    expect(fixture.componentInstance.selectedSectionId()).toBe('first');
+    expect(fixture.componentInstance.selectedDomainId()).toBe('other');
+  });
+
+  it('preserves Indicator modal and input on duplicate-code failure', async () => {
+    canUpdate.set(true);
+    createSurveyIndicator.mockRejectedValue(new SurveyWriteError('DUPLICATE_SURVEY_INDICATOR_CODE'));
+    await render();
+    fixture.componentInstance.openCreateIndicator();
+    fixture.componentInstance.indicatorForm.patchValue({ code: 'duplicate', textAr: 'نص محفوظ' });
+    await fixture.componentInstance.saveIndicator();
+    expect(fixture.componentInstance.indicatorModalOpen()).toBe(true);
+    expect(fixture.componentInstance.indicatorForm.controls.textAr.value).toBe('نص محفوظ');
+    expect(fixture.componentInstance.indicatorSaveError()).toContain('رمز المؤشر مستخدم');
+  });
+
+  it('prefills Indicator edit and omits unchanged locked fields from update payload', async () => {
+    canUpdate.set(true);
+    const item = { ...indicator('a', 'one'), textHe: 'טקסט', reportingRuleCode: 'AGREEMENT_TOP_2' as const, isReverseDirection: true };
+    getSurveyStructure.mockResolvedValue({ survey, sections: [section('first', [domain('one', 'first', [item])])], rounds: [] });
+    await render();
+    fixture.componentInstance.openEditIndicator(item);
+    expect(fixture.componentInstance.indicatorForm.controls.code.value).toBe('I_a');
+    expect(fixture.componentInstance.indicatorForm.controls.textAr.value).toBe('مؤشر a');
+    expect(fixture.componentInstance.indicatorForm.controls.textHe.value).toBe('טקסט');
+    expect(fixture.componentInstance.indicatorForm.controls.reportingRuleCode.value).toBe('AGREEMENT_TOP_2');
+    expect(fixture.componentInstance.indicatorForm.controls.isReverseDirection.value).toBe(true);
+    fixture.componentInstance.indicatorForm.patchValue({ descriptionAr: 'وصف معدل', sortOrder: '5', isActive: false });
+    await fixture.componentInstance.saveIndicator();
+    const payload = updateSurveyIndicator.mock.calls[0][2];
+    expect(payload).toEqual(expect.objectContaining({ descriptionAr: 'وصف معدل', sortOrder: 5, isActive: false }));
+    for (const field of ['domainId', 'code', 'textAr', 'textHe', 'reportingRuleCode', 'isReverseDirection', 'academicYearId', 'surveyId']) expect(payload).not.toHaveProperty(field);
+    expect(getSurveyStructure).toHaveBeenCalledTimes(2);
+    expect(fixture.componentInstance.selectedDomainId()).toBe('one');
+  });
+
+  it('shows history-lock error for changed meaning field while preserving edit modal', async () => {
+    canUpdate.set(true);
+    const item = indicator('a', 'one');
+    getSurveyStructure.mockResolvedValue({ survey, sections: [section('first', [domain('one', 'first', [item])])], rounds: [] });
+    updateSurveyIndicator.mockRejectedValue(new SurveyWriteError('SURVEY_STRUCTURE_LOCKED'));
+    await render();
+    fixture.componentInstance.openEditIndicator(item);
+    fixture.componentInstance.indicatorForm.patchValue({ reportingRuleCode: 'FREQUENCY_TOP_2', isReverseDirection: true });
+    await fixture.componentInstance.saveIndicator();
+    expect(updateSurveyIndicator.mock.calls[0][2]).toEqual(expect.objectContaining({ reportingRuleCode: 'FREQUENCY_TOP_2', isReverseDirection: true }));
+    expect(fixture.componentInstance.indicatorSaveError()).toContain('بعد تسجيل نتائج');
+    expect(fixture.componentInstance.indicatorModalOpen()).toBe(true);
   });
 });

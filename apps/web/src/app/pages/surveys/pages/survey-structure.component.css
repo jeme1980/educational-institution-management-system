@@ -23,6 +23,9 @@ td { height: var(--table-row-height); color: var(--on-surface-variant); font-siz
 .structure-select { border: 0; padding: 0; background: transparent; color: var(--on-surface); font: inherit; font-weight: var(--font-semibold); text-align: start; cursor: pointer; overflow-wrap: anywhere; }
 .structure-select:hover { color: var(--primary); text-decoration: underline; }
 .structure-name { color: var(--on-surface); font-weight: var(--font-semibold); overflow-wrap: anywhere; }
+.structure-indicators { width: 100%; }
+.structure-indicator-text { color: var(--on-surface); font-weight: var(--font-medium); overflow-wrap: anywhere; }
+.structure-indicators-empty { margin: 0; padding: var(--space-6) var(--space-4); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
 .structure-code, .structure-number { font-variant-numeric: tabular-nums; }
 .structure-page ui-empty-state { display: block; box-sizing: border-box; width: 100%; min-width: 0; border: var(--border-width-thin) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-elevated); }
 .structure-panel ui-empty-state { border: 0; }
@@ -30,6 +33,8 @@ td { height: var(--table-row-height); color: var(--on-surface-variant); font-siz
 :host ::ng-deep .structure-page ui-empty-state .ui-empty-state mat-icon { width: var(--space-8); height: var(--space-8); color: var(--on-surface-variant); font-size: var(--space-8); }
 :host ::ng-deep .structure-page ui-empty-state .ui-empty-state h3 { margin: 0; font-size: var(--text-body-md); font-weight: var(--font-medium); line-height: var(--text-body-md-line); }
 .structure-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.structure-indicator-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: var(--space-4); min-width: 0; }
+.structure-indicator-checks { display: grid; gap: var(--space-2); min-width: 0; }
 .structure-field { display: grid; min-width: 0; gap: var(--space-1); }
 .structure-field label { color: var(--on-surface); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
 .structure-field ui-input, .structure-field ui-select, .structure-field ui-textarea { display: block; min-width: 0; }
@@ -41,4 +46,4 @@ td { height: var(--table-row-height); color: var(--on-surface-variant); font-siz
 .structure-modal-actions { display: flex; gap: var(--space-2); }
 @media (max-width: 900px) { .structure-panels { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .structure-form { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 767px) { .structure-page { padding: var(--space-3); } }
+@media (max-width: 767px) { .structure-page { padding: var(--space-3); } .indicator-form, .structure-indicator-options { grid-template-columns: minmax(0, 1fr); } }

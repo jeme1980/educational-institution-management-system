@@ -68,4 +68,18 @@ describe('SurveysApiService', () => {
     expect(apiFetch).toHaveBeenNthCalledWith(3, '/api/surveys/survey-1/domains', expect.objectContaining({ method: 'POST', body: JSON.stringify({ sectionId: 'section-1', code: 'D1', nameAr: 'مجال' }) }));
     expect(apiFetch).toHaveBeenNthCalledWith(4, '/api/surveys/survey-1/domains/domain-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ sectionId: 'section-2', nameAr: 'مجال معدل' }) }));
   });
+
+  it('writes Indicators through survey-scoped routes with the selected Domain in create only', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ id: 'indicator-1' }) } as unknown as Response);
+    await service.createSurveyIndicator('survey-1', { domainId: 'domain-1', code: 'I1', textAr: 'مؤشر', reportingRuleCode: 'DIRECT_PERCENT', isReverseDirection: true });
+    await service.updateSurveyIndicator('survey-1', 'indicator-1', { descriptionAr: 'وصف', sortOrder: 2 });
+    expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/indicators', expect.objectContaining({ method: 'POST', body: JSON.stringify({ domainId: 'domain-1', code: 'I1', textAr: 'مؤشر', reportingRuleCode: 'DIRECT_PERCENT', isReverseDirection: true }) }));
+    expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/indicators/indicator-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ descriptionAr: 'وصف', sortOrder: 2 }) }));
+  });
 });

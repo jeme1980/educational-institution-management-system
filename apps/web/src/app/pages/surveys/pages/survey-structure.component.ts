@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SurveyWriteError, SurveysApiService } from '../../../core/services/surveys-api.service';
+import { UiBadgeComponent } from '../../../shared/components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
 import { UiEmptyStateComponent } from '../../../shared/components/ui-empty-state/ui-empty-state.component';
 import { UiInputComponent } from '../../../shared/components/input/ui-input.component';
@@ -14,7 +15,8 @@ import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header
 import { UiSelectComponent } from '../../../shared/components/select/ui-select.component';
 import { UiTableActionsComponent } from '../../../shared/components/ui-table-actions/ui-table-actions.component';
 import { UiTextareaComponent } from '../../../shared/components/textarea/ui-textarea.component';
-import type { CreateSurveyDomainRequest, CreateSurveySectionRequest, SurveyDetail, SurveyDomain, SurveySection, UpdateSurveyDomainRequest, UpdateSurveySectionRequest } from '../models/survey.model';
+import { SURVEY_INDICATOR_REPORTING_RULES } from '../models/survey.model';
+import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveySectionRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyIndicatorReportingRule, SurveySection, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveySectionRequest } from '../models/survey.model';
 
 const nonBlank = (control: AbstractControl): ValidationErrors | null =>
   typeof control.value === 'string' && control.value.trim() ? null : { required: true };
@@ -22,7 +24,7 @@ const nonBlank = (control: AbstractControl): ValidationErrors | null =>
 @Component({
   selector: 'app-survey-structure',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiButtonComponent, UiEmptyStateComponent, UiInputComponent, UiModalComponent, UiPageHeaderComponent, UiSelectComponent, UiTableActionsComponent, UiTextareaComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiBadgeComponent, UiButtonComponent, UiEmptyStateComponent, UiInputComponent, UiModalComponent, UiPageHeaderComponent, UiSelectComponent, UiTableActionsComponent, UiTextareaComponent],
   templateUrl: './survey-structure.component.html',
   styleUrl: './survey-structure.component.css',
 })
@@ -38,6 +40,8 @@ export class SurveyStructureComponent {
   readonly sections = signal<SurveySection[]>([]);
   readonly selectedSectionId = signal<string | null>(null);
   readonly selectedSection = computed(() => this.sections().find(section => section.id === this.selectedSectionId()) ?? null);
+  readonly selectedDomainId = signal<string | null>(null);
+  readonly selectedDomain = computed(() => this.selectedSection()?.domains.find(domain => domain.id === this.selectedDomainId()) ?? null);
   readonly loading = signal(false);
   readonly error = signal(false);
   readonly notice = signal('');
@@ -47,6 +51,11 @@ export class SurveyStructureComponent {
   readonly mode = signal<'section' | 'domain'>('section');
   readonly editingSection = signal<SurveySection | null>(null);
   readonly editingDomain = signal<SurveyDomain | null>(null);
+  readonly indicatorModalOpen = signal(false);
+  readonly editingIndicator = signal<SurveyIndicator | null>(null);
+  readonly indicatorSaving = signal(false);
+  readonly indicatorSaveError = signal('');
+  readonly reportingRules = SURVEY_INDICATOR_REPORTING_RULES;
   readonly form = this.fb.nonNullable.group({
     code: ['', [nonBlank, Validators.maxLength(80)]],
     nameAr: ['', [nonBlank, Validators.maxLength(500)]],
@@ -58,28 +67,43 @@ export class SurveyStructureComponent {
     isOptional: false,
     isActive: true,
   });
+  readonly indicatorForm = this.fb.nonNullable.group({
+    code: ['', [nonBlank, Validators.maxLength(80)]],
+    textAr: ['', [nonBlank, Validators.maxLength(10000)]],
+    textHe: ['', Validators.maxLength(10000)],
+    descriptionAr: ['', Validators.maxLength(10000)],
+    descriptionHe: ['', Validators.maxLength(10000)],
+    sortOrder: ['0', [Validators.pattern(/^\d+$/), Validators.min(0), Validators.max(1000000)]],
+    reportingRuleCode: this.fb.nonNullable.control<SurveyIndicatorReportingRule | ''>(''),
+    isReverseDirection: false,
+    isActive: true,
+  });
   private requestId = 0;
   private modalSurveyId: string | null = null;
+  private indicatorModalSurveyId: string | null = null;
 
   constructor() {
     effect(() => {
       const id = this.surveyId();
       if (untracked(this.modalOpen) && this.modalSurveyId !== id) untracked(() => this.closeModal());
+      if (untracked(this.indicatorModalOpen) && this.indicatorModalSurveyId !== id) untracked(() => this.closeIndicatorModal());
       void this.load(id, false);
     });
   }
 
   async retry(): Promise<void> { await this.load(this.surveyId(), false); }
 
-  private async load(id: string | null, preserveSelection: boolean, preferredId?: string): Promise<void> {
+  private async load(id: string | null, preserveSelection: boolean, preferredId?: string, preferredDomainId?: string): Promise<void> {
     const requestId = ++this.requestId;
     const previousId = preserveSelection ? preferredId ?? this.selectedSectionId() : null;
+    const previousDomainId = preserveSelection ? preferredDomainId ?? this.selectedDomainId() : null;
     this.loading.set(Boolean(id));
     this.error.set(false);
     if (!preserveSelection) {
       this.survey.set(null);
       this.sections.set([]);
       this.selectedSectionId.set(null);
+      this.selectedDomainId.set(null);
     }
     if (!id) { this.error.set(true); return; }
     try {
@@ -87,7 +111,9 @@ export class SurveyStructureComponent {
       if (requestId !== this.requestId) return;
       this.survey.set(structure.survey);
       this.sections.set(structure.sections);
-      this.selectedSectionId.set(structure.sections.some(section => section.id === previousId) ? previousId : structure.sections[0]?.id ?? null);
+      const selectedSection = structure.sections.find(section => section.id === previousId) ?? structure.sections[0];
+      this.selectedSectionId.set(selectedSection?.id ?? null);
+      this.selectedDomainId.set(selectedSection?.domains.find(domain => domain.id === previousDomainId)?.id ?? selectedSection?.domains[0]?.id ?? null);
     } catch {
       if (requestId === this.requestId) this.error.set(true);
     } finally {
@@ -95,7 +121,103 @@ export class SurveyStructureComponent {
     }
   }
 
-  selectSection(section: SurveySection): void { this.selectedSectionId.set(section.id); }
+  selectSection(section: SurveySection): void {
+    this.selectedSectionId.set(section.id);
+    this.selectedDomainId.set(section.domains[0]?.id ?? null);
+  }
+
+  selectDomain(domain: SurveyDomain): void { this.selectedDomainId.set(domain.id); }
+
+  reportingRuleLabel(rule: SurveyIndicatorReportingRule | null): string {
+    if (!rule) return 'بدون قاعدة محددة';
+    return ({
+      AGREEMENT_TOP_2: 'أعلى درجتي اتفاق',
+      FREQUENCY_TOP_2: 'أعلى درجتي تكرار',
+      FREQUENCY_TOP_3: 'أعلى ثلاث درجات تكرار',
+      DIRECT_PERCENT: 'نسبة مباشرة',
+    } satisfies Record<SurveyIndicatorReportingRule, string>)[rule];
+  }
+
+  openCreateIndicator(): void {
+    if (!this.canUpdate() || !this.selectedDomain()) return;
+    this.editingIndicator.set(null);
+    this.resetIndicatorForm();
+  }
+
+  openEditIndicator(indicator: SurveyIndicator): void {
+    if (!this.canUpdate() || indicator.surveyId !== this.surveyId() || indicator.domainId !== this.selectedDomainId()) return;
+    this.editingIndicator.set(indicator);
+    this.resetIndicatorForm(indicator);
+  }
+
+  private resetIndicatorForm(indicator?: SurveyIndicator): void {
+    this.indicatorForm.reset({
+      code: indicator?.code ?? '', textAr: indicator?.textAr ?? '', textHe: indicator?.textHe ?? '',
+      descriptionAr: indicator?.descriptionAr ?? '', descriptionHe: indicator?.descriptionHe ?? '',
+      sortOrder: String(indicator?.sortOrder ?? 0), reportingRuleCode: indicator?.reportingRuleCode ?? '',
+      isReverseDirection: indicator?.isReverseDirection ?? false, isActive: indicator?.isActive ?? true,
+    });
+    this.indicatorSaveError.set('');
+    this.notice.set('');
+    this.indicatorModalSurveyId = this.surveyId();
+    this.indicatorModalOpen.set(true);
+  }
+
+  closeIndicatorModal(): void {
+    if (this.indicatorSaving()) return;
+    this.indicatorModalOpen.set(false);
+    this.indicatorModalSurveyId = null;
+  }
+
+  async saveIndicator(): Promise<void> {
+    if (this.indicatorSaving() || !this.indicatorModalOpen() || !this.canUpdate() || this.indicatorForm.invalid) {
+      this.indicatorForm.markAllAsTouched();
+      return;
+    }
+    const id = this.surveyId();
+    const domainId = this.selectedDomainId();
+    if (!id || id !== this.indicatorModalSurveyId || !domainId || !this.selectedDomain()) return;
+    const value = this.indicatorForm.getRawValue();
+    const nullable = (text: string): string | null => text.trim() || null;
+    const fields = {
+      code: value.code.trim(), textAr: value.textAr.trim(), textHe: nullable(value.textHe),
+      descriptionAr: nullable(value.descriptionAr), descriptionHe: nullable(value.descriptionHe),
+      sortOrder: Number(value.sortOrder), isActive: value.isActive,
+      reportingRuleCode: value.reportingRuleCode || null, isReverseDirection: value.isReverseDirection,
+    };
+    const editing = this.editingIndicator();
+    this.indicatorSaving.set(true);
+    this.indicatorSaveError.set('');
+    try {
+      if (editing) {
+        const payload: UpdateSurveyIndicatorRequest = { ...fields };
+        if (payload.code === editing.code) delete payload.code;
+        if (payload.textAr === editing.textAr) delete payload.textAr;
+        if (payload.textHe === editing.textHe) delete payload.textHe;
+        if (payload.reportingRuleCode === editing.reportingRuleCode) delete payload.reportingRuleCode;
+        if (payload.isReverseDirection === editing.isReverseDirection) delete payload.isReverseDirection;
+        await this.api.updateSurveyIndicator(id, editing.id, payload);
+      } else {
+        const payload: CreateSurveyIndicatorRequest = { ...fields, domainId };
+        await this.api.createSurveyIndicator(id, payload);
+      }
+      this.indicatorModalOpen.set(false);
+      this.indicatorModalSurveyId = null;
+      if (this.surveyId() === id) {
+        this.notice.set(editing ? 'تم حفظ تعديل المؤشر.' : 'تمت إضافة المؤشر.');
+        await this.load(id, true, this.selectedSectionId() ?? undefined, domainId);
+      }
+    } catch (error) {
+      const code = error instanceof SurveyWriteError ? error.code : null;
+      this.indicatorSaveError.set(({
+        SURVEY_ARCHIVED: 'لا يمكن تعديل استبيان مؤرشف.',
+        SURVEY_STRUCTURE_LOCKED: 'لا يمكن تعديل تعريف المؤشر بعد تسجيل نتائج للاستبيان.',
+        DUPLICATE_SURVEY_INDICATOR_CODE: 'رمز المؤشر مستخدم بالفعل في هذا الاستبيان.',
+      } as Record<string, string>)[code ?? ''] ?? 'تعذر حفظ المؤشر. تحقق من البيانات وحاول مرة أخرى.');
+    } finally {
+      this.indicatorSaving.set(false);
+    }
+  }
 
   openCreateSection(): void {
     if (!this.canUpdate() || !this.survey()) return;

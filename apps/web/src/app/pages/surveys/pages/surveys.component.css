@@ -1,0 +1,24 @@
+:host { display: block; min-width: 0; }
+.surveys-page { display: grid; max-width: 90rem; min-width: 0; gap: var(--space-4); margin-inline: auto; padding: var(--space-4); }
+.surveys-context { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
+.surveys-context strong { color: var(--on-surface); }
+.surveys-search { display: grid; max-width: 24rem; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+.surveys-search ui-input { display: block; }
+.surveys-feedback, .surveys-table-card { border: var(--border-width-thin) solid var(--border); border-radius: var(--radius-default); background: var(--surface-elevated); }
+.surveys-page ui-empty-state { display: block; box-sizing: border-box; width: 100%; min-width: 0; border: var(--border-width-thin) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-elevated); }
+:host ::ng-deep .surveys-page ui-empty-state .ui-empty-state { min-height: 0; gap: var(--space-1); padding: var(--space-6) var(--space-4); }
+:host ::ng-deep .surveys-page ui-empty-state .ui-empty-state mat-icon { width: var(--space-8); height: var(--space-8); color: var(--on-surface-variant); font-size: var(--space-8); }
+:host ::ng-deep .surveys-page ui-empty-state .ui-empty-state h3 { margin: 0; font-size: var(--text-body-md); font-weight: var(--font-medium); line-height: var(--text-body-md-line); }
+.surveys-feedback { display: grid; justify-items: start; gap: var(--space-3); padding: var(--space-6); color: var(--on-surface-variant); }
+.surveys-feedback p { margin: 0; }
+.surveys-table-card { min-width: 0; }
+.surveys-table-scroll { max-width: 100%; overflow-x: auto; }
+table { width: 100%; min-width: 38rem; border-collapse: collapse; text-align: start; }
+th, td { padding: var(--space-3) var(--space-4); text-align: start; }
+th { color: var(--on-surface-variant); background: var(--surface-container-low); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+tbody tr { min-height: var(--table-row-height); border-block-start: var(--border-width-thin) solid var(--divider); }
+tbody tr:hover { background: var(--hover-surface); }
+td { height: var(--table-row-height); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
+.surveys-name { color: var(--on-surface); font-weight: var(--font-semibold); overflow-wrap: anywhere; }
+.surveys-number, .surveys-date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 767px) { .surveys-page { padding: var(--space-3); } }

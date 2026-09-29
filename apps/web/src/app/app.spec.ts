@@ -24,6 +24,14 @@ describe('App', () => {
     expect(visible.some((item) => item.path === '/platform')).toBe(false);
   });
 
+  it('shows surveys only with read permission and guards the school route', () => {
+    expect(filterSchoolNavItems(SCHOOL_NAV_ITEMS, []).some(item => item.path === '/surveys')).toBe(false);
+    expect(filterSchoolNavItems(SCHOOL_NAV_ITEMS, ['surveys:read'])).toContainEqual(expect.objectContaining({ path: '/surveys', permission: 'surveys:read' }));
+    const surveyRoute = routes.find(route => route.path === 'surveys');
+    expect(surveyRoute?.data?.['requiredPermission']).toBe('surveys:read');
+    expect(surveyRoute?.canActivate).toHaveLength(2);
+  });
+
   it('keeps a single-institution identity stable and selects only a valid academic year', () => {
     const institutions = [{ id: 'institution-a' }];
     const years = [{ id: 'year-old', isCurrent: false }, { id: 'year-current', isCurrent: true }];

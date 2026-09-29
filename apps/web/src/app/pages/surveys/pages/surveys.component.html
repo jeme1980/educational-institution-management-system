@@ -1,0 +1,54 @@
+<main class="surveys-page" dir="rtl">
+  <ui-page-header title="الاستبيانات" description="إدارة استبيانات المدرسة وقياس التقدم عبر جولات متعددة." />
+
+  <section class="surveys-context" aria-label="السنة الدراسية المحددة">
+    <span>السنة الدراسية</span>
+    <strong>{{ selectedYear()?.yearLabel || 'لم تُحدّد سنة دراسية' }}</strong>
+  </section>
+
+  @if (loading()) {
+    <section class="surveys-feedback" role="status">جارٍ تحميل الاستبيانات…</section>
+  } @else if (error()) {
+    <section class="surveys-feedback" role="alert">
+      <p>تعذر تحميل الاستبيانات. حاول مرة أخرى.</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (!api.selectedAcademicYearId()) {
+    <ui-empty-state title="اختر سنة دراسية لعرض الاستبيانات." icon="calendar_today" />
+  } @else {
+    @if (surveys().length) {
+      <label class="surveys-search" for="surveys-search">
+        <span>البحث في الاستبيانات</span>
+        <ui-input id="surveys-search" placeholder="ابحث في الاستبيانات" (input)="updateSearch($event)" />
+      </label>
+    }
+    @if (!surveys().length) {
+      <ui-empty-state title="لا توجد استبيانات لهذه السنة الدراسية." icon="assignment" />
+    } @else if (!filteredSurveys().length) {
+      <ui-empty-state title="لا توجد استبيانات تطابق البحث." icon="assignment" />
+    } @else {
+      <section class="surveys-table-card" aria-label="قائمة الاستبيانات">
+        <div class="surveys-table-scroll">
+          <table>
+            <thead><tr>
+              <th scope="col">اسم الاستبيان</th>
+              <th scope="col">الحالة</th>
+              <th scope="col">عدد الجولات</th>
+              <th scope="col">آخر تحديث</th>
+            </tr></thead>
+            <tbody>
+              @for (survey of filteredSurveys(); track survey.id) {
+                <tr>
+                  <td class="surveys-name">{{ survey.nameAr }}</td>
+                  <td><ui-badge [tone]="statusTone(survey.status)">{{ statusLabel(survey.status) }}</ui-badge></td>
+                  <td class="surveys-number">{{ survey.roundCount }}</td>
+                  <td class="surveys-date">{{ survey.updatedAt | date:'yyyy-MM-dd' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+  }
+</main>

@@ -32,6 +32,7 @@ export const SCHOOL_NAV_ITEMS: SchoolNavItem[] = [
   { path: '/study-groups', label: 'مجموعات الدراسة', icon: 'diversity_3', permission: 'settings:read' },
   { path: '/subjects', label: 'المناهج والمواد', icon: 'menu_book', permission: 'settings:read' },
   { path: '/exams', label: 'الامتحانات', icon: 'assignment', permission: 'exams:read' },
+  { path: '/surveys', label: 'الاستبيانات', icon: 'assignment', permission: 'surveys:read' },
   { path: '/exam-analysis', label: 'تحليل الامتحان', icon: 'analytics', permission: 'exams:read' },
   { path: '/progress-tracking', label: 'مسار التقدم', icon: 'trending_up', permission: 'exams:read' },
   { path: '/action-center', label: 'مركز المتابعة التربوية', icon: 'fact_check', permission: 'exams:read' },

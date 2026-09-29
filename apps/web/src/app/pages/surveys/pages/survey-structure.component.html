@@ -103,6 +103,54 @@
     </section>
   }
 
+  @if (!loading() && !error() && survey()) {
+    <section class="structure-panel" aria-label="شرائح الاستبيان">
+      <div class="structure-panel-heading">
+        <h2>الشرائح</h2>
+        @if (canUpdate()) { <ui-button variant="secondary" size="sm" (activated)="openCreateSegment()">شريحة جديدة</ui-button> }
+      </div>
+      @if (!segments().length) {
+        <ui-empty-state title="لا توجد شرائح لهذا الاستبيان." icon="groups" />
+      } @else {
+        <div class="structure-table-scroll">
+          <table>
+            <thead><tr><th scope="col">الشريحة</th><th scope="col">الرمز</th><th scope="col">نوع الشريحة</th><th scope="col">الحالة</th><th scope="col">الترتيب</th>@if (canUpdate()) { <th scope="col">إجراءات</th> }</tr></thead>
+            <tbody>
+              @for (segment of segments(); track segment.id) {
+                <tr>
+                  <td class="structure-name">{{ segment.nameAr }}</td>
+                  <td class="structure-code" dir="ltr">{{ segment.code }}</td>
+                  <td>{{ segment.segmentType || '—' }}</td>
+                  <td><ui-badge tone="neutral">{{ segment.isActive ? 'نشطة' : 'غير نشطة' }}</ui-badge></td>
+                  <td class="structure-number">{{ segment.sortOrder }}</td>
+                  @if (canUpdate()) {
+                    <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل الشريحة ' + segment.nameAr" (activated)="openEditSegment(segment)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+
+  <ui-modal [open]="segmentModalOpen()" [title]="editingSegment() ? 'تعديل الشريحة' : 'شريحة جديدة'" size="md" [dismissible]="!segmentSaving()" (closed)="closeSegmentModal()">
+    <form ui-modal-body id="segment-form" [formGroup]="segmentForm" (ngSubmit)="saveSegment()" class="structure-form">
+      <div class="structure-field"><label for="segment-code">الرمز *</label><ui-input id="segment-code" formControlName="code" [required]="true" [maxLength]="80" [invalid]="segmentForm.controls.code.invalid && segmentForm.controls.code.touched" />@if (segmentForm.controls.code.invalid && segmentForm.controls.code.touched) { <span class="structure-field-error">الرمز مطلوب، وبحد أقصى 80 حرفًا.</span> }</div>
+      <div class="structure-field"><label for="segment-order">الترتيب</label><ui-input id="segment-order" type="number" formControlName="sortOrder" [min]="0" [max]="1000000" [invalid]="segmentForm.controls.sortOrder.invalid && segmentForm.controls.sortOrder.touched" />@if (segmentForm.controls.sortOrder.invalid && segmentForm.controls.sortOrder.touched) { <span class="structure-field-error">أدخل عددًا صحيحًا بين 0 و1000000.</span> }</div>
+      <div class="structure-field"><label for="segment-name-ar">الاسم بالعربية *</label><ui-input id="segment-name-ar" formControlName="nameAr" [required]="true" [maxLength]="500" [invalid]="segmentForm.controls.nameAr.invalid && segmentForm.controls.nameAr.touched" />@if (segmentForm.controls.nameAr.invalid && segmentForm.controls.nameAr.touched) { <span class="structure-field-error">الاسم بالعربية مطلوب، وبحد أقصى 500 حرف.</span> }</div>
+      <div class="structure-field"><label for="segment-name-he">الاسم بالعبرية</label><ui-input id="segment-name-he" formControlName="nameHe" [maxLength]="500" /></div>
+      <div class="structure-field structure-wide"><label for="segment-type">نوع الشريحة</label><ui-input id="segment-type" formControlName="segmentType" [maxLength]="40" [invalid]="segmentForm.controls.segmentType.invalid && segmentForm.controls.segmentType.touched" />@if (segmentForm.controls.segmentType.invalid && segmentForm.controls.segmentType.touched) { <span class="structure-field-error">نوع الشريحة بحد أقصى 40 حرفًا.</span> }</div>
+      <label class="structure-check"><input type="checkbox" formControlName="isActive" />نشطة</label>
+      @if (segmentSaveError()) { <p class="structure-save-error structure-wide" role="alert">{{ segmentSaveError() }}</p> }
+    </form>
+    <div ui-modal-footer class="structure-modal-actions">
+      <ui-button variant="secondary" [disabled]="segmentSaving()" (activated)="closeSegmentModal()">إلغاء</ui-button>
+      <ui-button type="submit" form="segment-form" [disabled]="segmentForm.invalid || segmentSaving()" [loading]="segmentSaving()">حفظ</ui-button>
+    </div>
+  </ui-modal>
+
   <ui-modal [open]="modalOpen()" [title]="mode() === 'section' ? (editingSection() ? 'تعديل القسم' : 'قسم جديد') : (editingDomain() ? 'تعديل المجال' : 'مجال جديد')" size="md" [dismissible]="!saving()" (closed)="closeModal()">
     <form ui-modal-body id="structure-form" [formGroup]="form" (ngSubmit)="save()" class="structure-form">
       @if (mode() === 'domain' && editingDomain()) {

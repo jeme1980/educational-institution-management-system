@@ -41,7 +41,7 @@ describe('SurveysApiService', () => {
       { provide: Router, useValue: { navigate: vi.fn() } },
     ] });
     const service = TestBed.inject(SurveysApiService);
-    const result = { survey: { id: 'survey-1' }, sections: [], rounds: [] };
+    const result = { survey: { id: 'survey-1' }, sections: [], rounds: [], segments: [] };
     const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
     expect(await service.getSurveyStructure('survey-1')).toEqual(result);
     await service.createSurveyRound('survey-1', { code: 'R1', nameAr: 'الجولة الأولى', sequenceNumber: 1 });
@@ -81,5 +81,19 @@ describe('SurveysApiService', () => {
     await service.updateSurveyIndicator('survey-1', 'indicator-1', { descriptionAr: 'وصف', sortOrder: 2 });
     expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/indicators', expect.objectContaining({ method: 'POST', body: JSON.stringify({ domainId: 'domain-1', code: 'I1', textAr: 'مؤشر', reportingRuleCode: 'DIRECT_PERCENT', isReverseDirection: true }) }));
     expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/indicators/indicator-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ descriptionAr: 'وصف', sortOrder: 2 }) }));
+  });
+
+  it('writes Segments through survey-scoped routes without Section or Domain IDs', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ id: 'segment-1' }) } as unknown as Response);
+    await service.createSurveySegment('survey-1', { code: 'G1', nameAr: 'شريحة', segmentType: 'custom' });
+    await service.updateSurveySegment('survey-1', 'segment-1', { nameAr: 'شريحة معدلة', isActive: false });
+    expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/segments', expect.objectContaining({ method: 'POST', body: JSON.stringify({ code: 'G1', nameAr: 'شريحة', segmentType: 'custom' }) }));
+    expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/segments/segment-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ nameAr: 'شريحة معدلة', isActive: false }) }));
   });
 });

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyRound, SurveySection, SurveyStructureResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest } from '../../pages/surveys/models/survey.model';
+import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyRound, SurveySection, SurveySegment, SurveyStructureResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
 
 export class SurveyWriteError extends Error {
   constructor(readonly code: string | null) { super('Survey write request failed.'); }
@@ -64,7 +64,15 @@ export class SurveysApiService extends BaseApiService {
     return this.writeSurvey<SurveyIndicator>(`/api/surveys/${encodeURIComponent(surveyId)}/indicators/${encodeURIComponent(indicatorId)}`, 'PATCH', payload);
   }
 
-  private async writeSurvey<T>(path: string, method: 'POST' | 'PATCH', payload: CreateSurveyRequest | UpdateSurveyRequest | CreateSurveyRoundRequest | UpdateSurveyRoundRequest | CreateSurveySectionRequest | UpdateSurveySectionRequest | CreateSurveyDomainRequest | UpdateSurveyDomainRequest | CreateSurveyIndicatorRequest | UpdateSurveyIndicatorRequest): Promise<T> {
+  async createSurveySegment(surveyId: string, payload: CreateSurveySegmentRequest): Promise<SurveySegment> {
+    return this.writeSurvey<SurveySegment>(`/api/surveys/${encodeURIComponent(surveyId)}/segments`, 'POST', payload);
+  }
+
+  async updateSurveySegment(surveyId: string, segmentId: string, payload: UpdateSurveySegmentRequest): Promise<SurveySegment> {
+    return this.writeSurvey<SurveySegment>(`/api/surveys/${encodeURIComponent(surveyId)}/segments/${encodeURIComponent(segmentId)}`, 'PATCH', payload);
+  }
+
+  private async writeSurvey<T>(path: string, method: 'POST' | 'PATCH', payload: CreateSurveyRequest | UpdateSurveyRequest | CreateSurveyRoundRequest | UpdateSurveyRoundRequest | CreateSurveySectionRequest | UpdateSurveySectionRequest | CreateSurveyDomainRequest | UpdateSurveyDomainRequest | CreateSurveyIndicatorRequest | UpdateSurveyIndicatorRequest | CreateSurveySegmentRequest | UpdateSurveySegmentRequest): Promise<T> {
     const response = await this.apiFetch(path, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     if (!response.ok) {
       const body: unknown = await response.json().catch(() => null);

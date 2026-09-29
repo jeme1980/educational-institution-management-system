@@ -73,7 +73,30 @@ export interface SurveyStructureResponse {
   survey: SurveyDetail;
   sections: SurveySection[];
   rounds: SurveyRound[];
+  segments: SurveySegment[];
 }
+
+export interface SurveySegment {
+  id: string;
+  surveyId: string;
+  code: string;
+  nameAr: string;
+  nameHe: string | null;
+  segmentType: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface CreateSurveySegmentRequest {
+  code: string;
+  nameAr: string;
+  nameHe?: string | null;
+  segmentType?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateSurveySegmentRequest = Partial<CreateSurveySegmentRequest>;
 
 export interface SurveyDomain {
   id: string;

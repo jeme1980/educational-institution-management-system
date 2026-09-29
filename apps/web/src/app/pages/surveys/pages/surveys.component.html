@@ -41,7 +41,7 @@
               <th scope="col">الحالة</th>
               <th scope="col">عدد الجولات</th>
               <th scope="col">آخر تحديث</th>
-              @if (canUpdate()) { <th scope="col">إجراءات</th> }
+              <th scope="col">إجراءات</th>
             </tr></thead>
             <tbody>
               @for (survey of filteredSurveys(); track survey.id) {
@@ -50,13 +50,14 @@
                   <td><ui-badge [tone]="statusTone(survey.status)">{{ statusLabel(survey.status) }}</ui-badge></td>
                   <td class="surveys-number">{{ survey.roundCount }}</td>
                   <td class="surveys-date">{{ survey.updatedAt | date:'yyyy-MM-dd' }}</td>
-                  @if (canUpdate()) {
-                    <td class="surveys-actions">
-                      <ui-table-actions>
+                  <td class="surveys-actions">
+                    <ui-table-actions>
+                      <ui-button variant="ghost" size="sm" [iconOnly]="true" [routerLink]="['/surveys', survey.id, 'rounds']" [ariaLabel]="'جولات ' + survey.nameAr"><mat-icon aria-hidden="true">view_timeline</mat-icon></ui-button>
+                      @if (canUpdate()) {
                         <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + survey.nameAr" (activated)="openEdit(survey)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
-                      </ui-table-actions>
-                    </td>
-                  }
+                      }
+                    </ui-table-actions>
+                  </td>
                 </tr>
               }
             </tbody>

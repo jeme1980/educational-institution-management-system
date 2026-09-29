@@ -109,6 +109,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/exams/pages/exams').then(m => m.ExamsComponent),
   },
   {
+    path: 'surveys/:surveyId/rounds',
+    title: 'جولات الاستبيان',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'surveys:read' },
+    loadComponent: () => import('./pages/surveys/pages/survey-rounds.component').then(m => m.SurveyRoundsComponent),
+  },
+  {
     path: 'surveys',
     title: 'الاستبيانات',
     canActivate: [authGuard, permissionGuard],

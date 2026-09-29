@@ -1,0 +1,34 @@
+:host { display: block; min-width: 0; }
+.rounds-page { display: grid; max-width: 90rem; min-width: 0; gap: var(--space-4); margin-inline: auto; padding: var(--space-4); }
+.rounds-back { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); color: var(--primary); font-size: var(--text-body-sm); text-decoration: none; }
+.rounds-back:hover { text-decoration: underline; }
+.rounds-back:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: var(--focus-ring-offset); }
+.rounds-back mat-icon { width: var(--space-5); height: var(--space-5); font-size: var(--space-5); }
+.rounds-notice { margin: 0; border: var(--border-width-thin) solid var(--success); border-radius: var(--radius-default); padding: var(--space-3) var(--space-4); background: var(--success-container); color: var(--on-surface); font-size: var(--text-body-sm); }
+.rounds-feedback, .rounds-table-card { border: var(--border-width-thin) solid var(--border); border-radius: var(--radius-default); background: var(--surface-elevated); }
+.rounds-feedback { display: grid; justify-items: start; gap: var(--space-3); padding: var(--space-6); color: var(--on-surface-variant); }
+.rounds-feedback p { margin: 0; }
+.rounds-page ui-empty-state { display: block; box-sizing: border-box; width: 100%; min-width: 0; border: var(--border-width-thin) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-elevated); }
+:host ::ng-deep .rounds-page ui-empty-state .ui-empty-state { min-height: 0; gap: var(--space-1); padding: var(--space-6) var(--space-4); }
+:host ::ng-deep .rounds-page ui-empty-state .ui-empty-state mat-icon { width: var(--space-8); height: var(--space-8); color: var(--on-surface-variant); font-size: var(--space-8); }
+:host ::ng-deep .rounds-page ui-empty-state .ui-empty-state h3 { margin: 0; font-size: var(--text-body-md); font-weight: var(--font-medium); line-height: var(--text-body-md-line); }
+.rounds-table-card { min-width: 0; }
+.rounds-table-scroll { max-width: 100%; overflow-x: auto; }
+table { width: 100%; min-width: 48rem; border-collapse: collapse; text-align: start; }
+th, td { padding: var(--space-3) var(--space-4); text-align: start; }
+th { color: var(--on-surface-variant); background: var(--surface-container-low); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+tbody tr { min-height: var(--table-row-height); border-block-start: var(--border-width-thin) solid var(--divider); }
+tbody tr:hover { background: var(--hover-surface); }
+td { height: var(--table-row-height); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
+.rounds-name { color: var(--on-surface); font-weight: var(--font-semibold); overflow-wrap: anywhere; }
+.rounds-code { font-variant-numeric: tabular-nums; }
+.rounds-number, .rounds-date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rounds-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.rounds-form-field { display: grid; min-width: 0; gap: var(--space-1); }
+.rounds-form-field label { color: var(--on-surface); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+.rounds-form-field ui-input, .rounds-form-field ui-select { display: block; min-width: 0; }
+.rounds-field-error, .rounds-save-error { color: var(--danger); font-size: var(--text-body-sm); }
+.rounds-form-wide { grid-column: 1 / -1; margin: 0; }
+.rounds-modal-actions { display: flex; gap: var(--space-2); }
+@media (max-width: 640px) { .rounds-form { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767px) { .rounds-page { padding: var(--space-3); } }

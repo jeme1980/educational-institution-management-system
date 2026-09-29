@@ -48,3 +48,41 @@ export interface CreateSurveyRequest {
 }
 
 export type UpdateSurveyRequest = Partial<Omit<CreateSurveyRequest, 'academicYearId'>> & { isActive?: boolean };
+
+export const SURVEY_ROUND_STATUSES = ['PLANNED', 'OPEN', 'CLOSED'] as const;
+export type SurveyRoundStatus = typeof SURVEY_ROUND_STATUSES[number];
+
+export interface SurveyRound {
+  id: string;
+  surveyId: string;
+  academicYearId: string;
+  code: string;
+  nameAr: string;
+  nameHe: string | null;
+  sequenceNumber: number;
+  startsAt: string | null;
+  endsAt: string | null;
+  measurementDate: string | null;
+  status: SurveyRoundStatus;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyStructureResponse {
+  survey: SurveyDetail;
+  rounds: SurveyRound[];
+}
+
+export interface CreateSurveyRoundRequest {
+  code: string;
+  nameAr: string;
+  nameHe?: string | null;
+  sequenceNumber: number;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  measurementDate?: string | null;
+  status?: SurveyRoundStatus;
+}
+
+export type UpdateSurveyRoundRequest = Partial<CreateSurveyRoundRequest>;

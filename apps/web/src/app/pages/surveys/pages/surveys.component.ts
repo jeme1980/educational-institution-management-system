@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { SurveyWriteError, SurveysApiService } from '../../../core/services/surveys-api.service';
@@ -23,7 +24,7 @@ const nonBlank = (control: AbstractControl): ValidationErrors | null =>
 @Component({
   selector: 'app-surveys',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, MatIconModule, UiBadgeComponent, UiButtonComponent, UiEmptyStateComponent, UiInputComponent, UiModalComponent, UiPageHeaderComponent, UiSelectComponent, UiTableActionsComponent, UiTextareaComponent],
+  imports: [CommonModule, ReactiveFormsModule, MatIconModule, RouterLink, UiBadgeComponent, UiButtonComponent, UiEmptyStateComponent, UiInputComponent, UiModalComponent, UiPageHeaderComponent, UiSelectComponent, UiTableActionsComponent, UiTextareaComponent],
   templateUrl: './surveys.component.html',
   styleUrl: './surveys.component.css',
 })

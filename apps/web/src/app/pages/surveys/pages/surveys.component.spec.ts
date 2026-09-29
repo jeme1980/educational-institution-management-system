@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -56,6 +57,7 @@ describe('SurveysComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SurveysComponent],
       providers: [
+        provideRouter([]),
         { provide: ApiService, useValue: { selectedAcademicYearId, academicYears } },
         { provide: AuthService, useValue: { hasPermission: (permission: string) => permission === 'surveys:update' && canUpdate() } },
         { provide: SurveysApiService, useValue: { getSurveys, createSurvey, updateSurvey } },
@@ -149,7 +151,8 @@ describe('SurveysComponent', () => {
     getSurveys.mockResolvedValue([survey('one', 'DRAFT')]);
     await render();
     expect(fixture.nativeElement.textContent).not.toContain('استبيان جديد');
-    expect(fixture.debugElement.query(By.css('ui-table-actions'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل استبيان one"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="جولات استبيان one"]'))).not.toBeNull();
     canUpdate.set(true);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('استبيان جديد');
@@ -190,7 +193,7 @@ describe('SurveysComponent', () => {
     canUpdate.set(true);
     getSurveys.mockResolvedValue([survey('one', current)]);
     await render();
-    fixture.debugElement.query(By.css('ui-table-actions button')).nativeElement.click();
+    fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل استبيان one"]')).nativeElement.click();
     fixture.detectChanges();
     const select = fixture.debugElement.query(By.css('#survey-status select')).nativeElement as HTMLSelectElement;
     expect(Array.from(select.options, option => option.value)).toEqual(expected);
@@ -217,7 +220,7 @@ describe('SurveysComponent', () => {
     const item = { ...survey('one', 'ACTIVE'), nameHe: 'עברית', descriptionAr: 'وصف', audienceType: 'STAFF', isActive: false };
     getSurveys.mockResolvedValue([item]);
     await render();
-    fixture.debugElement.query(By.css('ui-table-actions button')).nativeElement.click();
+    fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل استبيان one"]')).nativeElement.click();
     fixture.detectChanges();
     expect(fixture.componentInstance.form.getRawValue()).toEqual(expect.objectContaining({ nameAr: item.nameAr, nameHe: 'עברית', descriptionAr: 'وصف', audienceType: 'STAFF', status: 'ACTIVE', isActive: false }));
     const statusSelect = fixture.debugElement.query(By.css('#survey-status select')).nativeElement as HTMLSelectElement;

@@ -1,0 +1,100 @@
+<main class="rounds-page" dir="rtl">
+  <a class="rounds-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header [title]="survey()?.nameAr || 'جولات الاستبيان'" description="إدارة جولات القياس الخاصة بهذا الاستبيان.">
+    @if (canUpdate() && survey() && !survey()?.archivedAt) {
+      <ui-button ui-page-actions (activated)="openCreate()">جولة جديدة</ui-button>
+    }
+  </ui-page-header>
+
+  @if (notice()) { <p class="rounds-notice" role="status">{{ notice() }}</p> }
+
+  @if (loading()) {
+    <section class="rounds-feedback" role="status">جارٍ تحميل جولات الاستبيان…</section>
+  } @else if (error()) {
+    <section class="rounds-feedback" role="alert">
+      <p>تعذر تحميل جولات الاستبيان. حاول مرة أخرى.</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (!rounds().length) {
+    <ui-empty-state title="لا توجد جولات لهذا الاستبيان." icon="view_timeline" />
+  } @else {
+    <section class="rounds-table-card" aria-label="قائمة جولات الاستبيان">
+      <div class="rounds-table-scroll">
+        <table>
+          <thead><tr>
+            <th scope="col">الجولة</th>
+            <th scope="col">الرمز</th>
+            <th scope="col">الترتيب</th>
+            <th scope="col">تاريخ القياس</th>
+            <th scope="col">الفترة</th>
+            <th scope="col">الحالة</th>
+            @if (canUpdate() && !survey()?.archivedAt) { <th scope="col">إجراءات</th> }
+          </tr></thead>
+          <tbody>
+            @for (round of rounds(); track round.id) {
+              <tr>
+                <td class="rounds-name">{{ round.nameAr }}</td>
+                <td class="rounds-code" dir="ltr">{{ round.code }}</td>
+                <td class="rounds-number">{{ round.sequenceNumber }}</td>
+                <td class="rounds-date">{{ round.measurementDate ? (round.measurementDate | date:'yyyy-MM-dd') : '—' }}</td>
+                <td class="rounds-date">{{ round.startsAt ? (round.startsAt | date:'yyyy-MM-dd') : '—' }} – {{ round.endsAt ? (round.endsAt | date:'yyyy-MM-dd') : '—' }}</td>
+                <td><ui-badge [tone]="statusTone(round.status)">{{ statusLabel(round.status) }}</ui-badge></td>
+                @if (canUpdate() && !survey()?.archivedAt) {
+                  <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + round.nameAr" (activated)="openEdit(round)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  <ui-modal [open]="modalOpen()" [title]="editing() ? 'تعديل الجولة' : 'جولة جديدة'" size="md" [dismissible]="!saving()" (closed)="closeModal()">
+    <form ui-modal-body id="round-form" [formGroup]="form" (ngSubmit)="save()" class="rounds-form">
+      <div class="rounds-form-field">
+        <label for="round-code">رمز الجولة *</label>
+        <ui-input id="round-code" formControlName="code" [required]="true" [maxLength]="80" [invalid]="form.controls.code.invalid && form.controls.code.touched" />
+        @if (form.controls.code.invalid && form.controls.code.touched) { <span class="rounds-field-error">رمز الجولة مطلوب، وبحد أقصى 80 حرفًا.</span> }
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-sequence">ترتيب الجولة *</label>
+        <ui-input id="round-sequence" type="number" formControlName="sequenceNumber" [required]="true" [min]="1" [invalid]="form.controls.sequenceNumber.invalid && form.controls.sequenceNumber.touched" />
+        @if (form.controls.sequenceNumber.invalid && form.controls.sequenceNumber.touched) { <span class="rounds-field-error">أدخل عددًا صحيحًا أكبر من صفر.</span> }
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-name-ar">الاسم بالعربية *</label>
+        <ui-input id="round-name-ar" formControlName="nameAr" [required]="true" [maxLength]="500" [invalid]="form.controls.nameAr.invalid && form.controls.nameAr.touched" />
+        @if (form.controls.nameAr.invalid && form.controls.nameAr.touched) { <span class="rounds-field-error">الاسم بالعربية مطلوب، وبحد أقصى 500 حرف.</span> }
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-name-he">الاسم بالعبرية</label>
+        <ui-input id="round-name-he" formControlName="nameHe" [maxLength]="500" />
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-start">تاريخ البداية</label>
+        <ui-input id="round-start" type="date" formControlName="startsAt" />
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-end">تاريخ النهاية</label>
+        <ui-input id="round-end" type="date" formControlName="endsAt" />
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-measurement">تاريخ القياس</label>
+        <ui-input id="round-measurement" type="date" formControlName="measurementDate" />
+      </div>
+      <div class="rounds-form-field">
+        <label for="round-status">الحالة</label>
+        <ui-select id="round-status" formControlName="status">
+          @for (status of statuses; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }
+        </ui-select>
+      </div>
+      @if (form.hasError('dateOrder') && form.touched) { <p class="rounds-field-error rounds-form-wide">تاريخ البداية يجب ألا يكون بعد تاريخ النهاية.</p> }
+      @if (saveError()) { <p class="rounds-save-error rounds-form-wide" role="alert">{{ saveError() }}</p> }
+    </form>
+    <div ui-modal-footer class="rounds-modal-actions">
+      <ui-button variant="secondary" [disabled]="saving()" (activated)="closeModal()">إلغاء</ui-button>
+      <ui-button type="submit" form="round-form" [disabled]="form.invalid || saving()" [loading]="saving()">حفظ</ui-button>
+    </div>
+  </ui-modal>
+</main>

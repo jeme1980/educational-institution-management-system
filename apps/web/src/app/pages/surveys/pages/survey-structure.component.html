@@ -1,0 +1,93 @@
+<main class="structure-page" dir="rtl">
+  <a class="structure-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header [title]="survey()?.nameAr || 'بنية الاستبيان'" description="إدارة أقسام الاستبيان ومجالاته.">
+    @if (canUpdate() && survey()) {
+      <ui-button ui-page-actions (activated)="openCreateSection()">قسم جديد</ui-button>
+    }
+  </ui-page-header>
+
+  @if (notice()) { <p class="structure-notice" role="status">{{ notice() }}</p> }
+  @if (loading()) {
+    <section class="structure-feedback" role="status">جارٍ تحميل بنية الاستبيان…</section>
+  } @else if (error()) {
+    <section class="structure-feedback" role="alert">
+      <p>تعذر تحميل بنية الاستبيان. حاول مرة أخرى.</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (!sections().length) {
+    <ui-empty-state title="لا توجد أقسام لهذا الاستبيان." icon="account_tree" />
+  } @else {
+    <div class="structure-panels">
+      <section class="structure-panel" aria-label="أقسام الاستبيان">
+        <div class="structure-panel-heading"><h2>الأقسام</h2></div>
+        <div class="structure-table-scroll">
+          <table>
+            <thead><tr><th scope="col">القسم</th><th scope="col">الرمز</th><th scope="col">الترتيب</th>@if (canUpdate()) { <th scope="col">إجراءات</th> }</tr></thead>
+            <tbody>
+              @for (section of sections(); track section.id) {
+                <tr [class.structure-selected]="selectedSectionId() === section.id">
+                  <td><button class="structure-select" type="button" [attr.aria-pressed]="selectedSectionId() === section.id" (click)="selectSection(section)">{{ section.nameAr }}</button></td>
+                  <td class="structure-code" dir="ltr">{{ section.code }}</td>
+                  <td class="structure-number">{{ section.sortOrder }}</td>
+                  @if (canUpdate()) {
+                    <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل القسم ' + section.nameAr" (activated)="openEditSection(section)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+      @if (selectedSection(); as section) {
+        <section class="structure-panel" [attr.aria-label]="'مجالات القسم ' + section.nameAr">
+          <div class="structure-panel-heading">
+            <h2>مجالات: {{ section.nameAr }}</h2>
+            @if (canUpdate()) { <ui-button variant="secondary" size="sm" (activated)="openCreateDomain()">مجال جديد</ui-button> }
+          </div>
+          @if (!section.domains.length) {
+            <ui-empty-state title="لا توجد مجالات في هذا القسم." icon="category" />
+          } @else {
+            <div class="structure-table-scroll">
+              <table>
+                <thead><tr><th scope="col">المجال</th><th scope="col">الرمز</th><th scope="col">الترتيب</th>@if (canUpdate()) { <th scope="col">إجراءات</th> }</tr></thead>
+                <tbody>
+                  @for (domain of section.domains; track domain.id) {
+                    <tr>
+                      <td class="structure-name">{{ domain.nameAr }}</td>
+                      <td class="structure-code" dir="ltr">{{ domain.code }}</td>
+                      <td class="structure-number">{{ domain.sortOrder }}</td>
+                      @if (canUpdate()) {
+                        <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل المجال ' + domain.nameAr" (activated)="openEditDomain(domain)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                      }
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      }
+    </div>
+  }
+
+  <ui-modal [open]="modalOpen()" [title]="mode() === 'section' ? (editingSection() ? 'تعديل القسم' : 'قسم جديد') : (editingDomain() ? 'تعديل المجال' : 'مجال جديد')" size="md" [dismissible]="!saving()" (closed)="closeModal()">
+    <form ui-modal-body id="structure-form" [formGroup]="form" (ngSubmit)="save()" class="structure-form">
+      @if (mode() === 'domain' && editingDomain()) {
+        <div class="structure-field structure-wide"><label for="structure-section">القسم</label><ui-select id="structure-section" formControlName="sectionId">@for (section of sections(); track section.id) { <option [value]="section.id">{{ section.nameAr }}</option> }</ui-select></div>
+      }
+      <div class="structure-field"><label for="structure-code">الرمز *</label><ui-input id="structure-code" formControlName="code" [required]="true" [maxLength]="80" [invalid]="form.controls.code.invalid && form.controls.code.touched" />@if (form.controls.code.invalid && form.controls.code.touched) { <span class="structure-field-error">الرمز مطلوب، وبحد أقصى 80 حرفًا.</span> }</div>
+      <div class="structure-field"><label for="structure-order">الترتيب</label><ui-input id="structure-order" type="number" formControlName="sortOrder" [min]="0" [max]="1000000" [invalid]="form.controls.sortOrder.invalid && form.controls.sortOrder.touched" />@if (form.controls.sortOrder.invalid && form.controls.sortOrder.touched) { <span class="structure-field-error">أدخل عددًا صحيحًا بين 0 و1000000.</span> }</div>
+      <div class="structure-field"><label for="structure-name-ar">الاسم بالعربية *</label><ui-input id="structure-name-ar" formControlName="nameAr" [required]="true" [maxLength]="500" [invalid]="form.controls.nameAr.invalid && form.controls.nameAr.touched" />@if (form.controls.nameAr.invalid && form.controls.nameAr.touched) { <span class="structure-field-error">الاسم بالعربية مطلوب، وبحد أقصى 500 حرف.</span> }</div>
+      <div class="structure-field"><label for="structure-name-he">الاسم بالعبرية</label><ui-input id="structure-name-he" formControlName="nameHe" [maxLength]="500" /></div>
+      <div class="structure-field structure-wide"><label for="structure-description-ar">الوصف بالعربية</label><ui-textarea id="structure-description-ar" formControlName="descriptionAr" [maxLength]="10000" /></div>
+      <div class="structure-field structure-wide"><label for="structure-description-he">الوصف بالعبرية</label><ui-textarea id="structure-description-he" formControlName="descriptionHe" [maxLength]="10000" /></div>
+      @if (mode() === 'section') { <label class="structure-check"><input type="checkbox" formControlName="isOptional" />قسم اختياري</label> }
+      <label class="structure-check"><input type="checkbox" formControlName="isActive" />نشط</label>
+      @if (saveError()) { <p class="structure-save-error structure-wide" role="alert">{{ saveError() }}</p> }
+    </form>
+    <div ui-modal-footer class="structure-modal-actions">
+      <ui-button variant="secondary" [disabled]="saving()" (activated)="closeModal()">إلغاء</ui-button>
+      <ui-button type="submit" form="structure-form" [disabled]="form.invalid || saving()" [loading]="saving()">حفظ</ui-button>
+    </div>
+  </ui-modal>
+</main>

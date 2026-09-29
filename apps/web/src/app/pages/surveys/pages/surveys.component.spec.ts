@@ -152,6 +152,7 @@ describe('SurveysComponent', () => {
     await render();
     expect(fixture.nativeElement.textContent).not.toContain('استبيان جديد');
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل استبيان one"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="بنية استبيان one"]'))).not.toBeNull();
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="جولات استبيان one"]'))).not.toBeNull();
     canUpdate.set(true);
     fixture.detectChanges();

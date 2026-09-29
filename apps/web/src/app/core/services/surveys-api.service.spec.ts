@@ -41,7 +41,7 @@ describe('SurveysApiService', () => {
       { provide: Router, useValue: { navigate: vi.fn() } },
     ] });
     const service = TestBed.inject(SurveysApiService);
-    const result = { survey: { id: 'survey-1' }, rounds: [] };
+    const result = { survey: { id: 'survey-1' }, sections: [], rounds: [] };
     const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
     expect(await service.getSurveyStructure('survey-1')).toEqual(result);
     await service.createSurveyRound('survey-1', { code: 'R1', nameAr: 'الجولة الأولى', sequenceNumber: 1 });
@@ -49,5 +49,23 @@ describe('SurveysApiService', () => {
     expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/structure');
     expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/rounds', expect.objectContaining({ method: 'POST', body: JSON.stringify({ code: 'R1', nameAr: 'الجولة الأولى', sequenceNumber: 1 }) }));
     expect(apiFetch).toHaveBeenNthCalledWith(3, '/api/surveys/survey-1/rounds/round-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ nameAr: 'جولة محدثة' }) }));
+  });
+
+  it('writes Sections and Domains through their survey-scoped routes', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ id: 'child-1' }) } as unknown as Response);
+    await service.createSurveySection('survey-1', { code: 'S1', nameAr: 'قسم', sortOrder: 0 });
+    await service.updateSurveySection('survey-1', 'section-1', { nameAr: 'قسم معدل' });
+    await service.createSurveyDomain('survey-1', { sectionId: 'section-1', code: 'D1', nameAr: 'مجال' });
+    await service.updateSurveyDomain('survey-1', 'domain-1', { sectionId: 'section-2', nameAr: 'مجال معدل' });
+    expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/sections', expect.objectContaining({ method: 'POST', body: JSON.stringify({ code: 'S1', nameAr: 'قسم', sortOrder: 0 }) }));
+    expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/sections/section-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ nameAr: 'قسم معدل' }) }));
+    expect(apiFetch).toHaveBeenNthCalledWith(3, '/api/surveys/survey-1/domains', expect.objectContaining({ method: 'POST', body: JSON.stringify({ sectionId: 'section-1', code: 'D1', nameAr: 'مجال' }) }));
+    expect(apiFetch).toHaveBeenNthCalledWith(4, '/api/surveys/survey-1/domains/domain-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ sectionId: 'section-2', nameAr: 'مجال معدل' }) }));
   });
 });

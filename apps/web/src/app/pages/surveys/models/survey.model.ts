@@ -71,8 +71,62 @@ export interface SurveyRound {
 
 export interface SurveyStructureResponse {
   survey: SurveyDetail;
+  sections: SurveySection[];
   rounds: SurveyRound[];
 }
+
+export interface SurveyDomain {
+  id: string;
+  surveyId: string;
+  sectionId: string;
+  code: string;
+  nameAr: string;
+  nameHe: string | null;
+  descriptionAr: string | null;
+  descriptionHe: string | null;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+export interface SurveySection {
+  id: string;
+  surveyId: string;
+  code: string;
+  nameAr: string;
+  nameHe: string | null;
+  descriptionAr: string | null;
+  descriptionHe: string | null;
+  sortOrder: number;
+  isOptional: boolean;
+  isActive: boolean;
+  domains: SurveyDomain[];
+}
+
+export interface CreateSurveySectionRequest {
+  code: string;
+  nameAr: string;
+  nameHe?: string | null;
+  descriptionAr?: string | null;
+  descriptionHe?: string | null;
+  sortOrder?: number;
+  isOptional?: boolean;
+  isActive?: boolean;
+}
+
+export type UpdateSurveySectionRequest = Partial<CreateSurveySectionRequest>;
+
+export interface CreateSurveyDomainRequest {
+  sectionId: string;
+  code: string;
+  nameAr: string;
+  nameHe?: string | null;
+  descriptionAr?: string | null;
+  descriptionHe?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateSurveyDomainRequest = Partial<CreateSurveyDomainRequest>;
 
 export interface CreateSurveyRoundRequest {
   code: string;

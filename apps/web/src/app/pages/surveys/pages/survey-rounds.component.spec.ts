@@ -38,7 +38,7 @@ describe('SurveyRoundsComponent', () => {
 
   beforeEach(async () => {
     canUpdate.set(false);
-    getSurveyStructure.mockReset().mockResolvedValue({ survey, rounds: [] });
+    getSurveyStructure.mockReset().mockResolvedValue({ survey, sections: [], rounds: [] });
     createSurveyRound.mockReset().mockResolvedValue(round('new', 1));
     updateSurveyRound.mockReset().mockResolvedValue(round('one', 1));
     await TestBed.configureTestingModule({
@@ -54,7 +54,7 @@ describe('SurveyRoundsComponent', () => {
 
   it('uses a surveys:read route and loads survey context and rounds in backend order', async () => {
     expect(routes.find(route => route.path === 'surveys/:surveyId/rounds')?.data?.['requiredPermission']).toBe('surveys:read');
-    getSurveyStructure.mockResolvedValue({ survey, rounds: [round('second', 2), round('first', 1)] });
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('second', 2), round('first', 1)] });
     await render();
     expect(getSurveyStructure).toHaveBeenCalledWith('survey-1');
     expect(fixture.nativeElement.textContent).toContain(survey.nameAr);
@@ -68,7 +68,7 @@ describe('SurveyRoundsComponent', () => {
     await render();
     expect(fixture.nativeElement.textContent).toContain('لا توجد جولات لهذا الاستبيان.');
     expect(fixture.nativeElement.textContent).not.toContain('جولة جديدة');
-    getSurveyStructure.mockResolvedValue({ survey, rounds: [round('one', 1)] });
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)] });
     await fixture.componentInstance.retry();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('جولة one');
@@ -77,11 +77,11 @@ describe('SurveyRoundsComponent', () => {
 
   it('shows create and edit controls for update permission and blocks archived survey mutations', async () => {
     canUpdate.set(true);
-    getSurveyStructure.mockResolvedValue({ survey, rounds: [round('one', 1)] });
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)] });
     await render();
     expect(fixture.nativeElement.textContent).toContain('جولة جديدة');
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل جولة one"]'))).not.toBeNull();
-    getSurveyStructure.mockResolvedValue({ survey: { ...survey, archivedAt: '2026-03-01T00:00:00.000Z' }, rounds: [round('one', 1)] });
+    getSurveyStructure.mockResolvedValue({ survey: { ...survey, archivedAt: '2026-03-01T00:00:00.000Z' }, sections: [], rounds: [round('one', 1)] });
     await fixture.componentInstance.retry();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('جولة جديدة');
@@ -135,7 +135,7 @@ describe('SurveyRoundsComponent', () => {
   it('prefills edit and omits unchanged locked identity fields while saving editable values', async () => {
     canUpdate.set(true);
     const item = { ...round('one', 1), nameHe: 'עברית', status: 'OPEN' as const };
-    getSurveyStructure.mockResolvedValue({ survey, rounds: [item] });
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [item] });
     await render();
     fixture.debugElement.query(By.css('ui-table-actions button')).nativeElement.click();
     fixture.detectChanges();
@@ -155,7 +155,7 @@ describe('SurveyRoundsComponent', () => {
   it('rejects inverted dates locally and preserves the modal on history-lock conflict', async () => {
     canUpdate.set(true);
     updateSurveyRound.mockRejectedValue(new SurveyWriteError('SURVEY_STRUCTURE_LOCKED'));
-    getSurveyStructure.mockResolvedValue({ survey, rounds: [round('one', 1)] });
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)] });
     await render();
     fixture.componentInstance.openEdit(round('one', 1));
     fixture.componentInstance.form.patchValue({ startsAt: '2026-03-01', endsAt: '2026-02-01', code: 'NEW_CODE' });
@@ -170,7 +170,7 @@ describe('SurveyRoundsComponent', () => {
   });
 
   it('shows a safe loading error and retries', async () => {
-    getSurveyStructure.mockRejectedValueOnce(new Error('private database failure')).mockResolvedValueOnce({ survey, rounds: [] });
+    getSurveyStructure.mockRejectedValueOnce(new Error('private database failure')).mockResolvedValueOnce({ survey, sections: [], rounds: [] });
     await render();
     expect(fixture.nativeElement.textContent).toContain('تعذر تحميل جولات الاستبيان');
     expect(fixture.nativeElement.textContent).not.toContain('private database failure');

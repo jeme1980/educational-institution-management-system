@@ -21,4 +21,16 @@ tbody tr:hover { background: var(--hover-surface); }
 td { height: var(--table-row-height); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
 .surveys-name { color: var(--on-surface); font-weight: var(--font-semibold); overflow-wrap: anywhere; }
 .surveys-number, .surveys-date { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.surveys-actions { white-space: nowrap; }
+.surveys-notice { margin: 0; border: var(--border-width-thin) solid var(--success); border-radius: var(--radius-default); padding: var(--space-3) var(--space-4); background: var(--success-container); color: var(--on-surface); font-size: var(--text-body-sm); }
+.surveys-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.surveys-form-field { display: grid; min-width: 0; gap: var(--space-1); }
+.surveys-form-field label { color: var(--on-surface); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+.surveys-form-field ui-input, .surveys-form-field ui-select, .surveys-form-field ui-textarea { display: block; min-width: 0; }
+.surveys-field-error, .surveys-save-error { color: var(--danger); font-size: var(--text-body-sm); }
+.surveys-checkbox { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--on-surface); font-size: var(--text-body-sm); }
+.surveys-checkbox input { accent-color: var(--primary); }
+.surveys-save-error { grid-column: 1 / -1; margin: 0; }
+.surveys-modal-actions { display: flex; gap: var(--space-2); }
+@media (max-width: 640px) { .surveys-form { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 767px) { .surveys-page { padding: var(--space-3); } }

@@ -1,4 +1,16 @@
-export type SurveyStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+export const SURVEY_STATUSES = ['DRAFT', 'ACTIVE', 'CLOSED'] as const;
+export type SurveyStatus = typeof SURVEY_STATUSES[number];
+
+const SURVEY_STATUS_TRANSITIONS: Record<SurveyStatus, readonly SurveyStatus[]> = {
+  DRAFT: ['ACTIVE'],
+  ACTIVE: ['CLOSED'],
+  CLOSED: [],
+};
+
+export function getAllowedSurveyStatusOptions(currentStatus: SurveyStatus | null): readonly SurveyStatus[] {
+  if (!currentStatus) return SURVEY_STATUSES;
+  return SURVEY_STATUSES.filter(status => status === currentStatus || SURVEY_STATUS_TRANSITIONS[currentStatus].includes(status));
+}
 
 /** GET /api/surveys returns this array directly, with no pagination wrapper. */
 export interface SurveyListItem {
@@ -22,3 +34,17 @@ export interface SurveyListItem {
 }
 
 export type SurveyListResponse = SurveyListItem[];
+
+export type SurveyDetail = Omit<SurveyListItem, 'sectionCount' | 'domainCount' | 'indicatorCount' | 'roundCount' | 'segmentCount'>;
+
+export interface CreateSurveyRequest {
+  academicYearId: string;
+  nameAr: string;
+  nameHe?: string | null;
+  descriptionAr?: string | null;
+  descriptionHe?: string | null;
+  audienceType?: string | null;
+  status?: SurveyStatus;
+}
+
+export type UpdateSurveyRequest = Partial<Omit<CreateSurveyRequest, 'academicYearId'>> & { isActive?: boolean };

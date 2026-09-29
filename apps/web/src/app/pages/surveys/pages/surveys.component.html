@@ -1,10 +1,16 @@
 <main class="surveys-page" dir="rtl">
-  <ui-page-header title="الاستبيانات" description="إدارة استبيانات المدرسة وقياس التقدم عبر جولات متعددة." />
+  <ui-page-header title="الاستبيانات" description="إدارة استبيانات المدرسة وقياس التقدم عبر جولات متعددة.">
+    @if (canUpdate() && api.selectedAcademicYearId()) {
+      <ui-button ui-page-actions (activated)="openCreate()">استبيان جديد</ui-button>
+    }
+  </ui-page-header>
 
   <section class="surveys-context" aria-label="السنة الدراسية المحددة">
     <span>السنة الدراسية</span>
     <strong>{{ selectedYear()?.yearLabel || 'لم تُحدّد سنة دراسية' }}</strong>
   </section>
+
+  @if (notice()) { <p class="surveys-notice" role="status">{{ notice() }}</p> }
 
   @if (loading()) {
     <section class="surveys-feedback" role="status">جارٍ تحميل الاستبيانات…</section>
@@ -35,6 +41,7 @@
               <th scope="col">الحالة</th>
               <th scope="col">عدد الجولات</th>
               <th scope="col">آخر تحديث</th>
+              @if (canUpdate()) { <th scope="col">إجراءات</th> }
             </tr></thead>
             <tbody>
               @for (survey of filteredSurveys(); track survey.id) {
@@ -43,6 +50,13 @@
                   <td><ui-badge [tone]="statusTone(survey.status)">{{ statusLabel(survey.status) }}</ui-badge></td>
                   <td class="surveys-number">{{ survey.roundCount }}</td>
                   <td class="surveys-date">{{ survey.updatedAt | date:'yyyy-MM-dd' }}</td>
+                  @if (canUpdate()) {
+                    <td class="surveys-actions">
+                      <ui-table-actions>
+                        <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + survey.nameAr" (activated)="openEdit(survey)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
+                      </ui-table-actions>
+                    </td>
+                  }
                 </tr>
               }
             </tbody>
@@ -51,4 +65,44 @@
       </section>
     }
   }
+
+  <ui-modal [open]="modalOpen()" [title]="editing() ? 'تعديل الاستبيان' : 'استبيان جديد'" size="md" [dismissible]="!saving()" (closed)="closeModal()">
+    <form ui-modal-body id="survey-form" [formGroup]="form" (ngSubmit)="save()" class="surveys-form">
+      <div class="surveys-form-field">
+        <label for="survey-name-ar">الاسم بالعربية <span aria-hidden="true">*</span></label>
+        <ui-input id="survey-name-ar" formControlName="nameAr" [required]="true" [maxLength]="500" [invalid]="form.controls.nameAr.invalid && form.controls.nameAr.touched" describedBy="survey-name-ar-error" />
+        @if (form.controls.nameAr.invalid && form.controls.nameAr.touched) { <span id="survey-name-ar-error" class="surveys-field-error">الاسم بالعربية مطلوب، وبحد أقصى 500 حرف.</span> }
+      </div>
+      <div class="surveys-form-field">
+        <label for="survey-name-he">الاسم بالعبرية</label>
+        <ui-input id="survey-name-he" formControlName="nameHe" [maxLength]="500" />
+      </div>
+      <div class="surveys-form-field">
+        <label for="survey-audience">نوع الجمهور</label>
+        <ui-input id="survey-audience" formControlName="audienceType" [maxLength]="40" />
+      </div>
+      <div class="surveys-form-field">
+        <label for="survey-status">الحالة</label>
+        <ui-select id="survey-status" formControlName="status">
+          @for (status of allowedStatuses(); track status) { <option [value]="status">{{ statusLabel(status) }}</option> }
+        </ui-select>
+      </div>
+      <div class="surveys-form-field">
+        <label for="survey-description-ar">الوصف بالعربية</label>
+        <ui-textarea id="survey-description-ar" formControlName="descriptionAr" [maxLength]="10000" />
+      </div>
+      <div class="surveys-form-field">
+        <label for="survey-description-he">الوصف بالعبرية</label>
+        <ui-textarea id="survey-description-he" formControlName="descriptionHe" [maxLength]="10000" />
+      </div>
+      @if (editing()) {
+        <label class="surveys-checkbox"><input type="checkbox" formControlName="isActive" /> فعّال</label>
+      }
+      @if (saveError()) { <p class="surveys-save-error" role="alert">{{ saveError() }}</p> }
+    </form>
+    <div ui-modal-footer class="surveys-modal-actions">
+      <ui-button variant="secondary" [disabled]="saving()" (activated)="closeModal()">إلغاء</ui-button>
+      <ui-button type="submit" form="survey-form" [disabled]="form.invalid || saving()" [loading]="saving()">حفظ</ui-button>
+    </div>
+  </ui-modal>
 </main>

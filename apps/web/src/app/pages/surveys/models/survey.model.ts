@@ -137,6 +137,62 @@ export interface SurveyResultsImportResponse {
   importedAt: string;
 }
 
+export interface SurveyResultNamedItem { id: string; code: string; nameAr: string; nameHe: string | null }
+export interface SurveyResultDomain extends SurveyResultNamedItem { section: SurveyResultNamedItem }
+export interface SurveyRoundIndicatorResult {
+  id: string;
+  section: SurveyResultNamedItem;
+  domain: SurveyResultDomain;
+  indicator: { id: string; code: string; textAr: string; textHe: string | null };
+  segment: SurveyResultNamedItem;
+  reportedPercentage: number | null;
+  respondentCount: number | null;
+  earnedTotal: number | null;
+  possibleTotal: number | null;
+}
+export interface SurveyRoundDomainResult {
+  id: string;
+  domain: SurveyResultDomain;
+  segment: SurveyResultNamedItem;
+  scorePercentage: number | null;
+  respondentCount: number | null;
+  isComparable: boolean;
+}
+export interface SurveyRoundComparison {
+  id: string;
+  domain: SurveyResultDomain;
+  segment: SurveyResultNamedItem;
+  comparisonType: string;
+  comparisonCode: string | null;
+  comparisonValue: number | null;
+  comparisonRoundCode: string | null;
+  noteAr: string | null;
+  noteHe: string | null;
+}
+export interface SurveyRoundParticipationResult {
+  id: string;
+  segment: SurveyResultNamedItem;
+  participantCount: number | null;
+  eligibleCount: number | null;
+  responseRate: number | null;
+}
+export interface SurveyRoundResultsImportMetadata {
+  id: string;
+  originalFileName: string;
+  status: string;
+  rowCount: number | null;
+  importedAt: string | null;
+}
+export interface SurveyRoundResultsResponse {
+  survey: Pick<SurveyDetail, 'id' | 'nameAr' | 'nameHe' | 'academicYearId' | 'archivedAt'>;
+  round: Pick<SurveyRound, 'id' | 'code' | 'nameAr' | 'nameHe' | 'sequenceNumber' | 'status' | 'measurementDate'>;
+  import: SurveyRoundResultsImportMetadata | null;
+  indicatorResults: SurveyRoundIndicatorResult[];
+  domainResults: SurveyRoundDomainResult[];
+  comparisons: SurveyRoundComparison[];
+  participation: SurveyRoundParticipationResult[];
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

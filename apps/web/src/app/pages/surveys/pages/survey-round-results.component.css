@@ -1,0 +1,22 @@
+:host { display: block; min-width: 0; }
+.results-page { display: grid; max-width: 90rem; min-width: 0; gap: var(--space-4); margin-inline: auto; padding: var(--space-4); }
+.results-back { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); color: var(--primary); font-size: var(--text-body-sm); text-decoration: none; }
+.results-back:hover { text-decoration: underline; }
+.results-back:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: var(--focus-ring-offset); }
+.results-back mat-icon { width: var(--space-5); height: var(--space-5); font-size: var(--space-5); }
+.results-context { margin: 0; color: var(--on-surface-variant); font-size: var(--text-body-md); }
+.results-feedback { display: grid; justify-items: start; gap: var(--space-3); border: var(--border-width-thin) solid var(--border); border-radius: var(--radius-default); padding: var(--space-6); background: var(--surface-elevated); color: var(--on-surface-variant); }
+.results-feedback p { margin: 0; }
+.results-import { display: flex; flex-wrap: wrap; gap: var(--space-4) var(--space-8); margin: 0; padding: var(--space-4); }
+.results-import div { min-width: 0; }
+.results-import dt { color: var(--on-surface-variant); font-size: var(--text-label-sm); }
+.results-import dd { margin: 0; overflow-wrap: anywhere; color: var(--on-surface); font-size: var(--text-body-sm); }
+.results-table-scroll { max-width: 100%; overflow-x: auto; }
+table { width: 100%; min-width: max-content; border-collapse: collapse; text-align: start; }
+th, td { padding: var(--space-3) var(--space-4); text-align: start; }
+thead th { color: var(--on-surface-variant); background: var(--surface-container-low); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
+tbody tr { border-block-start: var(--border-width-thin) solid var(--divider); }
+tbody th, tbody td { height: var(--table-row-height); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
+tbody th { color: var(--on-surface); font-weight: var(--font-medium); }
+.results-panel-empty { margin: 0; padding: var(--space-4); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
+@media (max-width: 767px) { .results-page { padding: var(--space-3); } }

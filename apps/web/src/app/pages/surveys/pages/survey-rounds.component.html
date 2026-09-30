@@ -28,7 +28,7 @@
             <th scope="col">تاريخ القياس</th>
             <th scope="col">الفترة</th>
             <th scope="col">الحالة</th>
-            @if (canUpdate() && !survey()?.archivedAt) { <th scope="col">إجراءات</th> }
+            @if (canRead() || (canUpdate() && !survey()?.archivedAt)) { <th scope="col">إجراءات</th> }
           </tr></thead>
           <tbody>
             @for (round of rounds(); track round.id) {
@@ -39,10 +39,15 @@
                 <td class="rounds-date">{{ round.measurementDate ? (round.measurementDate | date:'yyyy-MM-dd') : '—' }}</td>
                 <td class="rounds-date">{{ round.startsAt ? (round.startsAt | date:'yyyy-MM-dd') : '—' }} – {{ round.endsAt ? (round.endsAt | date:'yyyy-MM-dd') : '—' }}</td>
                 <td><ui-badge [tone]="statusTone(round.status)">{{ statusLabel(round.status) }}</ui-badge></td>
-                @if (canUpdate() && !survey()?.archivedAt) {
+                @if (canRead() || (canUpdate() && !survey()?.archivedAt)) {
                   <td><ui-table-actions>
-                    <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + round.nameAr" (activated)="openEdit(round)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
-                    <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'استيراد نتائج الجولة ' + round.nameAr" (activated)="openResultsPreview(round)"><mat-icon aria-hidden="true">upload_file</mat-icon></ui-button>
+                    @if (canRead()) {
+                      <ui-button variant="ghost" size="sm" [iconOnly]="true" [routerLink]="['/surveys', surveyId(), 'rounds', round.id, 'results']" [ariaLabel]="'عرض النتائج: ' + round.nameAr"><mat-icon aria-hidden="true">visibility</mat-icon></ui-button>
+                    }
+                    @if (canUpdate() && !survey()?.archivedAt) {
+                      <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + round.nameAr" (activated)="openEdit(round)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
+                      <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'استيراد نتائج الجولة ' + round.nameAr" (activated)="openResultsPreview(round)"><mat-icon aria-hidden="true">upload_file</mat-icon></ui-button>
+                    }
                   </ui-table-actions></td>
                 }
               </tr>

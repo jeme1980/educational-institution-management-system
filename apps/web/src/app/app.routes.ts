@@ -123,6 +123,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/surveys/pages/survey-results-preview.component').then(m => m.SurveyResultsPreviewComponent),
   },
   {
+    path: 'surveys/:surveyId/rounds/:roundId/results',
+    title: 'نتائج الجولة',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'surveys:read' },
+    loadComponent: () => import('./pages/surveys/pages/survey-round-results.component').then(m => m.SurveyRoundResultsComponent),
+  },
+  {
     path: 'surveys/:surveyId/rounds',
     title: 'جولات الاستبيان',
     canActivate: [authGuard, permissionGuard],

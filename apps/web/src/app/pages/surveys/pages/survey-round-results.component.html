@@ -1,0 +1,69 @@
+<main class="results-page" dir="rtl">
+  <a class="results-back" [routerLink]="['/surveys', surveyId(), 'rounds']"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الجولات</a>
+  <ui-page-header title="نتائج الجولة" description="عرض نتائج الجولة المجمّعة كما سُجّلت." />
+
+  @if (loading()) {
+    <section class="results-feedback" role="status">جارٍ تحميل نتائج الجولة…</section>
+  } @else if (error()) {
+    <section class="results-feedback" role="alert">
+      <p>{{ error() }}</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (result(); as data) {
+    <p class="results-context">{{ data.survey.nameAr }} · {{ data.round.nameAr }}</p>
+    @if (data.import; as batch) {
+      <ui-section-card title="معلومات الاستيراد">
+        <dl class="results-import">
+          <div><dt>اسم الملف</dt><dd>{{ batch.originalFileName }}</dd></div>
+          <div><dt>الحالة</dt><dd>{{ importStatusLabel(batch.status) }}</dd></div>
+          <div><dt>عدد الصفوف</dt><dd>{{ batch.rowCount ?? '—' }}</dd></div>
+          <div><dt>تاريخ الاستيراد</dt><dd>{{ batch.importedAt ? (batch.importedAt | date:'yyyy-MM-dd') : '—' }}</dd></div>
+        </dl>
+      </ui-section-card>
+    }
+    @if (noResults()) {
+      <ui-empty-state title="لا توجد نتائج مسجلة لهذه الجولة." [compact]="true" />
+    } @else {
+      <ui-section-card title="نتائج المؤشرات">
+        @if (data.indicatorResults.length) {
+          <div class="results-table-scroll"><table>
+            <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th><th scope="col">المؤشر</th><th scope="col">رمز المؤشر</th><th scope="col">الشريحة</th><th scope="col">النسبة المبلغة</th><th scope="col">عدد المستجيبين</th><th scope="col">المجموع المحقق</th><th scope="col">المجموع الممكن</th></tr></thead>
+            <tbody>@for (row of data.indicatorResults; track row.id) {
+              <tr><td>{{ row.section.nameAr }}</td><td>{{ row.domain.nameAr }}</td><th scope="row">{{ row.indicator.textAr }}</th><td dir="ltr">{{ row.indicator.code }}</td><td>{{ row.segment.nameAr }}</td><td>{{ percentage(row.reportedPercentage) }}</td><td>{{ row.respondentCount ?? '—' }}</td><td>{{ row.earnedTotal ?? '—' }}</td><td>{{ row.possibleTotal ?? '—' }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="results-panel-empty">لا توجد نتائج مؤشرات لهذه الجولة.</p> }
+      </ui-section-card>
+      <ui-section-card title="نتائج المجالات">
+        @if (data.domainResults.length) {
+          <div class="results-table-scroll"><table>
+            <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th><th scope="col">الشريحة</th><th scope="col">النتيجة</th><th scope="col">عدد المستجيبين</th><th scope="col">قابلية المقارنة</th></tr></thead>
+            <tbody>@for (row of data.domainResults; track row.id) {
+              <tr><td>{{ row.domain.section.nameAr }}</td><th scope="row">{{ row.domain.nameAr }}</th><td>{{ row.segment.nameAr }}</td><td>{{ percentage(row.scorePercentage) }}</td><td>{{ row.respondentCount ?? '—' }}</td><td>{{ row.isComparable ? 'قابل للمقارنة' : 'غير قابل للمقارنة' }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="results-panel-empty">لا توجد نتائج مجالات لهذه الجولة.</p> }
+      </ui-section-card>
+      <ui-section-card title="المقارنات">
+        @if (data.comparisons.length) {
+          <div class="results-table-scroll"><table>
+            <thead><tr><th scope="col">المجال</th><th scope="col">الشريحة</th><th scope="col">نوع المقارنة</th><th scope="col">رمز المقارنة</th><th scope="col">قيمة المقارنة</th><th scope="col">جولة المقارنة</th><th scope="col">الملاحظة العربية</th><th scope="col">الملاحظة العبرية</th></tr></thead>
+            <tbody>@for (row of data.comparisons; track row.id) {
+              <tr><th scope="row">{{ row.domain.nameAr }}</th><td>{{ row.segment.nameAr }}</td><td>{{ comparisonTypeLabel(row.comparisonType) }}</td><td [attr.dir]="row.comparisonCode ? 'ltr' : null">{{ row.comparisonCode ?? '—' }}</td><td>{{ row.comparisonValue ?? '—' }}</td><td [attr.dir]="row.comparisonRoundCode ? 'ltr' : null">{{ row.comparisonRoundCode ?? '—' }}</td><td>{{ row.noteAr ?? '—' }}</td><td>{{ row.noteHe ?? '—' }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="results-panel-empty">لا توجد مقارنات لهذه الجولة.</p> }
+      </ui-section-card>
+      <ui-section-card title="المشاركة">
+        @if (data.participation.length) {
+          <div class="results-table-scroll"><table>
+            <thead><tr><th scope="col">الشريحة</th><th scope="col">عدد المشاركين</th><th scope="col">العدد المؤهل</th><th scope="col">معدل الاستجابة</th></tr></thead>
+            <tbody>@for (row of data.participation; track row.id) {
+              <tr><th scope="row">{{ row.segment.nameAr }}</th><td>{{ row.participantCount ?? '—' }}</td><td>{{ row.eligibleCount ?? '—' }}</td><td>{{ percentage(row.responseRate) }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="results-panel-empty">لا توجد بيانات مشاركة لهذه الجولة.</p> }
+      </ui-section-card>
+    }
+  }
+</main>

@@ -3,9 +3,28 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
-import { SurveyImportError, SurveysApiService } from './surveys-api.service';
+import { SurveyImportError, SurveyResultsReadError, SurveysApiService } from './surveys-api.service';
+import type { SurveyRoundResultsResponse } from '../../pages/surveys/models/survey.model';
 
 describe('SurveysApiService', () => {
+  it('reads one round results response with the exact GET path and no pagination query', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const result: SurveyRoundResultsResponse = {
+      survey: { id: 'survey-1', academicYearId: 'year-1', nameAr: 'استبيان', nameHe: null, archivedAt: null },
+      round: { id: 'round-1', code: 'R1', nameAr: 'جولة', nameHe: null, sequenceNumber: 1, status: 'PLANNED', measurementDate: null },
+      import: null, indicatorResults: [], domainResults: [], comparisons: [], participation: [],
+    };
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
+    expect(await service.getSurveyRoundResults('survey-1', 'round-1')).toEqual(result);
+    expect(apiFetch).toHaveBeenCalledExactlyOnceWith('/api/surveys/survey-1/rounds/round-1/results');
+    apiFetch.mockResolvedValue({ ok: false, status: 404, json: vi.fn().mockResolvedValue({ error: { code: 'SURVEY_ROUND_NOT_FOUND' } }) } as unknown as Response);
+    await expect(service.getSurveyRoundResults('survey-1', 'round-2')).rejects.toMatchObject({ code: 'SURVEY_ROUND_NOT_FOUND', status: 404 } satisfies Partial<SurveyResultsReadError>);
+  });
   it('downloads the official survey results template as a Blob', async () => {
     TestBed.configureTestingModule({ providers: [
       SurveysApiService,

@@ -25,6 +25,7 @@ const round = (id: string, sequenceNumber: number): SurveyRound => ({
 describe('SurveyRoundsComponent', () => {
   let fixture: ComponentFixture<SurveyRoundsComponent>;
   const canUpdate = signal(false);
+  const canRead = signal(false);
   const getSurveyStructure = vi.fn<(surveyId: string) => Promise<SurveyStructureResponse>>();
   const createSurveyRound = vi.fn();
   const updateSurveyRound = vi.fn();
@@ -38,6 +39,7 @@ describe('SurveyRoundsComponent', () => {
 
   beforeEach(async () => {
     canUpdate.set(false);
+    canRead.set(false);
     getSurveyStructure.mockReset().mockResolvedValue({ survey, sections: [], rounds: [], segments: [] });
     createSurveyRound.mockReset().mockResolvedValue(round('new', 1));
     updateSurveyRound.mockReset().mockResolvedValue(round('one', 1));
@@ -46,7 +48,7 @@ describe('SurveyRoundsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap }, paramMap: of(paramMap) } },
-        { provide: AuthService, useValue: { hasPermission: (permission: string) => permission === 'surveys:update' && canUpdate() } },
+        { provide: AuthService, useValue: { hasPermission: (permission: string) => (permission === 'surveys:update' && canUpdate()) || (permission === 'surveys:read' && canRead()) } },
         { provide: SurveysApiService, useValue: { getSurveyStructure, createSurveyRound, updateSurveyRound } },
       ],
     }).compileComponents();
@@ -90,8 +92,21 @@ describe('SurveyRoundsComponent', () => {
   });
 
   it('hides preview entry from read-only users', async () => {
+    canRead.set(true);
     getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)], segments: [] });
     await render();
+    expect(fixture.debugElement.query(By.css('button[aria-label="استيراد نتائج الجولة جولة one"]'))).toBeNull();
+    expect(fixture.debugElement.query(By.css('button[aria-label="عرض النتائج: جولة one"]'))).not.toBeNull();
+  });
+
+  it('keeps read-only results access for an archived survey and opens the results route', async () => {
+    canRead.set(true);
+    getSurveyStructure.mockResolvedValue({ survey: { ...survey, archivedAt: '2026-03-01T00:00:00.000Z' }, sections: [], rounds: [round('one', 1)], segments: [] });
+    await render();
+    expect(routes.find(route => route.path === 'surveys/:surveyId/rounds/:roundId/results')?.data?.['requiredPermission']).toBe('surveys:read');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    fixture.debugElement.query(By.css('button[aria-label="عرض النتائج: جولة one"]')).nativeElement.click();
+    expect(navigate.mock.calls[0][0].toString()).toBe('/surveys/survey-1/rounds/one/results');
     expect(fixture.debugElement.query(By.css('button[aria-label="استيراد نتائج الجولة جولة one"]'))).toBeNull();
   });
 

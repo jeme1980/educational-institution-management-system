@@ -41,6 +41,7 @@ export class SurveyRoundsComponent {
   private readonly fb = inject(FormBuilder);
   private readonly params = toSignal(this.route.paramMap, { initialValue: this.route.snapshot.paramMap });
   readonly surveyId = computed(() => this.params().get('surveyId'));
+  readonly canRead = computed(() => this.auth.hasPermission('surveys:read'));
   readonly canUpdate = computed(() => this.auth.hasPermission('surveys:update'));
   readonly survey = signal<SurveyDetail | null>(null);
   readonly rounds = signal<SurveyRound[]>([]);

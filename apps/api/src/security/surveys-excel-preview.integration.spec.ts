@@ -10,6 +10,8 @@ import { platformPrisma } from '../db/platform-prisma';
 import { testAdminPrisma as admin } from '../db/test-admin-prisma';
 import { createLocalAccessToken } from '../middleware/auth';
 import { XLSX_MIME } from './spreadsheet-security';
+import { parseSurveyExcelWorkbook } from '../services/surveys-excel.parser';
+import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
 
 type Fixture = {
   institutionAId: string;
@@ -137,6 +139,38 @@ test('survey Excel HTTP preview is authenticated, tenant-safe, and read-only', a
     const headers = (token?: string) => ({ ...(token ? { authorization: `Bearer ${token}` } : {}), 'x-institution-id': fixture!.institutionAId, 'x-academic-year-id': fixture!.yearAId });
     const validFile = await workbookBuffer();
     const before = await counts([fixture.surveyAId, fixture.archivedSurveyAId, fixture.surveyBId]);
+
+    const templateRoute = `http://127.0.0.1:${port}/api/surveys/results/template`;
+    await t.test('surveys:read downloads the official header-only XLSX template', async () => {
+      const response = await fetch(templateRoute, { headers: headers(fixture!.readToken) });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get('content-type'), XLSX_MIME);
+      assert.equal(response.headers.get('content-disposition'), 'attachment; filename="survey-results-template.xlsx"');
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer as any);
+      const expected = {
+        IndicatorResults: ['indicatorCode', 'segmentCode', 'reportedPercentage', 'respondentCount', 'earnedTotal', 'possibleTotal'],
+        DomainResults: ['domainCode', 'segmentCode', 'scorePercentage', 'respondentCount', 'isComparable'],
+        Comparisons: ['domainCode', 'segmentCode', 'comparisonType', 'comparisonCode', 'comparisonValue', 'comparisonRoundCode', 'noteAr', 'noteHe'],
+        Participation: ['segmentCode', 'participantCount', 'eligibleCount', 'responseRate'],
+      };
+      assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), Object.keys(expected));
+      for (const [name, headers] of Object.entries(expected)) {
+        const sheet = workbook.getWorksheet(name)!;
+        const values = sheet.getRow(1).values;
+        assert.ok(Array.isArray(values));
+        assert.deepEqual(values.slice(1), headers);
+        assert.equal(sheet.rowCount, 1);
+      }
+      assert.deepEqual(validateSurveyExcelWorkbook(await parseSurveyExcelWorkbook(buffer)).errors, []);
+    });
+    await t.test('official template rejects unauthenticated requests', async () => {
+      assert.equal((await fetch(templateRoute)).status, 401);
+    });
+    await t.test('official template requires surveys:read', async () => {
+      assert.equal((await fetch(templateRoute, { headers: headers(fixture!.updateToken) })).status, 403);
+    });
 
     await t.test('unauthenticated request is rejected', async () => {
       assert.equal((await fetch(route(), { method: 'POST', headers: headers(), body: formWithFile(validFile) })).status, 401);

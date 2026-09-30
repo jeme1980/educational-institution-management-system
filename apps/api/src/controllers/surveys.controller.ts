@@ -10,6 +10,8 @@ import { parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from '../services/
 import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
 import { previewSurveyExcelSemantics } from '../services/surveys-excel.semantic';
 import { executeSurveyExcelImport } from '../services/surveys-excel.import';
+import { createSurveyResultsTemplate } from '../services/surveys-excel.template';
+import { XLSX_MIME } from '../security/spreadsheet-security';
 import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
 
 const institutionOf = (req: ContextRequest) => req.context?.institutionId || req.institutionId || '';
@@ -51,6 +53,12 @@ export async function listSurveys(req: ContextRequest, res: Response) {
   const includeArchived = false;
   const items = await prisma.survey.findMany({ where: { institutionId, academicYearId, ...(includeArchived ? {} : { archivedAt: null }) }, include: { _count: { select: { sections: true, domains: true, indicators: true, rounds: true, segments: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }] });
   res.json(items.map((item) => surveyDto(item, { sectionCount: item._count.sections, domainCount: item._count.domains, indicatorCount: item._count.indicators, roundCount: item._count.rounds, segmentCount: item._count.segments })));
+}
+export async function downloadSurveyResultsTemplate(_req: ContextRequest, res: Response) {
+  const buffer = await createSurveyResultsTemplate();
+  res.setHeader('Content-Type', XLSX_MIME);
+  res.setHeader('Content-Disposition', 'attachment; filename="survey-results-template.xlsx"');
+  res.send(buffer);
 }
 export async function createSurvey(req: AuthRequest, res: Response) {
   const institutionId = institutionOf(req); const body: any = req.body; await requireAcademicYear(institutionId, body.academicYearId);

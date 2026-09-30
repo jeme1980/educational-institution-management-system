@@ -98,6 +98,33 @@ export interface CreateSurveySegmentRequest {
 
 export type UpdateSurveySegmentRequest = Partial<CreateSurveySegmentRequest>;
 
+export interface SurveyResultsPreviewSummary {
+  indicatorRowsTotal: number;
+  indicatorRowsValid: number;
+  domainRowsTotal: number;
+  domainRowsValid: number;
+  comparisonRowsTotal: number;
+  comparisonRowsValid: number;
+  participationRowsTotal: number;
+  participationRowsValid: number;
+  errorCount: number;
+}
+
+export interface SurveyResultsPreviewError {
+  sheet: string;
+  row: number;
+  column: string;
+  code: string;
+  message: string;
+}
+
+export interface SurveyResultsPreviewResponse {
+  valid: boolean;
+  context: { surveyId: string; roundId: string };
+  summary: SurveyResultsPreviewSummary;
+  errors: SurveyResultsPreviewError[];
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

@@ -40,7 +40,10 @@
                 <td class="rounds-date">{{ round.startsAt ? (round.startsAt | date:'yyyy-MM-dd') : '—' }} – {{ round.endsAt ? (round.endsAt | date:'yyyy-MM-dd') : '—' }}</td>
                 <td><ui-badge [tone]="statusTone(round.status)">{{ statusLabel(round.status) }}</ui-badge></td>
                 @if (canUpdate() && !survey()?.archivedAt) {
-                  <td><ui-table-actions><ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + round.nameAr" (activated)="openEdit(round)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button></ui-table-actions></td>
+                  <td><ui-table-actions>
+                    <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + round.nameAr" (activated)="openEdit(round)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
+                    <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'استيراد نتائج الجولة ' + round.nameAr" (activated)="openResultsPreview(round)"><mat-icon aria-hidden="true">upload_file</mat-icon></ui-button>
+                  </ui-table-actions></td>
                 }
               </tr>
             }

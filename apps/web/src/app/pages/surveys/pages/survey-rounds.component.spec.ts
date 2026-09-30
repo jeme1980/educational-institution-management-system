@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../../../app.routes';
@@ -75,17 +75,33 @@ describe('SurveyRoundsComponent', () => {
     expect(fixture.debugElement.query(By.css('ui-table-actions'))).toBeNull();
   });
 
-  it('shows create and edit controls for update permission and blocks archived survey mutations', async () => {
+  it('shows create, edit, and preview entry for update permission and blocks archived survey mutations', async () => {
     canUpdate.set(true);
     getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)], segments: [] });
     await render();
     expect(fixture.nativeElement.textContent).toContain('جولة جديدة');
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تعديل جولة one"]'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="استيراد نتائج الجولة جولة one"]'))).not.toBeNull();
     getSurveyStructure.mockResolvedValue({ survey: { ...survey, archivedAt: '2026-03-01T00:00:00.000Z' }, sections: [], rounds: [round('one', 1)], segments: [] });
     await fixture.componentInstance.retry();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('جولة جديدة');
     expect(fixture.debugElement.query(By.css('ui-table-actions'))).toBeNull();
+  });
+
+  it('hides preview entry from read-only users', async () => {
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)], segments: [] });
+    await render();
+    expect(fixture.debugElement.query(By.css('button[aria-label="استيراد نتائج الجولة جولة one"]'))).toBeNull();
+  });
+
+  it('opens the round preview route from its row action', async () => {
+    canUpdate.set(true);
+    getSurveyStructure.mockResolvedValue({ survey, sections: [], rounds: [round('one', 1)], segments: [] });
+    await render();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    fixture.debugElement.query(By.css('button[aria-label="استيراد نتائج الجولة جولة one"]')).nativeElement.click();
+    expect(navigate).toHaveBeenCalledWith(['/surveys', survey.id, 'rounds', 'one', 'results', 'import']);
   });
 
   it('creates a round without client year or survey IDs and reloads after success', async () => {

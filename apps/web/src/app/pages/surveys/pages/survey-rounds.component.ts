@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
 import { SurveyWriteError, SurveysApiService } from '../../../core/services/surveys-api.service';
@@ -35,6 +35,7 @@ const dateValue = (value: string | null): string => value?.slice(0, 10) ?? '';
 })
 export class SurveyRoundsComponent {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly surveysApi = inject(SurveysApiService);
   private readonly fb = inject(FormBuilder);
@@ -73,6 +74,12 @@ export class SurveyRoundsComponent {
   }
 
   async retry(): Promise<void> { await this.load(this.surveyId()); }
+
+  openResultsPreview(round: SurveyRound): void {
+    const surveyId = this.surveyId();
+    if (!surveyId || !this.canUpdate() || this.survey()?.archivedAt || round.surveyId !== surveyId) return;
+    void this.router.navigate(['/surveys', surveyId, 'rounds', round.id, 'results', 'import']);
+  }
 
   private async load(surveyId: string | null): Promise<void> {
     const requestId = ++this.requestId;

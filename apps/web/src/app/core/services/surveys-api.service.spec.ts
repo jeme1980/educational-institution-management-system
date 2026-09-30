@@ -6,6 +6,18 @@ import { AuthService } from './auth.service';
 import { SurveysApiService } from './surveys-api.service';
 
 describe('SurveysApiService', () => {
+  it('downloads the official survey results template as a Blob', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const blob = new Blob(['xlsx']);
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, blob: vi.fn().mockResolvedValue(blob) } as unknown as Response);
+    expect(await service.downloadSurveyResultsTemplate()).toBe(blob);
+    expect(apiFetch).toHaveBeenCalledWith('/api/surveys/results/template');
+  });
   it('requests the complete list for the selected academic year', async () => {
     TestBed.configureTestingModule({ providers: [
       SurveysApiService,
@@ -95,5 +107,25 @@ describe('SurveysApiService', () => {
     await service.updateSurveySegment('survey-1', 'segment-1', { nameAr: 'شريحة معدلة', isActive: false });
     expect(apiFetch).toHaveBeenNthCalledWith(1, '/api/surveys/survey-1/segments', expect.objectContaining({ method: 'POST', body: JSON.stringify({ code: 'G1', nameAr: 'شريحة', segmentType: 'custom' }) }));
     expect(apiFetch).toHaveBeenNthCalledWith(2, '/api/surveys/survey-1/segments/segment-1', expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ nameAr: 'شريحة معدلة', isActive: false }) }));
+  });
+
+  it('previews an XLSX using FormData with browser-managed multipart headers', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const result = { valid: true, context: { surveyId: 'survey-1', roundId: 'round-1' }, summary: {}, errors: [] };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 200, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
+    try {
+      const file = new File(['xlsx'], 'results.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      expect(await service.previewSurveyResults('survey-1', 'round-1', file)).toEqual(result);
+      const [path, options] = fetchSpy.mock.calls[0];
+      expect(path).toBe('/api/surveys/survey-1/rounds/round-1/results/preview');
+      expect(options?.method).toBe('POST');
+      expect(options?.headers).not.toHaveProperty('Content-Type');
+      expect((options?.body as FormData).get('file')).toBe(file);
+    } finally { fetchSpy.mockRestore(); }
   });
 });

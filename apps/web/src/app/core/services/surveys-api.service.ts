@@ -1,13 +1,23 @@
 import { Injectable } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyRound, SurveySection, SurveySegment, SurveyStructureResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
+import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyResultsPreviewResponse, SurveyRound, SurveySection, SurveySegment, SurveyStructureResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
 
 export class SurveyWriteError extends Error {
   constructor(readonly code: string | null) { super('Survey write request failed.'); }
 }
 
+export class SurveyPreviewError extends Error {
+  constructor(readonly code: string | null) { super('Survey preview request failed.'); }
+}
+
 @Injectable({ providedIn: 'root' })
 export class SurveysApiService extends BaseApiService {
+  async downloadSurveyResultsTemplate(): Promise<Blob> {
+    const response = await this.apiFetch('/api/surveys/results/template');
+    if (!response.ok) throw new Error('Survey results template request failed.');
+    return response.blob();
+  }
+
   async getSurveys(academicYearId: string): Promise<SurveyListResponse> {
     const query = new URLSearchParams({ academicYearId });
     const response = await this.apiFetch(`/api/surveys?${query.toString()}`);
@@ -70,6 +80,19 @@ export class SurveysApiService extends BaseApiService {
 
   async updateSurveySegment(surveyId: string, segmentId: string, payload: UpdateSurveySegmentRequest): Promise<SurveySegment> {
     return this.writeSurvey<SurveySegment>(`/api/surveys/${encodeURIComponent(surveyId)}/segments/${encodeURIComponent(segmentId)}`, 'PATCH', payload);
+  }
+
+  async previewSurveyResults(surveyId: string, roundId: string, file: File): Promise<SurveyResultsPreviewResponse> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await this.apiFetch(`/api/surveys/${encodeURIComponent(surveyId)}/rounds/${encodeURIComponent(roundId)}/results/preview`, { method: 'POST', body: form });
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      const error = body && typeof body === 'object' && 'error' in body ? body.error : null;
+      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : null;
+      throw new SurveyPreviewError(code);
+    }
+    return response.json() as Promise<SurveyResultsPreviewResponse>;
   }
 
   private async writeSurvey<T>(path: string, method: 'POST' | 'PATCH', payload: CreateSurveyRequest | UpdateSurveyRequest | CreateSurveyRoundRequest | UpdateSurveyRoundRequest | CreateSurveySectionRequest | UpdateSurveySectionRequest | CreateSurveyDomainRequest | UpdateSurveyDomainRequest | CreateSurveyIndicatorRequest | UpdateSurveyIndicatorRequest | CreateSurveySegmentRequest | UpdateSurveySegmentRequest): Promise<T> {

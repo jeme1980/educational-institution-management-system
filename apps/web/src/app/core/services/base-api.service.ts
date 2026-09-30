@@ -48,7 +48,7 @@ export class BaseApiService {
         Accept: 'application/json',
         ...originalHeaders,
       };
-      if (originalOptions.body != null && !headers['Content-Type'] && !headers['content-type']) {
+      if (originalOptions.body != null && !(originalOptions.body instanceof FormData) && !headers['Content-Type'] && !headers['content-type']) {
         headers['Content-Type'] = 'application/json';
       }
       const token = this.authService.idToken();

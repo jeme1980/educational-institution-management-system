@@ -1,0 +1,77 @@
+<main class="preview-page" dir="rtl">
+  <a class="preview-back" [routerLink]="['/surveys', surveyId(), 'rounds']"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الجولات</a>
+  <ui-page-header title="استيراد نتائج الاستبيان" description="ارفع ملف Excel لفحص النتائج قبل الاستيراد." />
+
+  @if (loading()) {
+    <section class="preview-feedback" role="status">جارٍ تحميل الاستبيان والجولة…</section>
+  } @else if (contextError()) {
+    <section class="preview-feedback" role="alert">
+      <p>{{ contextError() }}</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (survey() && round()) {
+    <p class="preview-context">{{ survey()?.nameAr }} <span aria-hidden="true">←</span> {{ round()?.nameAr }}</p>
+    @if (canDownloadTemplate()) {
+      <section class="preview-panel" aria-label="قالب نتائج الاستبيان">
+        <div class="preview-panel-body">
+          <p class="preview-template-guidance">استخدم القالب المعتمد لضمان أسماء الأوراق والأعمدة الصحيحة.</p>
+          <ui-button variant="secondary" [loading]="templateDownloading()" [disabled]="templateDownloading()" (activated)="downloadTemplate()">تنزيل قالب Excel</ui-button>
+          @if (templateError()) { <p class="preview-error" role="alert">{{ templateError() }}</p> }
+        </div>
+      </section>
+    }
+    @if (canPreview()) {
+      <section class="preview-panel" aria-label="اختيار ملف النتائج">
+        <div class="preview-panel-heading"><h2>اختيار الملف</h2></div>
+        <div class="preview-panel-body">
+          <label for="survey-results-file">ملف نتائج الاستبيان (.xlsx، حتى 10 MB)</label>
+          <input #fileInput id="survey-results-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onFileChange($event)" />
+          @if (selectedFile(); as file) {
+            <p class="preview-file-name">{{ file.name }} <span>({{ fileSize(file) }})</span></p>
+            <ui-button variant="ghost" size="sm" (activated)="clearFile(fileInput)">إزالة الملف</ui-button>
+          }
+          @if (fileError()) { <p class="preview-error" role="alert">{{ fileError() }}</p> }
+          <div class="preview-actions"><ui-button [disabled]="!selectedFile() || !!fileError() || previewing()" [loading]="previewing()" (activated)="runPreview()">فحص الملف</ui-button></div>
+        </div>
+      </section>
+      @if (previewError()) { <p class="preview-error preview-request-error" role="alert">{{ previewError() }}</p> }
+      @if (preview(); as result) {
+        <section class="preview-panel" aria-label="نتيجة فحص الملف">
+          <div class="preview-panel-heading"><h2>نتيجة الفحص</h2></div>
+          <div class="preview-panel-body">
+            <p class="preview-result" [class.preview-result-valid]="isPreviewImportReady()" [class.preview-result-empty]="result.valid && !isPreviewImportReady()" [class.preview-result-invalid]="!result.valid" role="status">{{ !result.valid ? 'الملف يحتاج إلى تصحيح قبل الاستيراد.' : isPreviewImportReady() ? 'الملف صالح للاستيراد.' : 'الملف صالح من حيث البنية، لكنه لا يحتوي على نتائج للاستيراد.' }}</p>
+            <div class="preview-table-scroll">
+              <table>
+                <thead><tr><th scope="col">نوع البيانات</th><th scope="col">إجمالي الصفوف</th><th scope="col">الصفوف الصالحة</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">نتائج المؤشرات</th><td>{{ result.summary.indicatorRowsTotal }}</td><td>{{ result.summary.indicatorRowsValid }}</td></tr>
+                  <tr><th scope="row">نتائج المجالات</th><td>{{ result.summary.domainRowsTotal }}</td><td>{{ result.summary.domainRowsValid }}</td></tr>
+                  <tr><th scope="row">المقارنات</th><td>{{ result.summary.comparisonRowsTotal }}</td><td>{{ result.summary.comparisonRowsValid }}</td></tr>
+                  <tr><th scope="row">المشاركة</th><td>{{ result.summary.participationRowsTotal }}</td><td>{{ result.summary.participationRowsValid }}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="preview-error-count">إجمالي الأخطاء: {{ result.summary.errorCount }}</p>
+          </div>
+        </section>
+        @if (result.errors.length) {
+          <section class="preview-panel" aria-label="أخطاء التحقق">
+            <div class="preview-panel-heading"><h2>أخطاء التحقق</h2></div>
+            <div class="preview-table-scroll">
+              <table class="preview-errors-table">
+                <thead><tr><th scope="col">ورقة العمل</th><th scope="col">الصف</th><th scope="col">العمود</th><th scope="col">الرسالة</th></tr></thead>
+                <tbody>
+                  @for (item of result.errors; track $index) {
+                    <tr><td dir="ltr">{{ item.sheet }}</td><td>{{ item.row }}</td><td dir="ltr">{{ item.column }}</td><td>{{ item.message }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+        }
+      }
+    } @else {
+      <section class="preview-feedback" role="status">{{ survey()?.archivedAt ? 'لا يمكن فحص نتائج استبيان مؤرشف.' : 'صلاحية تعديل الاستبيانات مطلوبة لفحص الملف.' }}</section>
+    }
+  }
+</main>

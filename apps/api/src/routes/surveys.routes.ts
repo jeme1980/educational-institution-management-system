@@ -11,6 +11,7 @@ const router = Router();
 const read = [requireAuth, requirePermission('surveys', 'read')] as const;
 const update = [requireAuth, requirePermission('surveys', 'update')] as const;
 router.get('/surveys', ...read, asyncHandler(controller.listSurveys));
+router.get('/surveys/results/template', ...read, asyncHandler(controller.downloadSurveyResultsTemplate));
 router.post('/surveys', ...update, validateRequest(schemas.createSurveySchema), asyncHandler(controller.createSurvey));
 router.get('/surveys/:surveyId', ...read, asyncHandler(controller.getSurvey));
 router.patch('/surveys/:surveyId', ...update, validateRequest(schemas.updateSurveySchema), asyncHandler(controller.updateSurvey));

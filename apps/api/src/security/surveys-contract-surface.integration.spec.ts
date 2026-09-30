@@ -18,14 +18,17 @@ const surveyTables = [
   'survey_participation_results',
 ] as const;
 
-test('survey route surface permits only preview and atomic import result routes and preserves database boundaries', async () => {
+test('survey result routes match the intended template, read, trends, preview, and import contract and preserve database boundaries', async () => {
   const routes = (surveyRouter as any).stack
     .filter((layer: any) => layer.route)
     .flatMap((layer: any) => Object.keys(layer.route.methods).map((method) => ({ method: method.toUpperCase(), path: String(layer.route.path) })));
   assert.ok(routes.length > 0);
   assert.equal(routes.some((route: any) => route.method === 'DELETE'), false);
-  const resultRoutes = routes.filter((route: any) => /result|import|batch/i.test(route.path));
+  const resultRoutes = routes.filter((route: any) => /result|import|batch|\/analytics\/trends/i.test(route.path));
   assert.deepEqual(resultRoutes, [
+    { method: 'GET', path: '/surveys/results/template' },
+    { method: 'GET', path: '/surveys/:surveyId/rounds/:roundId/results' },
+    { method: 'GET', path: '/surveys/:surveyId/analytics/trends' },
     { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/preview' },
     { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/import' },
   ]);

@@ -3,17 +3,18 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { SurveyPreviewError, SurveysApiService } from '../../../core/services/surveys-api.service';
+import { SurveyImportError, SurveyPreviewError, SurveysApiService } from '../../../core/services/surveys-api.service';
 import { UiButtonComponent } from '../../../shared/components/ui-button/ui-button.component';
+import { UiConfirmDialogComponent } from '../../../shared/components/ui-confirm-dialog/ui-confirm-dialog.component';
 import { UiPageHeaderComponent } from '../../../shared/components/ui-page-header/ui-page-header.component';
-import type { SurveyDetail, SurveyResultsPreviewResponse, SurveyRound } from '../models/survey.model';
+import type { SurveyDetail, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound } from '../models/survey.model';
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 @Component({
   selector: 'app-survey-results-preview',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatIconModule, RouterLink, UiButtonComponent, UiPageHeaderComponent],
+  imports: [MatIconModule, RouterLink, UiButtonComponent, UiConfirmDialogComponent, UiPageHeaderComponent],
   templateUrl: './survey-results-preview.component.html',
   styleUrl: './survey-results-preview.component.css',
 })
@@ -29,6 +30,7 @@ export class SurveyResultsPreviewComponent {
   readonly loading = signal(false);
   readonly contextError = signal('');
   readonly selectedFile = signal<File | null>(null);
+  private readonly previewedFile = signal<File | null>(null);
   readonly fileError = signal('');
   readonly preview = signal<SurveyResultsPreviewResponse | null>(null);
   readonly previewTotalRows = computed(() => {
@@ -40,8 +42,16 @@ export class SurveyResultsPreviewComponent {
   readonly previewing = signal(false);
   readonly templateDownloading = signal(false);
   readonly templateError = signal('');
+  readonly importConfirmOpen = signal(false);
+  readonly importing = signal(false);
+  readonly importResult = signal<SurveyResultsImportResponse | null>(null);
+  readonly importError = signal('');
+  readonly importBlocked = signal(false);
   readonly canDownloadTemplate = computed(() => this.auth.hasPermission('surveys:read'));
   readonly canPreview = computed(() => this.auth.hasPermission('surveys:update') && Boolean(this.survey() && this.round() && !this.survey()?.archivedAt));
+  readonly canImport = computed(() => this.canPreview() && this.isPreviewImportReady()
+    && this.selectedFile() !== null && this.selectedFile() === this.previewedFile()
+    && !this.importing() && !this.importResult() && !this.importBlocked());
   private requestVersion = 0;
 
   constructor() {
@@ -55,10 +65,15 @@ export class SurveyResultsPreviewComponent {
     this.survey.set(null);
     this.round.set(null);
     this.selectedFile.set(null);
+    this.previewedFile.set(null);
     this.fileError.set('');
     this.preview.set(null);
     this.previewError.set('');
     this.previewing.set(false);
+    this.importConfirmOpen.set(false);
+    this.importResult.set(null);
+    this.importError.set('');
+    this.importBlocked.set(false);
     this.contextError.set('');
     this.loading.set(Boolean(surveyId && roundId));
     if (!surveyId || !roundId) {
@@ -83,12 +98,15 @@ export class SurveyResultsPreviewComponent {
   }
 
   onFileChange(event: Event): void {
+    if (this.importing() || this.importConfirmOpen() || this.importResult()) return;
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     ++this.requestVersion;
     this.previewing.set(false);
     this.preview.set(null);
+    this.previewedFile.set(null);
     this.previewError.set('');
+    if (!this.importBlocked()) this.importError.set('');
     this.selectedFile.set(file);
     this.fileError.set(!file ? '' : !/\.xlsx$/i.test(file.name)
       ? 'اختر ملف Excel بصيغة .xlsx فقط.'
@@ -96,6 +114,7 @@ export class SurveyResultsPreviewComponent {
   }
 
   clearFile(input: HTMLInputElement): void {
+    if (this.importing() || this.importConfirmOpen() || this.importResult()) return;
     input.value = '';
     this.onFileChange({ target: input } as unknown as Event);
   }
@@ -128,14 +147,18 @@ export class SurveyResultsPreviewComponent {
     const file = this.selectedFile();
     const surveyId = this.surveyId();
     const roundId = this.roundId();
-    if (!file || this.fileError() || this.previewing() || !this.canPreview() || !surveyId || !roundId) return;
+    if (!file || this.fileError() || this.previewing() || this.importing() || this.importConfirmOpen() || this.importResult() || !this.canPreview() || !surveyId || !roundId) return;
     const version = ++this.requestVersion;
     this.preview.set(null);
+    this.previewedFile.set(null);
     this.previewError.set('');
     this.previewing.set(true);
     try {
       const result = await this.api.previewSurveyResults(surveyId, roundId, file);
-      if (version === this.requestVersion) this.preview.set(result);
+      if (version === this.requestVersion) {
+        this.previewedFile.set(file);
+        this.preview.set(result);
+      }
     } catch (error) {
       if (version !== this.requestVersion) return;
       const code = error instanceof SurveyPreviewError ? error.code : null;
@@ -153,6 +176,50 @@ export class SurveyResultsPreviewComponent {
       } as Record<string, string>)[code ?? ''] ?? 'تعذر فحص الملف. حاول مرة أخرى.');
     } finally {
       if (version === this.requestVersion) this.previewing.set(false);
+    }
+  }
+
+  openImportConfirmation(): void {
+    if (this.canImport()) {
+      this.importError.set('');
+      this.importConfirmOpen.set(true);
+    }
+  }
+
+  cancelImport(): void {
+    if (!this.importing()) this.importConfirmOpen.set(false);
+  }
+
+  async confirmImport(): Promise<void> {
+    if (!this.importConfirmOpen() || !this.canImport()) return;
+    const file = this.selectedFile();
+    const surveyId = this.surveyId();
+    const roundId = this.roundId();
+    if (!file || file !== this.previewedFile() || !surveyId || !roundId) return;
+    this.importing.set(true);
+    this.importError.set('');
+    try {
+      this.importResult.set(await this.api.importSurveyResults(surveyId, roundId, file));
+    } catch (error) {
+      const code = error instanceof SurveyImportError ? error.code : null;
+      this.importError.set(({
+        SURVEY_IMPORT_DUPLICATE_FILE: 'تم استيراد هذا الملف لهذه الجولة مسبقًا.',
+        SURVEY_ROUND_RESULTS_ALREADY_EXIST: 'توجد نتائج مسجلة لهذه الجولة بالفعل، ولا يمكن استيراد ملف آخر.',
+        SURVEY_IMPORT_PREVIEW_INVALID: 'لم يعد الملف صالحًا للاستيراد. افحص الملف مرة أخرى.',
+        SURVEY_IMPORT_EMPTY: 'الملف لا يحتوي على نتائج للاستيراد.',
+        SURVEY_NOT_FOUND: 'الاستبيان غير موجود أو غير متاح.',
+        SURVEY_ROUND_NOT_FOUND: 'الجولة غير موجودة أو لا تتبع هذا الاستبيان.',
+        SURVEY_ARCHIVED: 'لا يمكن استيراد نتائج لاستبيان مؤرشف.',
+      } as Record<string, string>)[code ?? ''] ?? 'تعذر استيراد النتائج. حاول مرة أخرى.');
+      if (code === 'SURVEY_IMPORT_PREVIEW_INVALID' || code === 'SURVEY_IMPORT_EMPTY') {
+        this.preview.set(null);
+        this.previewedFile.set(null);
+      }
+      if (code === 'SURVEY_IMPORT_DUPLICATE_FILE' || code === 'SURVEY_ROUND_RESULTS_ALREADY_EXIST'
+        || code === 'SURVEY_NOT_FOUND' || code === 'SURVEY_ROUND_NOT_FOUND' || code === 'SURVEY_ARCHIVED') this.importBlocked.set(true);
+    } finally {
+      this.importing.set(false);
+      this.importConfirmOpen.set(false);
     }
   }
 }

@@ -25,13 +25,13 @@
         <div class="preview-panel-heading"><h2>اختيار الملف</h2></div>
         <div class="preview-panel-body">
           <label for="survey-results-file">ملف نتائج الاستبيان (.xlsx، حتى 10 MB)</label>
-          <input #fileInput id="survey-results-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="onFileChange($event)" />
+          <input #fileInput id="survey-results-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" [disabled]="importing() || importConfirmOpen() || !!importResult()" (change)="onFileChange($event)" />
           @if (selectedFile(); as file) {
             <p class="preview-file-name">{{ file.name }} <span>({{ fileSize(file) }})</span></p>
-            <ui-button variant="ghost" size="sm" (activated)="clearFile(fileInput)">إزالة الملف</ui-button>
+            <ui-button variant="ghost" size="sm" [disabled]="importing() || importConfirmOpen() || !!importResult()" (activated)="clearFile(fileInput)">إزالة الملف</ui-button>
           }
           @if (fileError()) { <p class="preview-error" role="alert">{{ fileError() }}</p> }
-          <div class="preview-actions"><ui-button [disabled]="!selectedFile() || !!fileError() || previewing()" [loading]="previewing()" (activated)="runPreview()">فحص الملف</ui-button></div>
+          <div class="preview-actions"><ui-button [disabled]="!selectedFile() || !!fileError() || previewing() || importing() || importConfirmOpen() || !!importResult()" [loading]="previewing()" (activated)="runPreview()">فحص الملف</ui-button></div>
         </div>
       </section>
       @if (previewError()) { <p class="preview-error preview-request-error" role="alert">{{ previewError() }}</p> }
@@ -52,6 +52,7 @@
               </table>
             </div>
             <p class="preview-error-count">إجمالي الأخطاء: {{ result.summary.errorCount }}</p>
+            @if (canImport()) { <ui-button (activated)="openImportConfirmation()">استيراد النتائج</ui-button> }
           </div>
         </section>
         @if (result.errors.length) {
@@ -70,8 +71,18 @@
           </section>
         }
       }
+      @if (importError()) { <p class="preview-error preview-request-error" role="alert">{{ importError() }}</p> }
+      @if (importResult(); as imported) {
+        <section class="preview-panel" aria-label="نجاح استيراد النتائج">
+          <div class="preview-panel-body">
+            <p class="preview-result preview-result-valid" role="status">تم استيراد نتائج الجولة بنجاح. عدد الصفوف المستوردة: {{ imported.rowCount }}.</p>
+            <a class="preview-back" [routerLink]="['/surveys', surveyId(), 'rounds']">العودة إلى الجولات</a>
+          </div>
+        </section>
+      }
     } @else {
       <section class="preview-feedback" role="status">{{ survey()?.archivedAt ? 'لا يمكن فحص نتائج استبيان مؤرشف.' : 'صلاحية تعديل الاستبيانات مطلوبة لفحص الملف.' }}</section>
     }
   }
+  <ui-confirm-dialog [open]="importConfirmOpen()" title="تأكيد استيراد النتائج" message="سيتم حفظ نتائج هذه الجولة، ولا يمكن استيراد ملف آخر للجولة بعد وجود النتائج." confirmText="تأكيد الاستيراد" cancelText="إلغاء" [loading]="importing()" (confirmed)="confirmImport()" (cancelled)="cancelImport()" />
 </main>

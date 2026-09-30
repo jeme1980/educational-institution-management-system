@@ -125,6 +125,18 @@ export interface SurveyResultsPreviewResponse {
   errors: SurveyResultsPreviewError[];
 }
 
+export interface SurveyResultsImportResponse {
+  importBatchId: string;
+  surveyId: string;
+  roundId: string;
+  status: 'COMPLETED';
+  rowCount: number;
+  validRowCount: number;
+  invalidRowCount: number;
+  fileHash: string;
+  importedAt: string;
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

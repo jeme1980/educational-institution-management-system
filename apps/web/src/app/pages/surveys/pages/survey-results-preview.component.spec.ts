@@ -6,14 +6,15 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../../../app.routes';
 import { AuthService } from '../../../core/services/auth.service';
-import { SurveyPreviewError, SurveysApiService } from '../../../core/services/surveys-api.service';
-import type { SurveyDetail, SurveyResultsPreviewResponse, SurveyRound, SurveyStructureResponse } from '../models/survey.model';
+import { SurveyImportError, SurveyPreviewError, SurveysApiService } from '../../../core/services/surveys-api.service';
+import type { SurveyDetail, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound, SurveyStructureResponse } from '../models/survey.model';
 import { SurveyResultsPreviewComponent } from './survey-results-preview.component';
 
 const survey: SurveyDetail = { id: 'survey-1', academicYearId: 'year-1', nameAr: 'استبيان المدرسة', nameHe: null, descriptionAr: null, descriptionHe: null, audienceType: null, status: 'ACTIVE', isActive: true, archivedAt: null, createdAt: '', updatedAt: '' };
 const round: SurveyRound = { id: 'round-1', surveyId: survey.id, academicYearId: survey.academicYearId, code: 'ROUND_1', nameAr: 'الجولة الأولى', nameHe: null, sequenceNumber: 1, startsAt: null, endsAt: null, measurementDate: null, status: 'OPEN', closedAt: null, createdAt: '', updatedAt: '' };
 const summary = { indicatorRowsTotal: 2, indicatorRowsValid: 1, domainRowsTotal: 3, domainRowsValid: 2, comparisonRowsTotal: 4, comparisonRowsValid: 3, participationRowsTotal: 5, participationRowsValid: 4, errorCount: 1 };
 const validResult: SurveyResultsPreviewResponse = { valid: true, context: { surveyId: survey.id, roundId: round.id }, summary, errors: [] };
+const importedResult: SurveyResultsImportResponse = { importBatchId: 'batch-1', surveyId: survey.id, roundId: round.id, status: 'COMPLETED', rowCount: 14, validRowCount: 14, invalidRowCount: 0, fileHash: 'hash', importedAt: '2026-09-30T00:00:00.000Z' };
 
 describe('SurveyResultsPreviewComponent', () => {
   let fixture: ComponentFixture<SurveyResultsPreviewComponent>;
@@ -21,6 +22,7 @@ describe('SurveyResultsPreviewComponent', () => {
   const getSurveyStructure = vi.fn<(id: string) => Promise<SurveyStructureResponse>>();
   const previewSurveyResults = vi.fn<(surveyId: string, roundId: string, file: File) => Promise<SurveyResultsPreviewResponse>>();
   const downloadSurveyResultsTemplate = vi.fn<() => Promise<Blob>>();
+  const importSurveyResults = vi.fn<(surveyId: string, roundId: string, file: File) => Promise<SurveyResultsImportResponse>>();
   const paramMap = convertToParamMap({ surveyId: survey.id, roundId: round.id });
   const render = async () => {
     fixture = TestBed.createComponent(SurveyResultsPreviewComponent);
@@ -34,18 +36,26 @@ describe('SurveyResultsPreviewComponent', () => {
     input.dispatchEvent(new Event('change'));
     fixture.detectChanges();
   };
+  const previewFile = async (file = new File(['xlsx'], 'results.xlsx')) => {
+    await render();
+    selectFile(file);
+    await fixture.componentInstance.runPreview();
+    fixture.detectChanges();
+    return file;
+  };
 
   beforeEach(async () => {
     canUpdate.set(true);
     getSurveyStructure.mockReset().mockResolvedValue({ survey, rounds: [round], sections: [], segments: [] });
     previewSurveyResults.mockReset().mockResolvedValue(validResult);
     downloadSurveyResultsTemplate.mockReset().mockResolvedValue(new Blob(['xlsx']));
+    importSurveyResults.mockReset().mockResolvedValue(importedResult);
     await TestBed.configureTestingModule({
       imports: [SurveyResultsPreviewComponent],
       providers: [provideRouter([]),
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap }, paramMap: of(paramMap) } },
         { provide: AuthService, useValue: { hasPermission: (permission: string) => permission === 'surveys:read' || (permission === 'surveys:update' && canUpdate()) } },
-        { provide: SurveysApiService, useValue: { getSurveyStructure, previewSurveyResults, downloadSurveyResultsTemplate } },
+        { provide: SurveysApiService, useValue: { getSurveyStructure, previewSurveyResults, downloadSurveyResultsTemplate, importSurveyResults } },
       ],
     }).compileComponents();
   });
@@ -60,6 +70,7 @@ describe('SurveyResultsPreviewComponent', () => {
     expect(fixture.debugElement.query(By.css('ui-pagination'))).toBeNull();
     expect(fixture.debugElement.query(By.css('#survey-results-file'))).not.toBeNull();
     expect(fixture.nativeElement.textContent).toContain('تنزيل قالب Excel');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
   });
 
   it('downloads the backend Blob with the official filename', async () => {
@@ -106,6 +117,7 @@ describe('SurveyResultsPreviewComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('صلاحية تعديل الاستبيانات مطلوبة');
     expect(fixture.debugElement.query(By.css('#survey-results-file'))).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('تنزيل قالب Excel');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
   });
 
   it('shows archived Survey context without offering the file picker', async () => {
@@ -114,6 +126,7 @@ describe('SurveyResultsPreviewComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('لا يمكن فحص نتائج استبيان مؤرشف.');
     expect(fixture.debugElement.query(By.css('#survey-results-file'))).toBeNull();
     expect(previewSurveyResults).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
   });
 
   it('accepts XLSX, shows its filename, sends preview once, and renders four summary categories', async () => {
@@ -128,6 +141,7 @@ describe('SurveyResultsPreviewComponent', () => {
     expect(previewSurveyResults).toHaveBeenCalledWith(survey.id, round.id, file);
     expect(fixture.componentInstance.isPreviewImportReady()).toBe(true);
     expect(fixture.nativeElement.textContent).toContain('الملف صالح للاستيراد.');
+    expect(fixture.nativeElement.textContent).toContain('استيراد النتائج');
     expect(fixture.debugElement.queryAll(By.css('section[aria-label="نتيجة فحص الملف"] tbody tr')).length).toBe(4);
     for (const label of ['نتائج المؤشرات', 'نتائج المجالات', 'المقارنات', 'المشاركة', 'إجمالي الأخطاء']) expect(fixture.nativeElement.textContent).toContain(label);
   });
@@ -150,6 +164,93 @@ describe('SurveyResultsPreviewComponent', () => {
     expect(fixture.debugElement.queryAll(By.css('section[aria-label="نتيجة فحص الملف"] tbody td')).map(cell => cell.nativeElement.textContent.trim())).toEqual(Array(8).fill('0'));
     expect(fixture.debugElement.query(By.css('section[aria-label="أخطاء التحقق"]'))).toBeNull();
     expect(fixture.nativeElement.textContent).not.toContain('تأكيد الاستيراد');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
+  });
+
+  it('requires confirmation, cancels without a write, and imports the exact previewed File once', async () => {
+    const file = await previewFile();
+    fixture.componentInstance.openImportConfirmation();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('تأكيد استيراد النتائج');
+    expect(fixture.nativeElement.textContent).toContain('ولا يمكن استيراد ملف آخر للجولة');
+    fixture.componentInstance.cancelImport();
+    expect(importSurveyResults).not.toHaveBeenCalled();
+
+    let finish!: (result: SurveyResultsImportResponse) => void;
+    importSurveyResults.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    fixture.componentInstance.openImportConfirmation();
+    const pending = fixture.componentInstance.confirmImport();
+    await fixture.componentInstance.confirmImport();
+    fixture.detectChanges();
+    expect(importSurveyResults).toHaveBeenCalledOnce();
+    expect(importSurveyResults).toHaveBeenCalledWith(survey.id, round.id, file);
+    expect(fixture.componentInstance.importing()).toBe(true);
+    expect(fixture.nativeElement.querySelector('ui-confirm-dialog button:disabled')).not.toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('نتيجة الفحص');
+    expect(fixture.nativeElement.textContent).not.toContain('استبدال النتائج');
+    finish(importedResult);
+    await pending;
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('تم استيراد نتائج الجولة بنجاح. عدد الصفوف المستوردة: 14.');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
+    expect(fixture.componentInstance.canImport()).toBe(false);
+    fixture.componentInstance.openImportConfirmation();
+    await fixture.componentInstance.confirmImport();
+    expect(importSurveyResults).toHaveBeenCalledOnce();
+    expect(fixture.debugElement.query(By.css('ui-pagination'))).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('الرسم البياني');
+  });
+
+  it('removes import readiness when a different file is selected after preview', async () => {
+    await previewFile();
+    selectFile(new File(['other'], 'other.xlsx'));
+    expect(fixture.componentInstance.canImport()).toBe(false);
+    fixture.componentInstance.openImportConfirmation();
+    await fixture.componentInstance.confirmImport();
+    expect(importSurveyResults).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
+  });
+
+  it.each([
+    ['SURVEY_IMPORT_DUPLICATE_FILE', 'تم استيراد هذا الملف لهذه الجولة مسبقًا.'],
+    ['SURVEY_ROUND_RESULTS_ALREADY_EXIST', 'توجد نتائج مسجلة لهذه الجولة بالفعل، ولا يمكن استيراد ملف آخر.'],
+    ['SURVEY_IMPORT_PREVIEW_INVALID', 'لم يعد الملف صالحًا للاستيراد. افحص الملف مرة أخرى.'],
+    ['SURVEY_IMPORT_EMPTY', 'الملف لا يحتوي على نتائج للاستيراد.'],
+    ['SURVEY_NOT_FOUND', 'الاستبيان غير موجود أو غير متاح.'],
+    ['SURVEY_ROUND_NOT_FOUND', 'الجولة غير موجودة أو لا تتبع هذا الاستبيان.'],
+    ['SURVEY_ARCHIVED', 'لا يمكن استيراد نتائج لاستبيان مؤرشف.'],
+  ])('maps import error %s without exposing the backend code', async (code, message) => {
+    importSurveyResults.mockRejectedValue(new SurveyImportError(code));
+    await previewFile();
+    fixture.componentInstance.openImportConfirmation();
+    await fixture.componentInstance.confirmImport();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain(message);
+    expect(fixture.nativeElement.textContent).not.toContain(code);
+    expect(fixture.componentInstance.importResult()).toBeNull();
+    expect(fixture.componentInstance.canImport()).toBe(false);
+    if (code === 'SURVEY_IMPORT_PREVIEW_INVALID' || code === 'SURVEY_IMPORT_EMPTY') expect(fixture.componentInstance.preview()).toBeNull();
+    if (code === 'SURVEY_IMPORT_DUPLICATE_FILE' || code === 'SURVEY_ROUND_RESULTS_ALREADY_EXIST') {
+      selectFile(new File(['other'], 'other.xlsx'));
+      expect(fixture.componentInstance.importError()).toBe(message);
+      expect(fixture.componentInstance.canImport()).toBe(false);
+    }
+  });
+
+  it('keeps the file and valid preview available after a network failure for an explicit retry', async () => {
+    importSurveyResults.mockRejectedValueOnce(new Error('private network detail'));
+    const file = await previewFile();
+    fixture.componentInstance.openImportConfirmation();
+    await fixture.componentInstance.confirmImport();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('تعذر استيراد النتائج. حاول مرة أخرى.');
+    expect(fixture.nativeElement.textContent).not.toContain('private network detail');
+    expect(fixture.componentInstance.selectedFile()).toBe(file);
+    expect(fixture.componentInstance.preview()).toEqual(validResult);
+    expect(fixture.componentInstance.canImport()).toBe(true);
+    fixture.componentInstance.openImportConfirmation();
+    await fixture.componentInstance.confirmImport();
+    expect(importSurveyResults).toHaveBeenCalledTimes(2);
   });
 
   it('rejects non-XLSX and files larger than 10 MB before calling preview', async () => {
@@ -171,6 +272,7 @@ describe('SurveyResultsPreviewComponent', () => {
     fixture.detectChanges();
     expect(fixture.componentInstance.isPreviewImportReady()).toBe(false);
     expect(fixture.nativeElement.textContent).toContain('الملف يحتاج إلى تصحيح قبل الاستيراد.');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
     const row = fixture.debugElement.query(By.css('section[aria-label="أخطاء التحقق"] tbody tr')).nativeElement.textContent;
     for (const value of ['IndicatorResults', '7', 'reportedPercentage', 'القيمة غير صالحة']) expect(row).toContain(value);
     expect(fixture.nativeElement.textContent).not.toContain('تعذر فحص الملف');
@@ -185,6 +287,7 @@ describe('SurveyResultsPreviewComponent', () => {
     selectFile(new File(['x'], 'second.xlsx'));
     expect(fixture.nativeElement.textContent).toContain('second.xlsx');
     expect(fixture.nativeElement.textContent).not.toContain('الملف صالح للاستيراد.');
+    expect(fixture.nativeElement.textContent).not.toContain('استيراد النتائج');
   });
 
   it('maps backend errors to Arabic and prevents double-submit', async () => {

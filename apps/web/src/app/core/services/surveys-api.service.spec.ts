@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
-import { SurveysApiService } from './surveys-api.service';
+import { SurveyImportError, SurveysApiService } from './surveys-api.service';
 
 describe('SurveysApiService', () => {
   it('downloads the official survey results template as a Blob', async () => {
@@ -126,6 +126,41 @@ describe('SurveysApiService', () => {
       expect(options?.method).toBe('POST');
       expect(options?.headers).not.toHaveProperty('Content-Type');
       expect((options?.body as FormData).get('file')).toBe(file);
+    } finally { fetchSpy.mockRestore(); }
+  });
+
+  it('imports one XLSX with a single multipart request and returns the backend response', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const result = { importBatchId: 'batch-1', surveyId: 'survey-1', roundId: 'round-1', status: 'COMPLETED', rowCount: 1, validRowCount: 1, invalidRowCount: 0, fileHash: 'hash', importedAt: '2026-09-30T00:00:00.000Z' };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 201, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
+    try {
+      const file = new File(['xlsx'], 'results.xlsx');
+      expect(await service.importSurveyResults('survey-1', 'round-1', file)).toEqual(result);
+      expect(fetchSpy).toHaveBeenCalledOnce();
+      const [path, options] = fetchSpy.mock.calls[0];
+      expect(path).toBe('/api/surveys/survey-1/rounds/round-1/results/import');
+      expect(options?.method).toBe('POST');
+      expect(options?.headers).not.toHaveProperty('Content-Type');
+      expect((options?.body as FormData).get('file')).toBe(file);
+    } finally { fetchSpy.mockRestore(); }
+  });
+
+  it('preserves the import error code for user-facing conflict handling', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 409, json: vi.fn().mockResolvedValue({ error: { code: 'SURVEY_ROUND_RESULTS_ALREADY_EXIST' } }) } as unknown as Response);
+    try {
+      await expect(service.importSurveyResults('survey-1', 'round-1', new File(['xlsx'], 'results.xlsx')))
+        .rejects.toMatchObject({ code: 'SURVEY_ROUND_RESULTS_ALREADY_EXIST' } satisfies Partial<SurveyImportError>);
     } finally { fetchSpy.mockRestore(); }
   });
 });

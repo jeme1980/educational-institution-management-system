@@ -6,6 +6,7 @@ const code = text(80);
 const sortOrder = z.number().int().min(0).max(1_000_000).optional();
 const status = z.enum(['DRAFT', 'ACTIVE', 'CLOSED']);
 const roundStatus = z.enum(['PLANNED', 'OPEN', 'CLOSED']);
+export const surveyRoundResultsParamsSchema = z.object({ surveyId: z.string().uuid(), roundId: z.string().uuid() });
 
 export const createSurveySchema = z.object({
   academicYearId: z.string().uuid(), nameAr: text(500), nameHe: optionalText(500),

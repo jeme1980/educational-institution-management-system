@@ -1,4 +1,5 @@
 import type { Response } from 'express';
+import * as schemas from '../validation/surveys.schemas';
 import { prisma } from '../db/prisma';
 import type { AuthRequest } from '../middleware/auth';
 import type { ContextRequest } from '../middleware/context';
@@ -10,6 +11,7 @@ import { parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from '../services/
 import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
 import { previewSurveyExcelSemantics } from '../services/surveys-excel.semantic';
 import { executeSurveyExcelImport } from '../services/surveys-excel.import';
+import { readSurveyRoundResults } from '../services/surveys-results-read.service';
 import { createSurveyResultsTemplate } from '../services/surveys-excel.template';
 import { XLSX_MIME } from '../security/spreadsheet-security';
 import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
@@ -78,6 +80,13 @@ export async function getStructure(req: ContextRequest, res: Response) {
   const survey = await requireSurvey(institutionOf(req), param(req, 'surveyId'), true);
   const structure = await prisma.survey.findUniqueOrThrow({ where: { id: survey.id }, include: { sections: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], include: { domains: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }], include: { indicators: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } } } } }, rounds: { orderBy: [{ sequenceNumber: 'asc' }, { measurementDate: 'asc' }, { id: 'asc' }] }, segments: { orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }] } } });
   res.json({ survey: surveyDto(structure), sections: structure.sections, rounds: structure.rounds, segments: structure.segments });
+}
+export async function getSurveyRoundResults(req: ContextRequest, res: Response) {
+  const surveyId = param(req, 'surveyId');
+  const roundId = param(req, 'roundId');
+  if (!schemas.surveyRoundResultsParamsSchema.shape.surveyId.safeParse(surveyId).success) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
+  if (!schemas.surveyRoundResultsParamsSchema.shape.roundId.safeParse(roundId).success) throw new HttpError(404, 'Survey round was not found.', 'SURVEY_ROUND_NOT_FOUND');
+  res.json(await readSurveyRoundResults(institutionOf(req), surveyId, roundId));
 }
 export async function previewSurveyResults(req: AuthRequest, res: Response) {
   const institutionId = institutionOf(req);

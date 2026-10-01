@@ -1,0 +1,74 @@
+<main class="comparisons-page" dir="rtl">
+  <a class="comparisons-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header title="مقارنات الاستبيان" description="عرض المقارنات المبلّغ عنها في نتائج الاستبيان." />
+
+  @if (loading()) {
+    <section class="comparisons-feedback" role="status">جارٍ تحميل مقارنات الاستبيان…</section>
+  } @else if (error()) {
+    <section class="comparisons-feedback" role="alert">
+      <p>{{ error() }}</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (result(); as data) {
+    <p class="comparisons-context">{{ data.survey.nameAr }}</p>
+    @if (data.rounds.length) {
+      <div class="comparisons-filters">
+        <label class="comparisons-select" for="comparison-round">
+          <span>الجولة</span>
+          <ui-select id="comparison-round" [ngModel]="selectedRoundId()" (ngModelChange)="selectRound($event)">
+            @for (round of data.rounds; track round.id) { <option [value]="round.id">{{ round.nameAr }}</option> }
+          </ui-select>
+        </label>
+        @if (segments().length) {
+          <label class="comparisons-select" for="comparison-segment">
+            <span>الشريحة</span>
+            <ui-select id="comparison-segment" [ngModel]="selectedSegmentId()" (ngModelChange)="selectSegment($event)">
+              @for (segment of segments(); track segment.id) { <option [value]="segment.id">{{ segment.nameAr }}</option> }
+            </ui-select>
+          </label>
+        }
+      </div>
+    }
+
+    @if (!data.groups.length) {
+      <ui-empty-state title="لا توجد مقارنات مبلّغ عنها لهذا الاستبيان." [compact]="true" />
+    } @else if (!visibleGroups().length) {
+      <ui-empty-state title="لا توجد بيانات مقارنة لهذه الجولة." [compact]="true" />
+    } @else {
+      @for (group of visibleGroups(); track group.domainId) {
+        <ui-section-card [title]="group.domain.nameAr" [description]="'القسم: ' + group.section.nameAr">
+          @if (group.domainResult; as domainResult) {
+            <dl class="comparisons-summary">
+              <div><dt>نتيجة المجال</dt><dd>{{ percentage(domainResult.scorePercentage) }}</dd></div>
+              <div><dt>عدد المستجيبين</dt><dd>{{ count(domainResult.respondentCount) }}</dd></div>
+              <div><dt>قابل للمقارنة</dt><dd>{{ comparable(domainResult.isComparable) }}</dd></div>
+            </dl>
+          } @else {
+            <p class="comparisons-empty">لا توجد نتيجة مجال مسجلة لهذه المجموعة.</p>
+          }
+
+          @if (group.comparisons.length) {
+            <h3 class="comparisons-table-title">المقارنات المبلّغ عنها</h3>
+            <div class="comparisons-table-scroll"><table>
+              <thead><tr><th scope="col">نوع المقارنة</th><th scope="col">القيمة</th><th scope="col">رمز المقارنة</th><th scope="col">رمز جولة المقارنة</th><th scope="col">ملاحظة بالعربية</th><th scope="col">ملاحظة بالعبرية</th></tr></thead>
+              <tbody>
+                @for (comparison of group.comparisons; track comparison.id) {
+                  <tr>
+                    <th scope="row">{{ comparisonTypeLabel(comparison.comparisonType) }}</th>
+                    <td>{{ percentage(comparison.comparisonValue) }}</td>
+                    <td><span dir="ltr">{{ text(comparison.comparisonCode) }}</span></td>
+                    <td><span dir="ltr">{{ text(comparison.comparisonRoundCode) }}</span></td>
+                    <td>{{ text(comparison.noteAr) }}</td>
+                    <td lang="he" dir="rtl">{{ text(comparison.noteHe) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table></div>
+          } @else {
+            <p class="comparisons-empty">لا توجد مقارنات مبلّغ عنها لهذا المجال.</p>
+          }
+        </ui-section-card>
+      }
+    }
+  }
+</main>

@@ -116,6 +116,13 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/surveys/pages/survey-trends.component').then(m => m.SurveyTrendsComponent),
   },
   {
+    path: 'surveys/:surveyId/analytics/comparisons',
+    title: 'مقارنات الاستبيان',
+    canActivate: [authGuard, permissionGuard],
+    data: { requiredPermission: 'surveys:read' },
+    loadComponent: () => import('./pages/surveys/pages/survey-comparisons.component').then(m => m.SurveyComparisonsComponent),
+  },
+  {
     path: 'surveys/:surveyId/structure',
     title: 'بنية الاستبيان',
     canActivate: [authGuard, permissionGuard],

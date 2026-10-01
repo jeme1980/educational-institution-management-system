@@ -3,10 +3,27 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from './auth.service';
-import { SurveyImportError, SurveyResultsReadError, SurveyTrendsReadError, SurveysApiService } from './surveys-api.service';
-import type { SurveyRoundResultsResponse, SurveyTrendsResponse } from '../../pages/surveys/models/survey.model';
+import { SurveyComparisonsReadError, SurveyImportError, SurveyResultsReadError, SurveyTrendsReadError, SurveysApiService } from './surveys-api.service';
+import type { SurveyComparisonsResponse, SurveyRoundResultsResponse, SurveyTrendsResponse } from '../../pages/surveys/models/survey.model';
 
 describe('SurveysApiService', () => {
+  it('reads typed reported comparisons from the exact survey GET endpoint', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const result: SurveyComparisonsResponse = {
+      survey: { id: 'survey-1', nameAr: 'استبيان', nameHe: null, academicYearId: 'year-1', archivedAt: null },
+      rounds: [], groups: [],
+    };
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
+    expect(await service.getSurveyComparisons('survey-1')).toEqual(result);
+    expect(apiFetch).toHaveBeenCalledExactlyOnceWith('/api/surveys/survey-1/analytics/comparisons');
+    apiFetch.mockResolvedValue({ ok: false, status: 404, json: vi.fn().mockResolvedValue({ error: { code: 'SURVEY_NOT_FOUND' } }) } as unknown as Response);
+    await expect(service.getSurveyComparisons('survey-2')).rejects.toMatchObject({ code: 'SURVEY_NOT_FOUND', status: 404 } satisfies Partial<SurveyComparisonsReadError>);
+  });
   it('reads typed multi-round trends with the exact GET path and no query parameters', async () => {
     TestBed.configureTestingModule({ providers: [
       SurveysApiService,

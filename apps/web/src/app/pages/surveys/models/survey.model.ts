@@ -219,6 +219,31 @@ export interface SurveyTrendsResponse {
   participationTrends: SurveyParticipationTrend[];
 }
 
+export interface SurveyReportedComparison {
+  id: string;
+  comparisonType: string;
+  comparisonCode: string | null;
+  comparisonValue: number | null;
+  comparisonRoundCode: string | null;
+  noteAr: string | null;
+  noteHe: string | null;
+}
+export interface SurveyComparisonGroup {
+  roundId: string;
+  domainId: string;
+  segmentId: string;
+  section: SurveyResultNamedItem;
+  domain: SurveyResultDomain;
+  segment: SurveyResultNamedItem;
+  domainResult: { id: string; scorePercentage: number | null; respondentCount: number | null; isComparable: boolean } | null;
+  comparisons: SurveyReportedComparison[];
+}
+export interface SurveyComparisonsResponse {
+  survey: Pick<SurveyDetail, 'id' | 'nameAr' | 'nameHe' | 'academicYearId' | 'archivedAt'>;
+  rounds: SurveyTrendRound[];
+  groups: SurveyComparisonGroup[];
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

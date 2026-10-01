@@ -176,6 +176,21 @@ describe('SurveysComponent', () => {
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تحليل الاتجاهات: استبيان one"]'))).toBeNull();
   });
 
+  it('offers a separate comparisons read action for archived surveys', async () => {
+    getSurveys.mockResolvedValue([{ ...survey('one', 'CLOSED'), archivedAt: '2026-03-01T00:00:00.000Z' }]);
+    await render();
+    const action = fixture.debugElement.query(By.css('ui-table-actions button[aria-label="المقارنات: استبيان one"]'));
+    expect(action).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تحليل الاتجاهات: استبيان one"]'))).not.toBeNull();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    action.nativeElement.click();
+    await fixture.whenStable();
+    expect(navigate.mock.calls[0][0].toString()).toBe('/surveys/one/analytics/comparisons');
+    canRead.set(false);
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="المقارنات: استبيان one"]'))).toBeNull();
+  });
+
   it('opens create form, sends the selected year and reloads after success', async () => {
     canUpdate.set(true);
     await render();

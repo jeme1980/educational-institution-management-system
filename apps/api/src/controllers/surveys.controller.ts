@@ -13,6 +13,7 @@ import { previewSurveyExcelSemantics } from '../services/surveys-excel.semantic'
 import { executeSurveyExcelImport } from '../services/surveys-excel.import';
 import { readSurveyRoundResults } from '../services/surveys-results-read.service';
 import { readSurveyTrends } from '../services/surveys-trends.service';
+import { readSurveyComparisons } from '../services/surveys-comparisons.service';
 import { createSurveyResultsTemplate } from '../services/surveys-excel.template';
 import { XLSX_MIME } from '../security/spreadsheet-security';
 import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
@@ -93,6 +94,11 @@ export async function getSurveyTrends(req: ContextRequest, res: Response) {
   const surveyId = param(req, 'surveyId');
   if (!schemas.surveyRoundResultsParamsSchema.shape.surveyId.safeParse(surveyId).success) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
   res.json(await readSurveyTrends(institutionOf(req), surveyId));
+}
+export async function getSurveyComparisons(req: ContextRequest, res: Response) {
+  const surveyId = param(req, 'surveyId');
+  if (!schemas.surveyRoundResultsParamsSchema.shape.surveyId.safeParse(surveyId).success) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
+  res.json(await readSurveyComparisons(institutionOf(req), surveyId));
 }
 export async function previewSurveyResults(req: AuthRequest, res: Response) {
   const institutionId = institutionOf(req);

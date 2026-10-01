@@ -193,6 +193,32 @@ export interface SurveyRoundResultsResponse {
   participation: SurveyRoundParticipationResult[];
 }
 
+export interface SurveyTrendRound {
+  id: string; code: string; nameAr: string; nameHe: string | null;
+  sequenceNumber: number; measurementDate: string | null; status: string;
+}
+export interface SurveyTrendSummary { firstValue: number | null; latestValue: number | null; changeFromFirst: number | null }
+export interface SurveyTrendPoint { roundId: string; value: number | null; respondentCount: number | null; deltaFromPrevious: number | null }
+export interface SurveyDomainTrendPoint extends SurveyTrendPoint { isComparable: boolean | null }
+export interface SurveyParticipationTrendPoint { roundId: string; participantCount: number | null; eligibleCount: number | null; responseRate: number | null; deltaFromPrevious: number | null }
+export interface SurveyIndicatorTrend extends SurveyTrendSummary {
+  indicator: { id: string; code: string; textAr: string; textHe: string | null; isReverseDirection: boolean };
+  domain: SurveyResultDomain; section: SurveyResultNamedItem; segment: SurveyResultNamedItem; points: SurveyTrendPoint[];
+}
+export interface SurveyDomainTrend extends SurveyTrendSummary {
+  domain: SurveyResultDomain; section: SurveyResultNamedItem; segment: SurveyResultNamedItem; points: SurveyDomainTrendPoint[];
+}
+export interface SurveyParticipationTrend extends SurveyTrendSummary {
+  segment: SurveyResultNamedItem; points: SurveyParticipationTrendPoint[];
+}
+export interface SurveyTrendsResponse {
+  survey: Pick<SurveyDetail, 'id' | 'nameAr' | 'nameHe' | 'academicYearId' | 'archivedAt'>;
+  rounds: SurveyTrendRound[];
+  indicatorTrends: SurveyIndicatorTrend[];
+  domainTrends: SurveyDomainTrend[];
+  participationTrends: SurveyParticipationTrend[];
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

@@ -34,6 +34,7 @@ export class SurveysComponent {
   private readonly surveysApi = inject(SurveysApiService);
   private readonly fb = inject(FormBuilder);
   readonly canUpdate = computed(() => this.auth.hasPermission('surveys:update'));
+  readonly canRead = computed(() => this.auth.hasPermission('surveys:read'));
   readonly surveys = signal<SurveyListItem[]>([]);
   readonly loading = signal(false);
   readonly error = signal(false);

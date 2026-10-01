@@ -1,0 +1,103 @@
+<main class="trends-page" dir="rtl">
+  <a class="trends-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header title="اتجاهات الاستبيان" description="مقارنة النتائج عبر جولات القياس." />
+
+  @if (loading()) {
+    <section class="trends-feedback" role="status">جارٍ تحميل اتجاهات الاستبيان…</section>
+  } @else if (error()) {
+    <section class="trends-feedback" role="alert">
+      <p>{{ error() }}</p>
+      <ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button>
+    </section>
+  } @else if (result(); as data) {
+    <p class="trends-context">{{ data.survey.nameAr }}</p>
+
+    @if (segments().length) {
+      <label class="trends-select" for="trend-segment">
+        <span>الشريحة</span>
+        <ui-select id="trend-segment" [ngModel]="selectedSegmentId()" (ngModelChange)="selectSegment($event)">
+          @for (segment of segments(); track segment.id) { <option [value]="segment.id">{{ segment.nameAr }}</option> }
+        </ui-select>
+      </label>
+    }
+
+    <ui-section-card title="جولات القياس">
+      @if (data.rounds.length) {
+        <ol class="trends-rounds">
+          @for (round of data.rounds; track round.id) {
+            <li><strong>{{ round.nameAr }}</strong><span>الجولة {{ round.sequenceNumber }}</span><span>{{ round.measurementDate ? (round.measurementDate | date:'yyyy-MM-dd') : '—' }}</span></li>
+          }
+        </ol>
+      } @else { <p class="trends-section-empty">لا توجد جولات قياس لهذا الاستبيان.</p> }
+    </ui-section-card>
+
+    @if (noResults()) {
+      <ui-empty-state title="لا توجد نتائج كافية لعرض الاتجاهات." [compact]="true" />
+    } @else {
+      @if (data.rounds.length === 1) { <p class="trends-note">يلزم أكثر من جولة لعرض تغير زمني كامل.</p> }
+
+      <ui-section-card title="اتجاه المؤشرات">
+        @if (selectedIndicator(); as trend) {
+          <label class="trends-select" for="trend-indicator">
+            <span>المؤشر</span>
+            <ui-select id="trend-indicator" [ngModel]="trend.indicator.id" (ngModelChange)="selectIndicator($event)">
+              @for (item of indicators(); track item.indicator.id) { <option [value]="item.indicator.id">{{ item.indicator.code }} — {{ item.indicator.textAr }}</option> }
+            </ui-select>
+          </label>
+          <app-survey-trend-line-chart [rounds]="data.rounds" [values]="indicatorValues()" [label]="'نسبة المؤشر ' + trend.indicator.textAr" />
+          <dl class="trends-summary">
+            <div><dt>أول قياس</dt><dd>{{ percentage(trend.firstValue) }}</dd></div>
+            <div><dt>آخر قياس</dt><dd>{{ percentage(trend.latestValue) }}</dd></div>
+            <div><dt>التغير منذ البداية</dt><dd>{{ changeWithUnit(trend.changeFromFirst) }}</dd></div>
+          </dl>
+          <div class="trends-table-scroll"><table>
+            <thead><tr><th scope="col">الجولة</th><th scope="col">القيمة</th><th scope="col">عدد المستجيبين</th><th scope="col">الفرق عن القياس السابق (نقطة مئوية)</th></tr></thead>
+            <tbody>@for (point of trend.points; track point.roundId) {
+              <tr><th scope="row">{{ roundName(point.roundId) }}</th><td>{{ percentage(point.value) }}</td><td>{{ count(point.respondentCount) }}</td><td>{{ change(point.deltaFromPrevious) }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="trends-section-empty">لا توجد نتائج مؤشرات لهذه الشريحة.</p> }
+      </ui-section-card>
+
+      <ui-section-card title="اتجاه المجالات">
+        @if (selectedDomain(); as trend) {
+          <label class="trends-select" for="trend-domain">
+            <span>المجال</span>
+            <ui-select id="trend-domain" [ngModel]="trend.domain.id" (ngModelChange)="selectDomain($event)">
+              @for (item of domains(); track item.domain.id) { <option [value]="item.domain.id">{{ item.domain.code }} — {{ item.domain.nameAr }}</option> }
+            </ui-select>
+          </label>
+          <app-survey-trend-line-chart [rounds]="data.rounds" [values]="domainValues()" [label]="'نتيجة المجال ' + trend.domain.nameAr" />
+          <dl class="trends-summary">
+            <div><dt>أول قياس</dt><dd>{{ percentage(trend.firstValue) }}</dd></div>
+            <div><dt>آخر قياس</dt><dd>{{ percentage(trend.latestValue) }}</dd></div>
+            <div><dt>التغير منذ البداية</dt><dd>{{ changeWithUnit(trend.changeFromFirst) }}</dd></div>
+          </dl>
+          <div class="trends-table-scroll"><table>
+            <thead><tr><th scope="col">الجولة</th><th scope="col">النتيجة</th><th scope="col">عدد المستجيبين</th><th scope="col">قابلية المقارنة</th><th scope="col">الفرق عن القياس السابق (نقطة مئوية)</th></tr></thead>
+            <tbody>@for (point of trend.points; track point.roundId) {
+              <tr><th scope="row">{{ roundName(point.roundId) }}</th><td>{{ percentage(point.value) }}</td><td>{{ count(point.respondentCount) }}</td><td>{{ comparable(point.isComparable) }}</td><td>{{ change(point.deltaFromPrevious) }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="trends-section-empty">لا توجد نتائج مجالات لهذه الشريحة.</p> }
+      </ui-section-card>
+
+      <ui-section-card title="اتجاه المشاركة">
+        @if (selectedParticipation(); as trend) {
+          <app-survey-trend-line-chart [rounds]="data.rounds" [values]="participationValues()" [label]="'معدل الاستجابة للشريحة ' + trend.segment.nameAr" />
+          <dl class="trends-summary">
+            <div><dt>أول قياس</dt><dd>{{ percentage(trend.firstValue) }}</dd></div>
+            <div><dt>آخر قياس</dt><dd>{{ percentage(trend.latestValue) }}</dd></div>
+            <div><dt>التغير منذ البداية</dt><dd>{{ changeWithUnit(trend.changeFromFirst) }}</dd></div>
+          </dl>
+          <div class="trends-table-scroll"><table>
+            <thead><tr><th scope="col">الجولة</th><th scope="col">عدد المشاركين</th><th scope="col">العدد المؤهل</th><th scope="col">معدل الاستجابة</th><th scope="col">الفرق عن القياس السابق (نقطة مئوية)</th></tr></thead>
+            <tbody>@for (point of trend.points; track point.roundId) {
+              <tr><th scope="row">{{ roundName(point.roundId) }}</th><td>{{ count(point.participantCount) }}</td><td>{{ count(point.eligibleCount) }}</td><td>{{ percentage(point.responseRate) }}</td><td>{{ change(point.deltaFromPrevious) }}</td></tr>
+            }</tbody>
+          </table></div>
+        } @else { <p class="trends-section-empty">لا توجد بيانات مشاركة لهذه الشريحة.</p> }
+      </ui-section-card>
+    }
+  }
+</main>

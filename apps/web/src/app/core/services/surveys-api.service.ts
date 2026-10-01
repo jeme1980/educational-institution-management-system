@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound, SurveyRoundResultsResponse, SurveySection, SurveySegment, SurveyStructureResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
+import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound, SurveyRoundResultsResponse, SurveySection, SurveySegment, SurveyStructureResponse, SurveyTrendsResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
 
 export class SurveyWriteError extends Error {
   constructor(readonly code: string | null) { super('Survey write request failed.'); }
@@ -16,6 +16,10 @@ export class SurveyImportError extends Error {
 
 export class SurveyResultsReadError extends Error {
   constructor(readonly code: string | null, readonly status: number) { super('Survey results read request failed.'); }
+}
+
+export class SurveyTrendsReadError extends Error {
+  constructor(readonly code: string | null, readonly status: number) { super('Survey trends read request failed.'); }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -67,6 +71,17 @@ export class SurveysApiService extends BaseApiService {
       throw new SurveyResultsReadError(code, response.status);
     }
     return response.json() as Promise<SurveyRoundResultsResponse>;
+  }
+
+  async getSurveyTrends(surveyId: string): Promise<SurveyTrendsResponse> {
+    const response = await this.apiFetch(`/api/surveys/${encodeURIComponent(surveyId)}/analytics/trends`);
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      const error = body && typeof body === 'object' && 'error' in body ? body.error : null;
+      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : null;
+      throw new SurveyTrendsReadError(code, response.status);
+    }
+    return response.json() as Promise<SurveyTrendsResponse>;
   }
 
   async createSurveySection(surveyId: string, payload: CreateSurveySectionRequest): Promise<SurveySection> {

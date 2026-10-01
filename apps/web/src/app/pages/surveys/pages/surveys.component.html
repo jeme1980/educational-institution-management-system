@@ -54,6 +54,9 @@
                     <ui-table-actions>
                       <ui-button variant="ghost" size="sm" [iconOnly]="true" [routerLink]="['/surveys', survey.id, 'structure']" [ariaLabel]="'بنية ' + survey.nameAr"><mat-icon aria-hidden="true">account_tree</mat-icon></ui-button>
                       <ui-button variant="ghost" size="sm" [iconOnly]="true" [routerLink]="['/surveys', survey.id, 'rounds']" [ariaLabel]="'جولات ' + survey.nameAr"><mat-icon aria-hidden="true">view_timeline</mat-icon></ui-button>
+                      @if (canRead()) {
+                        <ui-button variant="ghost" size="sm" [iconOnly]="true" [routerLink]="['/surveys', survey.id, 'analytics', 'trends']" [ariaLabel]="'تحليل الاتجاهات: ' + survey.nameAr"><mat-icon aria-hidden="true">show_chart</mat-icon></ui-button>
+                      }
                       @if (canUpdate()) {
                         <ui-button variant="ghost" size="sm" [iconOnly]="true" [ariaLabel]="'تعديل ' + survey.nameAr" (activated)="openEdit(survey)"><mat-icon aria-hidden="true">edit</mat-icon></ui-button>
                       }

@@ -1,0 +1,140 @@
+<main class="report-page" dir="rtl">
+  <a class="report-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header title="تقرير الاستبيان" description="عرض موحد للنتائج والاتجاهات والمقارنات." />
+
+  @if (loading()) {
+    <section class="report-feedback" role="status">جارٍ تحميل تقرير الاستبيان…</section>
+  } @else if (error()) {
+    <section class="report-feedback" role="alert"><p>{{ error() }}</p><ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button></section>
+  } @else if (report(); as data) {
+    <section class="report-selectors" aria-label="اختيار سياق التقرير">
+      <label for="report-round"><span>الجولة</span>
+        <ui-select id="report-round" [ngModel]="data.selectedRound?.id ?? ''" (ngModelChange)="selectRound($event)">
+          <option value="">اختر جولة</option>
+          @for (round of data.rounds; track round.id) { <option [value]="round.id">{{ round.nameAr }}</option> }
+        </ui-select>
+      </label>
+      <label for="report-segment"><span>الشريحة</span>
+        <ui-select id="report-segment" [ngModel]="data.selectedSegment?.id ?? ''" (ngModelChange)="selectSegment($event)">
+          <option value="">اختر شريحة</option>
+          @for (segment of data.segments; track segment.id) { <option [value]="segment.id">{{ segment.nameAr }}</option> }
+        </ui-select>
+      </label>
+    </section>
+
+    <ui-section-card title="معلومات الاستبيان">
+      <dl class="report-definition">
+        <div><dt>اسم الاستبيان</dt><dd>{{ data.survey.nameAr }}</dd></div>
+        <div><dt>الجمهور</dt><dd>{{ text(data.survey.audienceType) }}</dd></div>
+        <div><dt>الحالة</dt><dd>{{ statusLabel(data.survey.status) }} @if (data.survey.archivedAt) { <span class="report-archived">مؤرشف</span> }</dd></div>
+        <div><dt>الجولة المحددة</dt><dd>{{ data.selectedRound?.nameAr ?? '—' }}</dd></div>
+        <div><dt>تاريخ القياس</dt><dd>{{ data.selectedRound?.measurementDate ? (data.selectedRound?.measurementDate | date:'yyyy-MM-dd') : '—' }}</dd></div>
+        <div><dt>الشريحة المحددة</dt><dd>{{ data.selectedSegment?.nameAr ?? '—' }}</dd></div>
+      </dl>
+      @if (data.survey.descriptionAr) { <p class="report-description">{{ data.survey.descriptionAr }}</p> }
+    </ui-section-card>
+
+    @if (!data.selectedRound || !data.selectedSegment) {
+      <ui-empty-state title="لا توجد نتائج متاحة لإعداد التقرير." [compact]="true" />
+    } @else {
+      <section class="report-section" aria-labelledby="report-snapshot-title">
+        <h2 id="report-snapshot-title">نتائج الجولة</h2>
+        <ui-section-card title="المشاركة">
+          @if (data.snapshot.participation; as participation) {
+            <dl class="report-definition">
+              <div><dt>عدد المشاركين</dt><dd>{{ count(participation.participantCount) }}</dd></div>
+              <div><dt>العدد المؤهل</dt><dd>{{ count(participation.eligibleCount) }}</dd></div>
+              <div><dt>معدل الاستجابة</dt><dd>{{ percentage(participation.responseRate) }}</dd></div>
+            </dl>
+          } @else { <p class="report-empty">لا توجد بيانات مشاركة لهذه الجولة والشريحة.</p> }
+        </ui-section-card>
+        <ui-section-card title="نتائج المجالات">
+          @if (data.snapshot.domainResults.length) {
+            <div class="report-table-scroll"><table>
+              <caption>نتائج المجالات في الجولة والشريحة المحددتين</caption>
+              <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th><th scope="col">النتيجة</th><th scope="col">عدد المستجيبين</th><th scope="col">قابلية المقارنة</th></tr></thead>
+              <tbody>@for (item of data.snapshot.domainResults; track item.id) {
+                <tr><td>{{ item.domain.section.nameAr }}</td><th scope="row">{{ item.domain.nameAr }}</th><td>{{ percentage(item.scorePercentage) }}</td><td>{{ count(item.respondentCount) }}</td><td>{{ comparable(item.isComparable) }}</td></tr>
+              }</tbody>
+            </table></div>
+          } @else { <p class="report-empty">لا توجد نتائج مجالات لهذه الجولة والشريحة.</p> }
+        </ui-section-card>
+        <ui-section-card title="نتائج المؤشرات">
+          @if (data.snapshot.indicatorResults.length) {
+            <div class="report-table-scroll"><table>
+              <caption>نتائج المؤشرات في الجولة والشريحة المحددتين</caption>
+              <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th><th scope="col">المؤشر</th><th scope="col">الرمز</th><th scope="col">النسبة المبلغة</th><th scope="col">عدد المستجيبين</th><th scope="col">المجموع المحقق</th><th scope="col">المجموع الممكن</th></tr></thead>
+              <tbody>@for (item of data.snapshot.indicatorResults; track item.id) {
+                <tr><td>{{ item.section.nameAr }}</td><td>{{ item.domain.nameAr }}</td><th scope="row">{{ item.indicator.textAr }}</th><td dir="ltr">{{ item.indicator.code }}</td><td>{{ percentage(item.reportedPercentage) }}</td><td>{{ count(item.respondentCount) }}</td><td>{{ count(item.earnedTotal) }}</td><td>{{ count(item.possibleTotal) }}</td></tr>
+              }</tbody>
+            </table></div>
+          } @else { <p class="report-empty">لا توجد نتائج مؤشرات لهذه الجولة والشريحة.</p> }
+        </ui-section-card>
+      </section>
+
+      <section class="report-section" aria-labelledby="report-trends-title">
+        <h2 id="report-trends-title">الاتجاهات عبر الجولات</h2>
+        <ui-section-card title="اتجاهات المؤشرات">
+          @if (data.trends.indicatorTrends.length) {
+            <div class="report-table-scroll"><table>
+              <caption>قياسات المؤشرات الفعلية عبر الجولات</caption>
+              <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th><th scope="col">المؤشر</th><th scope="col">الرمز</th>@for (round of data.rounds; track round.id) { <th scope="col">{{ round.nameAr }}</th> }<th scope="col">التغير منذ البداية (نقطة مئوية)</th></tr></thead>
+              <tbody>@for (item of data.trends.indicatorTrends; track item.indicator.id) {
+                <tr><td>{{ item.section.nameAr }}</td><td>{{ item.domain.nameAr }}</td><th scope="row">{{ item.indicator.textAr }}</th><td dir="ltr">{{ item.indicator.code }}</td>@for (round of data.rounds; track round.id) { <td>{{ trendValue(item.points, round.id) }}</td> }<td>{{ change(item.changeFromFirst) }}</td></tr>
+              }</tbody>
+            </table></div>
+          } @else { <p class="report-empty">لا توجد اتجاهات مؤشرات لهذه الشريحة.</p> }
+        </ui-section-card>
+        <ui-section-card title="اتجاهات المجالات">
+          @if (data.trends.domainTrends.length) {
+            <div class="report-table-scroll"><table>
+              <caption>قياسات المجالات الفعلية عبر الجولات</caption>
+              <thead><tr><th scope="col">القسم</th><th scope="col">المجال</th>@for (round of data.rounds; track round.id) { <th scope="col">{{ round.nameAr }}</th> }<th scope="col">التغير منذ البداية (نقطة مئوية)</th></tr></thead>
+              <tbody>@for (item of data.trends.domainTrends; track item.domain.id) {
+                <tr><td>{{ item.section.nameAr }}</td><th scope="row">{{ item.domain.nameAr }}</th>@for (round of data.rounds; track round.id) { <td>{{ trendValue(item.points, round.id) }}</td> }<td>{{ change(item.changeFromFirst) }}</td></tr>
+              }</tbody>
+            </table></div>
+          } @else { <p class="report-empty">لا توجد اتجاهات مجالات لهذه الشريحة.</p> }
+        </ui-section-card>
+        <ui-section-card title="اتجاه المشاركة">
+          @if (data.trends.participationTrend; as trend) {
+            <div class="report-table-scroll"><table>
+              <caption>قياسات المشاركة الفعلية عبر الجولات</caption>
+              <thead><tr><th scope="col">الجولة</th><th scope="col">عدد المشاركين</th><th scope="col">العدد المؤهل</th><th scope="col">معدل الاستجابة</th><th scope="col">الفرق عن القياس السابق (نقطة مئوية)</th></tr></thead>
+              <tbody>@for (round of data.rounds; track round.id) {
+                @let point = participationPoint(trend.points, round.id);
+                <tr><th scope="row">{{ round.nameAr }}</th><td>{{ count(point?.participantCount ?? null) }}</td><td>{{ count(point?.eligibleCount ?? null) }}</td><td>{{ percentage(point?.responseRate ?? null) }}</td><td>{{ change(point?.deltaFromPrevious ?? null) }}</td></tr>
+              }</tbody>
+            </table></div>
+          } @else { <p class="report-empty">لا توجد بيانات اتجاه مشاركة لهذه الشريحة.</p> }
+        </ui-section-card>
+      </section>
+
+      <section class="report-section" aria-labelledby="report-comparisons-title">
+        <h2 id="report-comparisons-title">المقارنات المبلّغ عنها</h2>
+        @if (data.comparisons.length) {
+          @for (group of data.comparisons; track group.domainId) {
+            <ui-section-card [title]="group.domain.nameAr" [description]="'القسم: ' + group.section.nameAr">
+              @if (group.domainResult; as domainResult) {
+                <dl class="report-definition">
+                  <div><dt>نتيجة المجال</dt><dd>{{ percentage(domainResult.scorePercentage) }}</dd></div>
+                  <div><dt>عدد المستجيبين</dt><dd>{{ count(domainResult.respondentCount) }}</dd></div>
+                  <div><dt>قابلية المقارنة</dt><dd>{{ comparable(domainResult.isComparable) }}</dd></div>
+                </dl>
+              } @else { <p class="report-empty">لا توجد نتيجة مجال مسجلة لهذه المجموعة.</p> }
+              @if (group.comparisons.length) {
+                <div class="report-table-scroll"><table>
+                  <caption>المقارنات المبلّغ عنها للمجال {{ group.domain.nameAr }}</caption>
+                  <thead><tr><th scope="col">نوع المقارنة</th><th scope="col">القيمة</th><th scope="col">الرمز المرجعي</th><th scope="col">الجولة المرجعية</th><th scope="col">الملاحظة العربية</th><th scope="col">الملاحظة العبرية</th></tr></thead>
+                  <tbody>@for (comparison of group.comparisons; track comparison.id) {
+                    <tr><th scope="row">{{ comparisonTypeLabel(comparison.comparisonType) }}</th><td>{{ percentage(comparison.comparisonValue) }}</td><td dir="ltr">{{ text(comparison.comparisonCode) }}</td><td dir="ltr">{{ text(comparison.comparisonRoundCode) }}</td><td>{{ text(comparison.noteAr) }}</td><td lang="he" dir="rtl">{{ text(comparison.noteHe) }}</td></tr>
+                  }</tbody>
+                </table></div>
+              } @else { <p class="report-empty">لا توجد مقارنات مبلّغ عنها لهذا المجال.</p> }
+            </ui-section-card>
+          }
+        } @else { <ui-empty-state title="لا توجد مقارنات مبلّغ عنها لهذه الجولة والشريحة." [compact]="true" /> }
+      </section>
+    }
+  }
+</main>

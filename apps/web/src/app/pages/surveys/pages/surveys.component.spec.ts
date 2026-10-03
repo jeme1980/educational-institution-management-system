@@ -191,6 +191,23 @@ describe('SurveysComponent', () => {
     expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="المقارنات: استبيان one"]'))).toBeNull();
   });
 
+  it('offers the survey report beside trends and comparisons for archived surveys with read access', async () => {
+    getSurveys.mockResolvedValue([{ ...survey('one', 'CLOSED'), archivedAt: '2026-03-01T00:00:00.000Z' }]);
+    await render();
+    const report = fixture.debugElement.query(By.css('ui-table-actions button[aria-label="التقرير: استبيان one"]'));
+    expect(report).not.toBeNull();
+    expect(report.nativeElement.title).toBe('التقرير: استبيان one');
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="تحليل الاتجاهات: استبيان one"]'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="المقارنات: استبيان one"]'))).not.toBeNull();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    report.nativeElement.click();
+    await fixture.whenStable();
+    expect(navigate.mock.calls[0][0].toString()).toBe('/surveys/one/analytics/report');
+    canRead.set(false);
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ui-table-actions button[aria-label="التقرير: استبيان one"]'))).toBeNull();
+  });
+
   it('opens create form, sends the selected year and reloads after success', async () => {
     canUpdate.set(true);
     await render();

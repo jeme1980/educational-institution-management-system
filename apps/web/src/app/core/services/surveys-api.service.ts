@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BaseApiService } from './base-api.service';
-import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyComparisonsResponse, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound, SurveyRoundResultsResponse, SurveySection, SurveySegment, SurveyStructureResponse, SurveyTrendsResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
+import type { CreateSurveyDomainRequest, CreateSurveyIndicatorRequest, CreateSurveyRequest, CreateSurveyRoundRequest, CreateSurveySectionRequest, CreateSurveySegmentRequest, SurveyAnalyticsReportResponse, SurveyComparisonsResponse, SurveyDetail, SurveyDomain, SurveyIndicator, SurveyListResponse, SurveyResultsImportResponse, SurveyResultsPreviewResponse, SurveyRound, SurveyRoundResultsResponse, SurveySection, SurveySegment, SurveyStructureResponse, SurveyTrendsResponse, UpdateSurveyDomainRequest, UpdateSurveyIndicatorRequest, UpdateSurveyRequest, UpdateSurveyRoundRequest, UpdateSurveySectionRequest, UpdateSurveySegmentRequest } from '../../pages/surveys/models/survey.model';
 
 export class SurveyWriteError extends Error {
   constructor(readonly code: string | null) { super('Survey write request failed.'); }
@@ -24,6 +24,10 @@ export class SurveyTrendsReadError extends Error {
 
 export class SurveyComparisonsReadError extends Error {
   constructor(readonly code: string | null, readonly status: number) { super('Survey comparisons read request failed.'); }
+}
+
+export class SurveyReportReadError extends Error {
+  constructor(readonly code: string | null, readonly status: number) { super('Survey report read request failed.'); }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -97,6 +101,21 @@ export class SurveysApiService extends BaseApiService {
       throw new SurveyComparisonsReadError(code, response.status);
     }
     return response.json() as Promise<SurveyComparisonsResponse>;
+  }
+
+  async getSurveyReport(surveyId: string, options?: { roundId?: string; segmentId?: string }): Promise<SurveyAnalyticsReportResponse> {
+    const query = new URLSearchParams();
+    if (options?.roundId) query.set('roundId', options.roundId);
+    if (options?.segmentId) query.set('segmentId', options.segmentId);
+    const path = `/api/surveys/${encodeURIComponent(surveyId)}/analytics/report${query.size ? `?${query}` : ''}`;
+    const response = await this.apiFetch(path);
+    if (!response.ok) {
+      const body: unknown = await response.json().catch(() => null);
+      const error = body && typeof body === 'object' && 'error' in body ? body.error : null;
+      const code = error && typeof error === 'object' && 'code' in error && typeof error.code === 'string' ? error.code : null;
+      throw new SurveyReportReadError(code, response.status);
+    }
+    return response.json() as Promise<SurveyAnalyticsReportResponse>;
   }
 
   async createSurveySection(surveyId: string, payload: CreateSurveySectionRequest): Promise<SurveySection> {

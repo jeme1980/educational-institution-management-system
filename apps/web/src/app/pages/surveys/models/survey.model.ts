@@ -244,6 +244,30 @@ export interface SurveyComparisonsResponse {
   groups: SurveyComparisonGroup[];
 }
 
+export type SurveyReportRound = SurveyTrendRound;
+export interface SurveyReportSegment extends SurveyResultNamedItem { segmentType: string | null; sortOrder: number }
+export interface SurveyReportSnapshot {
+  indicatorResults: SurveyRoundIndicatorResult[];
+  domainResults: SurveyRoundDomainResult[];
+  participation: SurveyRoundParticipationResult | null;
+}
+export interface SurveyReportTrends {
+  indicatorTrends: SurveyIndicatorTrend[];
+  domainTrends: SurveyDomainTrend[];
+  participationTrend: SurveyParticipationTrend | null;
+}
+export type SurveyReportComparisonGroup = SurveyComparisonGroup;
+export interface SurveyAnalyticsReportResponse {
+  survey: Pick<SurveyDetail, 'id' | 'academicYearId' | 'nameAr' | 'nameHe' | 'descriptionAr' | 'descriptionHe' | 'audienceType' | 'status' | 'archivedAt'>;
+  rounds: SurveyReportRound[];
+  segments: SurveyReportSegment[];
+  selectedRound: SurveyReportRound | null;
+  selectedSegment: SurveyReportSegment | null;
+  snapshot: SurveyReportSnapshot;
+  trends: SurveyReportTrends;
+  comparisons: SurveyReportComparisonGroup[];
+}
+
 export interface SurveyDomain {
   id: string;
   surveyId: string;

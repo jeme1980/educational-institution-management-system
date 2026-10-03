@@ -85,6 +85,27 @@ describe('SurveysApiService', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/surveys?academicYearId=year-1');
   });
 
+  it('reads the unified report with only explicitly supplied selection parameters', async () => {
+    TestBed.configureTestingModule({ providers: [
+      SurveysApiService,
+      { provide: AuthService, useValue: { idToken: signal(null), currentContext: signal(null), waitForAuthInit: vi.fn().mockResolvedValue(undefined) } },
+      { provide: Router, useValue: { navigate: vi.fn() } },
+    ] });
+    const service = TestBed.inject(SurveysApiService);
+    const result = { survey: { id: 'survey-1' }, rounds: [], segments: [] };
+    const apiFetch = vi.spyOn(service, 'apiFetch').mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue(result) } as unknown as Response);
+    expect(await service.getSurveyReport('survey-1')).toBe(result);
+    await service.getSurveyReport('survey-1', { roundId: 'round-1' });
+    await service.getSurveyReport('survey-1', { segmentId: 'segment-1' });
+    await service.getSurveyReport('survey-1', { roundId: 'round-1', segmentId: 'segment-1' });
+    expect(apiFetch.mock.calls.map(call => call[0])).toEqual([
+      '/api/surveys/survey-1/analytics/report',
+      '/api/surveys/survey-1/analytics/report?roundId=round-1',
+      '/api/surveys/survey-1/analytics/report?segmentId=segment-1',
+      '/api/surveys/survey-1/analytics/report?roundId=round-1&segmentId=segment-1',
+    ]);
+  });
+
   it('posts create and patches edit using their exact routes and bodies', async () => {
     TestBed.configureTestingModule({ providers: [
       SurveysApiService,

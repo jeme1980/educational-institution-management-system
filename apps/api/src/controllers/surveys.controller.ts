@@ -14,6 +14,7 @@ import { executeSurveyExcelImport } from '../services/surveys-excel.import';
 import { readSurveyRoundResults } from '../services/surveys-results-read.service';
 import { readSurveyTrends } from '../services/surveys-trends.service';
 import { readSurveyComparisons } from '../services/surveys-comparisons.service';
+import { readSurveyReport } from '../services/surveys-report.service';
 import { createSurveyResultsTemplate } from '../services/surveys-excel.template';
 import { XLSX_MIME } from '../security/spreadsheet-security';
 import type { SurveyExcelSemanticError, SurveyExcelValidatedWorkbook } from '../services/surveys-excel.types';
@@ -99,6 +100,15 @@ export async function getSurveyComparisons(req: ContextRequest, res: Response) {
   const surveyId = param(req, 'surveyId');
   if (!schemas.surveyRoundResultsParamsSchema.shape.surveyId.safeParse(surveyId).success) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
   res.json(await readSurveyComparisons(institutionOf(req), surveyId));
+}
+export async function getSurveyReport(req: ContextRequest, res: Response) {
+  const surveyId = param(req, 'surveyId');
+  if (!schemas.surveyRoundResultsParamsSchema.shape.surveyId.safeParse(surveyId).success) throw new HttpError(404, 'Survey was not found.', 'SURVEY_NOT_FOUND');
+  const roundId = req.query.roundId;
+  const segmentId = req.query.segmentId;
+  if (roundId !== undefined && !schemas.surveyRoundResultsParamsSchema.shape.roundId.safeParse(roundId).success) throw new HttpError(404, 'Survey round was not found.', 'SURVEY_ROUND_NOT_FOUND');
+  if (segmentId !== undefined && !schemas.surveyRoundResultsParamsSchema.shape.roundId.safeParse(segmentId).success) throw new HttpError(404, 'Survey segment was not found.', 'SURVEY_SEGMENT_NOT_FOUND');
+  res.json(await readSurveyReport(institutionOf(req), surveyId, roundId as string | undefined, segmentId as string | undefined));
 }
 export async function previewSurveyResults(req: AuthRequest, res: Response) {
   const institutionId = institutionOf(req);

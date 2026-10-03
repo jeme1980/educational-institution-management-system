@@ -24,12 +24,13 @@ test('survey result routes match the intended template, read, analytics, preview
     .flatMap((layer: any) => Object.keys(layer.route.methods).map((method) => ({ method: method.toUpperCase(), path: String(layer.route.path) })));
   assert.ok(routes.length > 0);
   assert.equal(routes.some((route: any) => route.method === 'DELETE'), false);
-  const resultRoutes = routes.filter((route: any) => /result|import|batch|\/analytics\/(?:trends|comparisons)/i.test(route.path));
+  const resultRoutes = routes.filter((route: any) => /result|import|batch|\/analytics\/(?:trends|comparisons|report)/i.test(route.path));
   assert.deepEqual(resultRoutes, [
     { method: 'GET', path: '/surveys/results/template' },
     { method: 'GET', path: '/surveys/:surveyId/rounds/:roundId/results' },
     { method: 'GET', path: '/surveys/:surveyId/analytics/trends' },
     { method: 'GET', path: '/surveys/:surveyId/analytics/comparisons' },
+    { method: 'GET', path: '/surveys/:surveyId/analytics/report' },
     { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/preview' },
     { method: 'POST', path: '/surveys/:surveyId/rounds/:roundId/results/import' },
   ]);

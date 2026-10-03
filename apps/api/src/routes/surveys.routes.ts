@@ -28,6 +28,7 @@ router.patch('/surveys/:surveyId/rounds/:roundId', ...update, validateRequest(sc
 router.get('/surveys/:surveyId/rounds/:roundId/results', ...read, asyncHandler(controller.getSurveyRoundResults));
 router.get('/surveys/:surveyId/analytics/trends', ...read, asyncHandler(controller.getSurveyTrends));
 router.get('/surveys/:surveyId/analytics/comparisons', ...read, asyncHandler(controller.getSurveyComparisons));
+router.get('/surveys/:surveyId/analytics/report', ...read, asyncHandler(controller.getSurveyReport));
 router.post('/surveys/:surveyId/rounds/:roundId/results/preview', ...update, xlsxMultipartBody, asyncHandler(controller.previewSurveyResults));
 router.post('/surveys/:surveyId/rounds/:roundId/results/import', ...update, xlsxMultipartBody, asyncHandler(controller.importSurveyResults));
 router.post('/surveys/:surveyId/segments', ...update, validateRequest(schemas.createSegmentSchema), asyncHandler(controller.createSegment));

@@ -430,6 +430,101 @@ input[type='number'] {
   }
 }
 
+/* The survey report prints from its existing route and loaded response. */
+@page {
+  size: A4 landscape;
+  margin: 12mm;
+}
+
+@media print {
+  body:has(app-survey-report) .school-app-shell {
+    display: block !important;
+    min-height: 0 !important;
+    background: Canvas !important;
+  }
+
+  body:has(app-survey-report) .school-app-shell > aside,
+  body:has(app-survey-report) .school-app-shell > .fixed,
+  body:has(app-survey-report) .school-app-shell > div > header,
+  body:has(app-survey-report) .school-app-shell > div > footer,
+  body:has(app-survey-report) .report-page .screen-only {
+    display: none !important;
+  }
+
+  body:has(app-survey-report) .school-app-shell > div,
+  body:has(app-survey-report) #main-content,
+  body:has(app-survey-report) app-survey-report,
+  body:has(app-survey-report) .report-page {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: Canvas !important;
+  }
+
+  body:has(app-survey-report) .report-page,
+  body:has(app-survey-report) .report-page * {
+    color: CanvasText !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:has(app-survey-report) .report-page .report-print-header {
+    display: block !important;
+    border-block-end: 1px solid CanvasText;
+    padding-block-end: 3mm;
+    margin-block-end: 4mm;
+    break-after: avoid;
+    font-family: var(--font-family-base);
+  }
+
+  body:has(app-survey-report) .report-print-header h1 { margin: 0; font-size: 16pt; }
+  body:has(app-survey-report) .report-print-header p { margin: 1mm 0 2mm; font-size: 11pt; }
+  body:has(app-survey-report) .report-print-header dl { display: flex; flex-wrap: wrap; gap: 2mm 8mm; margin: 0; font-size: 9pt; }
+  body:has(app-survey-report) .report-print-header dl div { display: flex; gap: 1mm; }
+  body:has(app-survey-report) .report-print-header dt { font-weight: 600; }
+  body:has(app-survey-report) .report-print-header dd { margin: 0; }
+
+  body:has(app-survey-report) .report-page .report-section,
+  body:has(app-survey-report) .report-page ui-section-card { display: block !important; }
+  body:has(app-survey-report) .report-page .report-section { margin-block-start: 5mm; }
+  body:has(app-survey-report) .report-page .report-section > h2 { margin: 0 0 2mm; font-size: 12pt; break-after: avoid; }
+  body:has(app-survey-report) .report-page ui-section-card { margin-block: 3mm; break-inside: auto; }
+  body:has(app-survey-report) .report-page .ui-section-card { overflow: visible !important; border: 1px solid CanvasText; border-radius: 0; }
+  body:has(app-survey-report) .report-page .ui-section-card__header {
+    display: flex !important;
+    border-block-end: 1px solid CanvasText;
+    padding: 2mm 3mm;
+    break-after: avoid;
+  }
+  body:has(app-survey-report) .report-page .ui-section-card__header h2 { font-size: 10pt; }
+  body:has(app-survey-report) .report-page .report-definition { gap: 2mm 6mm; padding: 2mm 3mm; }
+  body:has(app-survey-report) .report-page .report-description,
+  body:has(app-survey-report) .report-page .report-empty { padding: 2mm 3mm; }
+  body:has(app-survey-report) .report-page .report-archived { border: 1px solid CanvasText; }
+  body:has(app-survey-report) .report-page .report-table-scroll { max-width: none; overflow: visible !important; }
+  body:has(app-survey-report) .report-page table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
+  body:has(app-survey-report) .report-page caption { padding: 1mm 2mm; font-size: 8pt; break-after: avoid; }
+  body:has(app-survey-report) .report-page thead { display: table-header-group; }
+  body:has(app-survey-report) .report-page tr { break-inside: avoid; }
+  body:has(app-survey-report) .report-page th,
+  body:has(app-survey-report) .report-page td {
+    height: auto;
+    border: 1px solid CanvasText;
+    padding: 1mm 1.5mm;
+    font-size: 8pt;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  body:has(app-survey-report) .report-page .ui-empty-state { min-height: 0; padding: 3mm; }
+  body:has(app-survey-report) .report-page .ui-empty-state h3 { font-size: 10pt; }
+}
+
 /* Shared product shell primitives. Keep page composition consistent across
    legacy and newer standalone screens without forcing a full template rewrite. */
 .page-shell,

@@ -46,6 +46,11 @@ export class SurveyReportComponent {
 
   async retry(): Promise<void> { await this.load(this.surveyId(), this.roundId(), this.segmentId()); }
 
+  printReport(): void {
+    if (this.loading() || this.error() || !this.report()) return;
+    window.print();
+  }
+
   selectRound(roundId: string): void {
     if (!this.report()?.rounds.some(round => round.id === roundId)) return;
     void this.router.navigate([], { relativeTo: this.route, queryParams: { roundId, segmentId: null }, queryParamsHandling: 'merge' });

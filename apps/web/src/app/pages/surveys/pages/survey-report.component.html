@@ -1,13 +1,26 @@
 <main class="report-page" dir="rtl">
-  <a class="report-back" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
-  <ui-page-header title="تقرير الاستبيان" description="عرض موحد للنتائج والاتجاهات والمقارنات." />
+  <a class="report-back screen-only" routerLink="/surveys"><mat-icon aria-hidden="true">arrow_forward</mat-icon>العودة إلى الاستبيانات</a>
+  <ui-page-header class="screen-only" title="تقرير الاستبيان" description="عرض موحد للنتائج والاتجاهات والمقارنات.">
+    @if (report() && !loading() && !error()) {
+      <div ui-page-actions><ui-button variant="secondary" ariaLabel="طباعة تقرير الاستبيان" (activated)="printReport()"><mat-icon aria-hidden="true">print</mat-icon>طباعة التقرير</ui-button></div>
+    }
+  </ui-page-header>
 
   @if (loading()) {
     <section class="report-feedback" role="status">جارٍ تحميل تقرير الاستبيان…</section>
   } @else if (error()) {
     <section class="report-feedback" role="alert"><p>{{ error() }}</p><ui-button variant="secondary" (activated)="retry()">إعادة المحاولة</ui-button></section>
   } @else if (report(); as data) {
-    <section class="report-selectors" aria-label="اختيار سياق التقرير">
+    <div class="report-print-header print-only" aria-label="عنوان التقرير المطبوع">
+      <h1>تقرير الاستبيان</h1>
+      <p>{{ data.survey.nameAr }}</p>
+      <dl>
+        <div><dt>الجولة المحددة</dt><dd>{{ data.selectedRound?.nameAr ?? '—' }}</dd></div>
+        <div><dt>الشريحة المحددة</dt><dd>{{ data.selectedSegment?.nameAr ?? '—' }}</dd></div>
+        @if (data.selectedRound?.measurementDate) { <div><dt>تاريخ القياس</dt><dd>{{ data.selectedRound?.measurementDate | date:'yyyy-MM-dd' }}</dd></div> }
+      </dl>
+    </div>
+    <section class="report-selectors screen-only" aria-label="اختيار سياق التقرير">
       <label for="report-round"><span>الجولة</span>
         <ui-select id="report-round" [ngModel]="data.selectedRound?.id ?? ''" (ngModelChange)="selectRound($event)">
           <option value="">اختر جولة</option>

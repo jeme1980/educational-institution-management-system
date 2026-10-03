@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '../../../app.routes';
 import { SurveyReportReadError, SurveysApiService } from '../../../core/services/surveys-api.service';
 import type { SurveyAnalyticsReportResponse } from '../models/survey.model';
@@ -44,6 +44,8 @@ describe('SurveyReportComponent', () => {
   const params = convertToParamMap({ surveyId: 'survey-1' });
   const getSurveyReport = vi.fn<(surveyId: string, options?: { roundId?: string; segmentId?: string }) => Promise<SurveyAnalyticsReportResponse>>();
   const navigate = vi.fn();
+
+  afterEach(() => vi.restoreAllMocks());
 
   const render = async () => {
     fixture = TestBed.createComponent(SurveyReportComponent);
@@ -93,6 +95,53 @@ describe('SurveyReportComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('غير قابل للمقارنة');
     expect(fixture.debugElement.queryAll(By.css('.report-table-scroll table'))).toHaveLength(7);
     expect(fixture.debugElement.query(By.css('canvas, ui-pagination'))).toBeNull();
+  });
+
+  it('prints the loaded report once without another GET or changing the selected URL', async () => {
+    query.next(convertToParamMap({ roundId: 'r1', segmentId: segment.id }));
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    await render();
+    const action = fixture.debugElement.query(By.css('ui-page-header ui-button button')).nativeElement as HTMLButtonElement;
+    expect(action.textContent).toContain('طباعة التقرير');
+    expect(action.getAttribute('aria-label')).toBe('طباعة تقرير الاستبيان');
+    const printHeader = fixture.debugElement.query(By.css('.report-print-header')).nativeElement as HTMLElement;
+    expect(printHeader.textContent).toContain('استبيان التقرير');
+    expect(printHeader.textContent).toContain('الأولى');
+    expect(printHeader.textContent).toContain('شريحة');
+    expect(printHeader.textContent).toContain('2026-01-01');
+    expect(fixture.debugElement.query(By.css('.report-selectors.screen-only'))).not.toBeNull();
+    action.click();
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(getSurveyReport).toHaveBeenCalledTimes(1);
+    expect(navigate).not.toHaveBeenCalled();
+    expect(query.value.get('roundId')).toBe('r1');
+    expect(query.value.get('segmentId')).toBe(segment.id);
+  });
+
+  it('does not offer print while loading or after an error, but permits an empty loaded report', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    let resolve!: (value: SurveyAnalyticsReportResponse) => void;
+    getSurveyReport.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+    fixture = TestBed.createComponent(SurveyReportComponent);
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ui-page-header ui-button'))).toBeNull();
+    fixture.componentInstance.printReport();
+    expect(print).not.toHaveBeenCalled();
+
+    resolve({ ...full, selectedRound: null, selectedSegment: null });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('لا توجد نتائج متاحة لإعداد التقرير.');
+    expect(fixture.debugElement.query(By.css('ui-page-header ui-button'))).not.toBeNull();
+    fixture.componentInstance.printReport();
+    expect(print).toHaveBeenCalledTimes(1);
+
+    getSurveyReport.mockRejectedValueOnce(new SurveyReportReadError('SURVEY_NOT_FOUND', 404));
+    await fixture.componentInstance.retry();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ui-page-header ui-button'))).toBeNull();
+    fixture.componentInstance.printReport();
+    expect(print).toHaveBeenCalledTimes(1);
   });
 
   it('sends explicit URL values, changes rounds without retaining the old segment, and changes segment', async () => {

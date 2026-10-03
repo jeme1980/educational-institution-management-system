@@ -14,7 +14,7 @@
 } @else if (authService.currentContext()?.isPlatformAdmin) {
   <router-outlet />
 } @else if (authService.currentContext()) {
-<div dir="rtl" lang="ar" class="min-h-screen bg-background-soft-gray text-on-surface font-sans antialiased flex flex-col md:flex-row min-w-full">
+<div dir="rtl" lang="ar" class="school-app-shell min-h-screen bg-background-soft-gray text-on-surface font-sans antialiased flex flex-col md:flex-row min-w-full">
   
   <!-- Right Sidebar (Desktop) -->
   <aside [style.display]="authService.currentContext()?.isPlatformAdmin ? 'none' : null" class="hidden md:flex flex-col w-64 bg-surface-container-lowest border-l border-surface-border sticky top-0 h-screen z-30 shrink-0">

@@ -28,12 +28,13 @@ Use an isolated empty test database; never overwrite production during a drill.
 2. Restore the custom dump with migration/admin credentials.
 3. Run `npm run db:setup-runtime-role` and `npm run db:setup-platform-role` against the restored database.
 4. Run `npm run db:migrate:deploy` and confirm the migration status is up to date.
-5. Run the explicit production bootstrap only if reference data is absent; it must be idempotent and must not reset existing passwords.
-6. Point a test API process at the restored school/platform runtime URLs.
-7. Verify `/api/ready` returns 200 and restricted-role checks report both roles as safe.
-8. Run representative counts for institutions, users, students, staff, exams, results, subscriptions, and audit logs.
-9. Prove school tenant isolation and platform restrictions using the existing security regression suites.
-10. Record elapsed restore time, failures, counts, and the resulting RPO/RTO measurement.
+5. Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` to restore the restricted definer role and its versioned functions.
+6. Run the explicit production bootstrap only if reference data is absent; it must be idempotent and must not reset existing passwords.
+7. Point a test API process at the restored school/platform runtime URLs.
+8. Verify `/api/ready` returns 200 and restricted-role checks report both roles as safe.
+9. Run representative counts for institutions, users, students, staff, exams, results, subscriptions, and audit logs.
+10. Prove school tenant isolation and platform restrictions using the existing security regression suites.
+11. Record elapsed restore time, failures, counts, and the resulting RPO/RTO measurement.
 
 ## Recovery procedure
 
@@ -50,4 +51,3 @@ Use an isolated empty test database; never overwrite production during a drill.
 ## Validation evidence
 
 Do not declare a restore successful from counts alone. The minimum evidence is: readiness 200, school RLS isolation pass, platform restriction pass, representative API read/write pass, cookie/refresh lifecycle pass, and a captured restore duration.
-

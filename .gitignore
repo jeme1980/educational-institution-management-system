@@ -27,6 +27,7 @@ pnpm-debug.log*
 *.backup
 *.sql
 !apps/api/prisma/migrations/**/migration.sql
+!apps/api/scripts/sql/platform-metrics-api.sql
 .recovery/
 
 # Temporary scripts & patches

@@ -1,5 +1,7 @@
 import { NextFunction, Response } from 'express';
 import { prisma } from '../db/prisma';
+import { platformPrisma } from '../db/platform-prisma';
+import { getInstitutionUsage } from '../db/platform-metrics.repository';
 import type { ContextRequest } from '../middleware/context';
 
 export type SubscriptionResource = 'students' | 'staff' | 'users';
@@ -24,6 +26,7 @@ type SubscriptionDatabase = Pick<typeof prisma, 'institutionSubscription' | 'stu
 export async function getEffectiveSubscriptionState(
   institutionId: string,
   database: SubscriptionDatabase = prisma,
+  usageReader?: typeof getInstitutionUsage,
 ): Promise<InstitutionSubscriptionState> {
   const subscription = await database.institutionSubscription.findFirst({
     where: { institutionId },
@@ -43,12 +46,22 @@ export async function getEffectiveSubscriptionState(
     maxStaff: plan?.maxStaff ?? null,
     maxUsers: plan?.maxUsers ?? null,
   };
-  const [students, staff, users] = await Promise.all([
-    database.student.count({ where: { institutionId, isActive: true } }),
-    database.staffMember.count({ where: { institutionId, archivedAt: null } }),
-    database.institutionUser.count({ where: { institutionId, isActive: true, archivedAt: null } }),
-  ]);
+  const { students, staff, users } = usageReader
+    ? await usageReader(institutionId)
+    : await (async () => {
+      const [studentCount, staffCount, userCount] = await Promise.all([
+        database.student.count({ where: { institutionId, isActive: true } }),
+        database.staffMember.count({ where: { institutionId, archivedAt: null } }),
+        database.institutionUser.count({ where: { institutionId, isActive: true, archivedAt: null } }),
+      ]);
+      return { students: studentCount, staff: staffCount, users: userCount };
+    })();
   return { subscription, plan, status, isActive, limits, usage: { students, staff, users } };
+}
+
+/** Platform reads the same business contract through aggregate-only SQL. */
+export function getPlatformEffectiveSubscriptionState(institutionId: string): Promise<InstitutionSubscriptionState> {
+  return getEffectiveSubscriptionState(institutionId, platformPrisma, getInstitutionUsage);
 }
 
 // Compatibility alias for existing controllers and callers. The effective

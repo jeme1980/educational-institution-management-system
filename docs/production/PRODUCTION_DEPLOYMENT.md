@@ -37,13 +37,14 @@ Copy the variable names from `.env.example` or `apps/api/.env.example` into the 
 
 1. Create an empty PostgreSQL database and configure the migration/admin secret.
 2. Run `npm ci` and `npm run build:api` / `npm run build:web` in the build environment.
-3. Run `npm run db:migrate:deploy` with `MIGRATION_DATABASE_URL`.
-4. Provision the school role with `npm run db:setup-runtime-role --workspace @school-management-system/api`.
-5. Provision the platform role with `npm run db:setup-platform-role --workspace @school-management-system/api`.
-6. Run `npm run db:bootstrap` once with migration credentials. This creates reference data and an optional platform administrator; it does not create demo schools or reset passwords.
-7. Configure runtime URLs and start the API with `npm run start:api`.
-8. Confirm `GET /api/ready` is HTTP 200 before sending traffic.
-9. Publish `apps/web/dist/app/browser` and validate the SPA deep-link fallback.
+3. Provision `school_app` and `platform_app` with `npm run db:setup-runtime-role --workspace @school-management-system/api` and `npm run db:setup-platform-role --workspace @school-management-system/api`. The role scripts tolerate tables not yet created; roles must exist for migrations that grant them privileges.
+4. Run `npm run db:migrate:deploy` with `MIGRATION_DATABASE_URL`.
+5. Re-run both role provisioning commands to apply grants and policies to the migrated tables.
+6. Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` with a provisioning credential capable of creating the NOLOGIN definer role. This installs the versioned `apps/api/scripts/sql/platform-metrics-api.sql` artifact after its tables exist; Prisma's migration credential need not have `CREATEROLE`.
+7. Run `npm run db:bootstrap` once with migration credentials. This creates reference data and an optional platform administrator; it does not create demo schools or reset passwords.
+8. Configure runtime URLs and start the API with `npm run start:api`.
+9. Confirm `GET /api/ready` is HTTP 200 before sending traffic.
+10. Publish `apps/web/dist/app/browser` and validate the SPA deep-link fallback.
 
 Do not use `migrate dev`, `db push`, `migrate reset`, or `db:seed:dev` in production.
 
@@ -82,6 +83,7 @@ The role scripts use `psql` when available. On hosts where it is not on `PATH`, 
 - Deploy immutable API/Web artifacts.
 - Run `npm run db:migrate:deploy`.
 - Provision runtime roles only when grants changed.
+- Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` when the platform metrics SQL artifact changes.
 - Run bootstrap only when required.
 - Start API, verify readiness, publish Web, then validate proxy/TLS behavior.
 

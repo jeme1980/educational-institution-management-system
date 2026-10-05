@@ -4,7 +4,8 @@ import type { ContextRequest } from '../middleware/context';
 import { platformPrisma } from '../db/platform-prisma';
 import { recordPlatformAuditEvent } from '../services/platform-audit.service';
 import { assignPlatformSubscription, renewPlatformSubscription, transitionPlatformSubscription } from '../services/platform-subscription.service';
-import { getEffectiveSubscriptionState } from '../services/subscription.service';
+import { getPlatformEffectiveSubscriptionState } from '../services/subscription.service';
+import { getInstitutionUsage, getReferenceDependencyCounts, type PlatformReferenceDependencyKind } from '../db/platform-metrics.repository';
 import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup, revokeInitialAdminSetup } from '../services/school-onboarding.service';
 
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -233,10 +234,12 @@ export async function deletePlatformReferenceData(req: ContextRequest, res: Resp
     if (!existing) { res.status(404).json({ error: 'Reference item not found.' }); return; }
     if (existing.isSystem === true) { res.status(409).json({ code: 'SYSTEM_PROTECTED', error: 'System lookup items cannot be deleted.' }); return; }
     const dependencies = REFERENCE_DEPENDENCIES[key] || [];
-    const counts = await Promise.all(dependencies.map(async (dependency) => ({
-      type: dependency.type,
-      count: await (platformPrisma as any)[dependency.model].count({ where: { [dependency.field]: id } }),
-    })));
+    const counts = key === 'providers'
+      ? await Promise.all(dependencies.map(async (dependency) => ({
+        type: dependency.type,
+        count: await (platformPrisma as any)[dependency.model].count({ where: { [dependency.field]: id } }),
+      })))
+      : await getReferenceDependencyCounts(key as PlatformReferenceDependencyKind, id);
     const used = counts.filter((dependency) => dependency.count > 0);
     if (used.length) {
       res.status(409).json({ code: 'REFERENCE_IN_USE', message: 'This reference record is currently in use.', dependencies: used });
@@ -280,7 +283,7 @@ export async function getInstitution(req: ContextRequest, res: Response): Promis
   const institution = await platformPrisma.institution.findUnique({ where: { id }, include: { ...institutionRelations, subscriptions: { orderBy: { startsAt: 'desc' }, include: { plan: true } } } });
   if (!institution) { res.status(404).json({ error: 'Institution not found.' }); return; }
   const { subscriptions, ...metadata } = institution;
-  const subscriptionState = await getEffectiveSubscriptionState(id, platformPrisma);
+  const subscriptionState = await getPlatformEffectiveSubscriptionState(id);
   res.json({ ...metadata, currentSubscription: subscriptions.find((item) => ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'].includes(item.status)) || null, subscriptionHistory: subscriptions, subscriptionState, initialAdmin: await getInitialAdminStatus(id) });
 }
 
@@ -449,11 +452,7 @@ export async function updatePlan(req: ContextRequest, res: Response): Promise<vo
       const limits = ['maxStudents', 'maxStaff', 'maxUsers'] as const;
       const subscriptions = await tx.institutionSubscription.findMany({ where: { planId: id, status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] }, AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }, { OR: [{ trialEndsAt: null }, { trialEndsAt: { gt: new Date() } }] }] }, select: { institutionId: true } });
       const institutionIds = [...new Set(subscriptions.map((subscription) => subscription.institutionId))];
-      const usage = await Promise.all(institutionIds.map(async (institutionId) => ({
-        students: await tx.student.count({ where: { institutionId, isActive: true } }),
-        staff: await tx.staffMember.count({ where: { institutionId, archivedAt: null } }),
-        users: await tx.institutionUser.count({ where: { institutionId, isActive: true, archivedAt: null } }),
-      })));
+      const usage = await Promise.all(institutionIds.map((institutionId) => getInstitutionUsage(institutionId, tx)));
       for (const field of limits) {
         const requested = parsed.data?.[field];
         if (requested !== undefined && requested !== null) {

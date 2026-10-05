@@ -38,6 +38,7 @@
     "db:setup-runtime-role": "powershell -ExecutionPolicy Bypass -File scripts/setup-runtime-role.ps1",
     "db:setup-platform-role": "powershell -ExecutionPolicy Bypass -File scripts/setup-runtime-role.ps1 -Profile Platform",
     "db:install-platform-metrics-api": "powershell -ExecutionPolicy Bypass -File scripts/install-platform-metrics-api.ps1",
+    "db:install-provider-delete-hardening": "powershell -ExecutionPolicy Bypass -File scripts/install-provider-delete-hardening.ps1",
     "db:migrate:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
     "db:bootstrap": "npm run build && node dist/db/run-production-bootstrap.js",

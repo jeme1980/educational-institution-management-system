@@ -84,6 +84,7 @@ The role scripts use `psql` when available. On hosts where it is not on `PATH`, 
 - Run `npm run db:migrate:deploy`.
 - Provision runtime roles only when grants changed.
 - Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` when the platform metrics SQL artifact changes.
+- For Phase 10C-4P, deploy the API/Web version that rejects Provider DELETE and supports deactivate/reactivate first. Verify both PATCH transitions, then run `npm run db:install-provider-delete-hardening --workspace @school-management-system/api` with `MIGRATION_DATABASE_URL`. This applies `apps/api/scripts/sql/provider-delete-hardening.sql` to existing databases; subsequent platform role provisioning also leaves Provider DELETE revoked. Run Provider security regression after the revoke. On a fresh database, provision roles before migrations and repeat provisioning after migrations as described above.
 - Run bootstrap only when required.
 - Start API, verify readiness, publish Web, then validate proxy/TLS behavior.
 

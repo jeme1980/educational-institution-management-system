@@ -61,6 +61,13 @@ export class StaffDevelopmentComponent implements OnInit {
   readonly specializations = computed(() =>
     (this.apiService.publicLookups()['specializations'] || []).filter(item => item.isActive !== false),
   );
+  readonly historicalProvider = computed(() => {
+    const record = this.apiService.staffDevelopments().find(item => item.id === this.editingId());
+    const provider = record?.provider;
+    return provider && !(this.apiService.publicLookups()['providers'] || []).some(item => item.id === provider.id)
+      ? provider
+      : null;
+  });
   readonly availableYears = computed(() => {
     const years = new Set<number>();
     for (const item of this.apiService.staffDevelopments()) {

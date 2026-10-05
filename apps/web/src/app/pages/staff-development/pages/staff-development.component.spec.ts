@@ -34,6 +34,7 @@ describe('StaffDevelopmentComponent temporal filters', () => {
           useValue: {
             staffDevelopments: signal(developments), staff: signal(staff),
             publicLookups: signal({ specializations }), institutions: signal([]), selectedInstitutionId: signal('school'),
+            usersApi: { staffDevelopmentError: signal('') },
             loadStaff: vi.fn(), loadStaffDevelopments: vi.fn(), loadInstitutions: vi.fn(), loadPublicLookups: vi.fn(),
             loadAcademicPeriods,
           },
@@ -138,5 +139,22 @@ describe('StaffDevelopmentComponent temporal filters', () => {
 
   it('introduces no pagination controls', () => {
     expect(fixture.nativeElement.querySelector('.pagination, [aria-label="ترقيم الصفحات"]')).toBeNull();
+  });
+
+  it('keeps an inactive historical Provider selected only while editing its record', () => {
+    component.apiService.publicLookups.set({
+      specializations,
+      providers: [{ id: 'provider-active', name: 'مزود نشط', isActive: true }],
+    });
+    component.openAdd();
+    fixture.detectChanges();
+    let options = [...fixture.nativeElement.querySelectorAll('select[formControlName="providerId"] option')] as HTMLOptionElement[];
+    expect(options.map((option) => option.value)).not.toContain('provider-1');
+    expect(options.map((option) => option.value)).toContain('provider-active');
+    component.openEdit(developments[0] as any);
+    fixture.detectChanges();
+    options = [...fixture.nativeElement.querySelectorAll('select[formControlName="providerId"] option')] as HTMLOptionElement[];
+    expect(options.find((option) => option.value === 'provider-1')?.textContent).toContain('غير نشط');
+    expect((fixture.nativeElement.querySelector('select[formControlName="providerId"]') as HTMLSelectElement).value).toBe('provider-1');
   });
 });

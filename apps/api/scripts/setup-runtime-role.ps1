@@ -64,8 +64,9 @@ $platformGrants = @(
   @{ Privileges = 'SELECT, INSERT, UPDATE, DELETE'; Tables = @(
       'regions','towns','languages','education_types','education_stages','grade_levels',
       'class_types','composition_types','genders','student_statuses','enrollment_statuses',
-      'relation_types','student_features','providers'
+      'relation_types','student_features'
   ) }
+  @{ Privileges = 'SELECT, INSERT, UPDATE'; Tables = @('providers') }
 )
 
 $roleSql = @"

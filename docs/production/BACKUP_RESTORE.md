@@ -29,6 +29,7 @@ Use an isolated empty test database; never overwrite production during a drill.
 3. Run `npm run db:setup-runtime-role` and `npm run db:setup-platform-role` against the restored database.
 4. Run `npm run db:migrate:deploy` and confirm the migration status is up to date.
 5. Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` to restore the restricted definer role and its versioned functions.
+   Apply `npm run db:install-provider-delete-hardening --workspace @school-management-system/api` after the Provider deactivate/reactivate API is deployed so restored `platform_app` cannot hard-delete Provider rows.
 6. Run the explicit production bootstrap only if reference data is absent; it must be idempotent and must not reset existing passwords.
 7. Point a test API process at the restored school/platform runtime URLs.
 8. Verify `/api/ready` returns 200 and restricted-role checks report both roles as safe.

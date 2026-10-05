@@ -437,7 +437,7 @@ export async function updateStaffDevelopment(req: AuthRequest, res: Response): P
   const staff = await prisma.staffMember.findFirst({ where: { id: staffMemberId, institutionId } });
   if (!staff) return res.status(400).json({ error: 'الموظف المحدد لا ينتمي إلى المؤسسة الحالية.' });
   if (data.providerId && !uuid(data.providerId)) return res.status(400).json({ error: 'الجهة المقدمة المحددة غير صحيحة.' });
-  if (data.providerId && !(await prisma.provider.findFirst({ where: { id: data.providerId, isActive: true } }))) return res.status(400).json({ error: 'الجهة المقدمة غير موجودة أو غير فعالة.' });
+  if (data.providerId && data.providerId !== existing.providerId && !(await prisma.provider.findFirst({ where: { id: data.providerId, isActive: true } }))) return res.status(400).json({ error: 'الجهة المقدمة غير موجودة أو غير فعالة.' });
   try {
     return res.json(await prisma.staffDevelopment.update({ where: { id }, data: { staffMemberId, courseCode: data.courseCode, courseName: data.courseName, providerId: data.providerId, hoursCount: data.hoursCount, startDate: data.startDate, endDate: data.endDate, updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } }));
   } catch (error) {

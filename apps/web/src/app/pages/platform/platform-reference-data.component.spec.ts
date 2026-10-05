@@ -122,6 +122,28 @@ describe('PlatformReferenceDataComponent save DOM flow', () => {
     expect(fixture.componentInstance.showModal()).toBe(false);
   });
 
+  it('shows Provider status actions without hard delete while other references keep delete', async () => {
+    const component = fixture.componentInstance;
+    component.activeTable.set('providers');
+    component.items.set([
+      { id: 'provider-active', providerCode: 'ACTIVE', name: 'مزود نشط', isActive: true },
+      { id: 'provider-inactive', providerCode: 'INACTIVE', name: 'مزود معطل', isActive: false },
+    ]);
+    fixture.detectChanges();
+    const buttons = [...fixture.nativeElement.querySelectorAll('tbody button')] as HTMLButtonElement[];
+    expect(buttons.some((button) => button.getAttribute('aria-label') === 'تعطيل مزود نشط')).toBe(true);
+    expect(buttons.some((button) => button.getAttribute('aria-label') === 'تفعيل مزود معطل')).toBe(true);
+    expect(buttons.some((button) => button.getAttribute('aria-label')?.startsWith('حذف'))).toBe(false);
+    expect(fixture.nativeElement.textContent).toContain('معطل');
+    expect(fixture.nativeElement.textContent).toContain('مع حفظ السجلات التاريخية');
+    await component.deleteItem(component.items()[0]);
+    expect(calls.some((call) => call.options?.method === 'DELETE')).toBe(false);
+    component.activeTable.set('regions');
+    component.items.set(regions);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('tbody button[aria-label^="حذف"]')).not.toBeNull();
+  });
+
   it('updates a system Education Type with display fields only', async () => {
     fixture.componentInstance.activeTable.set('educationTypes');
     fixture.componentInstance.items.set([{ id: 'education-type-1', nameAr: 'تعليم عام', nameHe: 'חינוך כללי', sortOrder: 1, isActive: true, isSystem: true }]);

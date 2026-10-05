@@ -78,23 +78,6 @@ const REFERENCE_DISPLAY_FIELDS: Partial<Record<PlatformReferenceKey, readonly st
   providers: ['name', 'sortOrder', 'isActive'],
 };
 
-const REFERENCE_DEPENDENCIES: Partial<Record<PlatformReferenceKey, readonly { type: string; model: string; field: string }[]>> = {
-  regions: [{ type: 'institutions', model: 'institution', field: 'regionId' }, { type: 'towns', model: 'town', field: 'regionId' }],
-  towns: [{ type: 'institutions', model: 'institution', field: 'townId' }, { type: 'students', model: 'student', field: 'townId' }],
-  languages: [{ type: 'institutions', model: 'institution', field: 'defaultLanguageId' }],
-  educationTypes: [{ type: 'institutions', model: 'institution', field: 'typeId' }],
-  educationStages: [{ type: 'classes', model: 'class', field: 'stageId' }],
-  gradeLevels: [{ type: 'classes', model: 'class', field: 'gradeLevelId' }, { type: 'topics', model: 'topic', field: 'gradeLevelId' }, { type: 'skills', model: 'skill', field: 'gradeLevelId' }],
-  classTypes: [{ type: 'classes', model: 'class', field: 'typeId' }],
-  compositionTypes: [{ type: 'classes', model: 'class', field: 'compositionId' }],
-  genders: [{ type: 'students', model: 'student', field: 'genderId' }, { type: 'staffMembers', model: 'staffMember', field: 'genderId' }],
-  studentStatuses: [{ type: 'students', model: 'student', field: 'studentStatusId' }],
-  enrollmentStatuses: [{ type: 'studentEnrollments', model: 'studentEnrollment', field: 'enrollmentStatusId' }],
-  relationTypes: [{ type: 'studentGuardians', model: 'studentGuardian', field: 'relationTypeId' }],
-  studentFeatures: [{ type: 'enrollments', model: 'studentEnrollment', field: 'studentFeatureId' }],
-  providers: [{ type: 'staffDevelopments', model: 'staffDevelopment', field: 'providerId' }],
-};
-
 const platformReferenceKey = (value: unknown): value is PlatformReferenceKey =>
   typeof value === 'string' && Object.prototype.hasOwnProperty.call(PLATFORM_REFERENCE_TABLES, value);
 
@@ -228,18 +211,13 @@ export async function deletePlatformReferenceData(req: ContextRequest, res: Resp
   const id = String(req.params.id || '');
   if (!platformReferenceKey(key)) { res.status(404).json({ error: 'Platform reference table not found.' }); return; }
   if (!PLATFORM_MUTABLE_REFERENCE_TABLES.has(key)) { res.status(403).json({ error: 'This reference table is read-only at runtime.' }); return; }
+  if (key === 'providers') { res.status(409).json({ code: 'PROVIDER_DELETE_NOT_ALLOWED', message: 'Providers are historical references; deactivate them instead of deleting them.' }); return; }
   const delegate = (platformPrisma as any)[PLATFORM_REFERENCE_TABLES[key]];
   try {
     const existing = await delegate.findUnique({ where: { id } });
     if (!existing) { res.status(404).json({ error: 'Reference item not found.' }); return; }
     if (existing.isSystem === true) { res.status(409).json({ code: 'SYSTEM_PROTECTED', error: 'System lookup items cannot be deleted.' }); return; }
-    const dependencies = REFERENCE_DEPENDENCIES[key] || [];
-    const counts = key === 'providers'
-      ? await Promise.all(dependencies.map(async (dependency) => ({
-        type: dependency.type,
-        count: await (platformPrisma as any)[dependency.model].count({ where: { [dependency.field]: id } }),
-      })))
-      : await getReferenceDependencyCounts(key as PlatformReferenceDependencyKind, id);
+    const counts = await getReferenceDependencyCounts(key as PlatformReferenceDependencyKind, id);
     const used = counts.filter((dependency) => dependency.count > 0);
     if (used.length) {
       res.status(409).json({ code: 'REFERENCE_IN_USE', message: 'This reference record is currently in use.', dependencies: used });

@@ -75,7 +75,13 @@ test('Platform reference data supports safe CRUD, protection, dependencies, and 
 
     for (const item of [...createdIds].reverse()) {
       const deleted = await invoke(deletePlatformReferenceData, { ...request, params: { table: item.key, id: item.id } });
-      assert.equal(deleted.statusCode, 200, `delete ${item.key}`);
+      if (item.key === 'providers') {
+        assert.equal(deleted.statusCode, 409);
+        assert.equal(deleted.body.code, 'PROVIDER_DELETE_NOT_ALLOWED');
+        assert.ok(await admin.provider.findUnique({ where: { id: item.id } }));
+      } else {
+        assert.equal(deleted.statusCode, 200, `delete ${item.key}`);
+      }
     }
     const audit = await admin.platformAuditLog.findFirst({ where: { actorUserId: actor.id, action: 'REFERENCE_DATA_DELETED', entityId: duplicateRegionId } });
     assert.ok(audit, 'successful deletion must create an audit event');

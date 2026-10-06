@@ -120,7 +120,7 @@ test('Phase 10C-3: global references are school read-only and Provider is platfo
     assert.equal(platformPrivileges.provider_insert, true);
     assert.equal(platformPrivileges.provider_update, true);
     assert.equal(platformPrivileges.provider_delete, false);
-    assert.equal(platformPrivileges.region_insert, false);
+    assert.equal(platformPrivileges.region_insert, true);
     await assertDatabaseDenied(() => platformPrisma.$executeRawUnsafe('DELETE FROM public.providers WHERE FALSE'));
     await assertDatabaseDenied(() => platformPrisma.$queryRawUnsafe('SELECT * FROM public.students LIMIT 1'));
 

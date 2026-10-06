@@ -29,6 +29,7 @@ pnpm-debug.log*
 !apps/api/prisma/migrations/**/migration.sql
 !apps/api/scripts/sql/platform-metrics-api.sql
 !apps/api/scripts/sql/provider-delete-hardening.sql
+!apps/api/scripts/sql/platform-final-privilege-hardening.sql
 .recovery/
 
 # Temporary scripts & patches

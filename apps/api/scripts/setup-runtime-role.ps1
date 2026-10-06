@@ -59,7 +59,7 @@ $platformGrants = @(
   @{ Privileges = 'SELECT, INSERT'; Tables = @('platform_audit_logs') },
   @{ Privileges = 'INSERT'; Tables = @('audit_logs') },
   @{ Privileges = 'SELECT, INSERT'; Tables = @('institution_users','staff_members','roles','role_permissions','institution_user_roles') },
-  @{ Privileges = 'SELECT'; Tables = @('permissions','institution_statuses','students','classes','topics','skills','student_enrollments','student_guardians','staff_developments') },
+  @{ Privileges = 'SELECT'; Tables = @('permissions','institution_statuses') },
   # Platform may mutate only the explicit global reference-data allowlist.
   @{ Privileges = 'SELECT, INSERT, UPDATE, DELETE'; Tables = @(
       'regions','towns','languages','education_types','education_stages','grade_levels',
@@ -163,11 +163,11 @@ function Invoke-DatabaseSql([string]$Sql) {
       $parameterName -notin @('schema', 'connection_limit', 'pool_timeout')
     })
     $psqlUrlBuilder.Query = $psqlQueryParts -join '&'
-    $Sql | & $psqlCommand.Source $psqlUrlBuilder.Uri.AbsoluteUri --no-psqlrc --set ON_ERROR_STOP=1 --quiet
+    $Sql | & $psqlCommand.Source $psqlUrlBuilder.Uri.AbsoluteUri --no-psqlrc --set ON_ERROR_STOP=1 --quiet | Out-Host
     return $LASTEXITCODE
   }
 
-  $Sql | npx.cmd prisma db execute --url $AdminUrl --stdin
+  $Sql | npx.cmd prisma db execute --url $AdminUrl --stdin | Out-Host
   return $LASTEXITCODE
 }
 

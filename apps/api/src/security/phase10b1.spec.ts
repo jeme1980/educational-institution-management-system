@@ -61,9 +61,12 @@ test('repeated platform bootstrap does not reset an existing password', async ()
   process.env['PLATFORM_ADMIN_EMAIL'] = 'platform.phase10b1@test.local';
   process.env['PLATFORM_ADMIN_PASSWORD'] = 'A-development-secret-used-only-by-test';
   let createCalled = false;
+  const existingUser: { id: string; isPlatformAdmin: boolean; institutionUsers: { id: string }[]; passwordHash: string } = {
+    id: 'existing', isPlatformAdmin: true, institutionUsers: [], passwordHash: 'unchanged',
+  };
   const client = {
     user: {
-      findUnique: async () => ({ id: 'existing', isPlatformAdmin: true, institutionUser: null, passwordHash: 'unchanged' }),
+      findUnique: async () => existingUser,
       create: async () => { createCalled = true; throw new Error('create must not run for an existing platform administrator'); },
     },
   };

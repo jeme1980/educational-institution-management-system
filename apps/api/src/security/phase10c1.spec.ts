@@ -155,7 +155,7 @@ test('Phase 10C-1: production errors are sanitized while known errors remain map
       status(code: number) { statusCode = code; return this; },
       json(value: unknown) { body = value; return this; },
     } as any;
-    errorHandler(error, { method: 'GET', originalUrl: '/api/test' } as any, response, (() => undefined) as any);
+    errorHandler(error, { method: 'GET', originalUrl: '/api/test', headers: {} } as any, response, (() => undefined) as any);
     return { statusCode, body };
   };
 

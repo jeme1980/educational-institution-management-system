@@ -1,5 +1,5 @@
 import { NextFunction, Response } from 'express';
-import { prisma } from '../db/prisma';
+import { getRequestTransaction, prisma } from '../db/prisma';
 import { platformPrisma } from '../db/platform-prisma';
 import { getInstitutionUsage } from '../db/platform-metrics.repository';
 import type { ContextRequest } from '../middleware/context';
@@ -90,24 +90,47 @@ export function createRequireActiveSubscription(database: SubscriptionDatabase =
 
 export const requireActiveSubscription = createRequireActiveSubscription();
 
+/** Serialize limit-increasing school writes on their stable institution row. */
+export async function enforcePlanLimit(
+  req: ContextRequest,
+  res: Response,
+  resource: SubscriptionResource,
+  database: SubscriptionDatabase = prisma,
+): Promise<boolean> {
+  const institutionId = req.context?.institutionId || req.institutionId || '';
+  if (!institutionId) {
+    res.status(403).json({ error: 'Access denied.' });
+    return false;
+  }
+  const tx = req.db || getRequestTransaction();
+  if (!tx) throw new Error('Plan limit checks require a school request transaction.');
+  // FOR NO KEY UPDATE serializes competing checks without blocking FK key-share locks.
+  const rows = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM public.institutions
+    WHERE id = ${institutionId}::uuid
+      AND id = NULLIF(current_setting('app.current_institution_id', true), '')::uuid
+    FOR NO KEY UPDATE
+  `;
+  if (rows.length !== 1) {
+    res.status(403).json({ error: 'Access denied.' });
+    return false;
+  }
+  const state = await getEffectiveSubscriptionState(institutionId, database);
+  if (!state.isActive) {
+    res.status(403).json({ code: inactiveSubscriptionCode(state), error: 'The institution subscription is not active.' });
+    return false;
+  }
+  const limitKey = resource === 'students' ? 'maxStudents' : resource === 'staff' ? 'maxStaff' : 'maxUsers';
+  const limit = state.limits[limitKey];
+  if (limit !== null && state.usage[resource] >= limit) {
+    res.status(403).json({ code: 'PLAN_LIMIT_REACHED', resource, limit, usage: state.usage[resource], error: `The ${resource} plan limit has been reached.` });
+    return false;
+  }
+  return true;
+}
+
 export function checkPlanLimit(resource: SubscriptionResource, database: SubscriptionDatabase = prisma) {
   return async (req: ContextRequest, res: Response, next: NextFunction): Promise<void> => {
-    const institutionId = req.context?.institutionId || req.institutionId || '';
-    if (!institutionId) {
-      res.status(403).json({ error: 'Access denied.' });
-      return;
-    }
-    const state = await getEffectiveSubscriptionState(institutionId, database);
-    if (!state.isActive) {
-      res.status(403).json({ code: inactiveSubscriptionCode(state), error: 'The institution subscription is not active.' });
-      return;
-    }
-    const limitKey = resource === 'students' ? 'maxStudents' : resource === 'staff' ? 'maxStaff' : 'maxUsers';
-    const limit = state.limits[limitKey];
-    if (limit !== null && state.usage[resource] >= limit) {
-      res.status(403).json({ code: 'PLAN_LIMIT_REACHED', resource, limit, usage: state.usage[resource], error: `The ${resource} plan limit has been reached.` });
-      return;
-    }
-    next();
+    if (await enforcePlanLimit(req, res, resource, database)) next();
   };
 }

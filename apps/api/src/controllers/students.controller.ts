@@ -3,6 +3,7 @@ import { ContextRequest } from '../middleware/context';
 import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
 import { recordAuditEvent } from '../services/audit.service';
+import { enforcePlanLimit } from '../services/subscription.service';
 import { AttendanceStatus } from '@prisma/client';
 import { AttendanceInput } from '../validation/attendance.schemas';
 
@@ -489,6 +490,7 @@ export async function updateStudentsById(req: ContextRequest, res: Response): Pr
   const updated = await prisma.$transaction(async (tx) => {
     const existingStudent = await tx.student.findFirst({ where: { id, institutionId: instId } });
     if (!existingStudent) return null;
+    if (!existingStudent.isActive && isActive === true && !await enforcePlanLimit(req, res, 'students')) return undefined;
     const resolvedStudentStatusId = await resolveStudentStatusId(tx, studentStatusId || existingStudent.studentStatusId);
     const resolvedGenderId = await resolveGenderId(tx, genderId || existingStudent.genderId);
     const updatedStudent = await tx.student.update({
@@ -566,6 +568,7 @@ export async function updateStudentsById(req: ContextRequest, res: Response): Pr
     await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'UPDATE', entityType: 'Student', entityId: id, metadata: { changedFields } });
     return updatedStudent;
   });
+  if (updated === undefined) return;
   if (!updated) return res.status(404).json({ error: 'Student not found or unauthorized' });
   return res.json(updated);
 
@@ -593,6 +596,7 @@ export async function restoreStudentsById(req: ContextRequest, res: Response): P
   const institutionId = req.context!.institutionId;
   const existing = await prisma.student.findFirst({ where: { id: String(req.params.id), institutionId, isActive: false } });
   if (!existing) return res.status(404).json({ error: 'الطالب المؤرشف غير موجود.' });
+  if (!await enforcePlanLimit(req, res, 'students')) return;
   const restored = await prisma.$transaction(async (tx) => {
     const result = await tx.student.update({ where: { id: existing.id }, data: { isActive: true, updatedAt: new Date() } });
     await recordAuditEvent(tx, { institutionId, actorUserId: req.user?.uid, action: 'RESTORE', entityType: 'Student', entityId: existing.id });

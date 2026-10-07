@@ -3,6 +3,7 @@ import { ContextRequest } from '../middleware/context';
 import crypto from 'node:crypto';
 import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../db/prisma';
+import { enforcePlanLimit } from '../services/subscription.service';
 import { invalidateUserSessions } from './auth.controller';
 import { buildUserContext } from './auth.controller';
 import { recordAuditEvent } from '../services/audit.service';
@@ -459,6 +460,8 @@ export async function patchInstitutionUsersById(req: ContextRequest, res: Respon
       }
     }
   }
+
+  if (isActive === true && !instUser.isActive && !instUser.archivedAt && !await enforcePlanLimit(req, res, 'users')) return;
 
   // Toggle active state if passed
   if (isActive !== undefined) {

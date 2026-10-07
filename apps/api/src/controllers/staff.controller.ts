@@ -4,6 +4,7 @@ import { prisma } from '../db/prisma';
 import { ContextRequest } from '../middleware/context';
 import { AuthRequest } from '../middleware/auth';
 import { recordAuditEvent } from '../services/audit.service';
+import { enforcePlanLimit } from '../services/subscription.service';
 import { getStaffDevelopmentAnalysis as getStaffDevelopmentAnalysisData, ParticipationStatus } from '../services/staff-development-analysis.service';
 
 const institutionIdFrom = (req: { institutionId?: string; context?: { institutionId?: string } }) =>
@@ -80,6 +81,7 @@ export async function updateStaffById(req: AuthRequest, res: Response): Promise<
   if (!uuid(institutionId) || !String(firstNameAr || '').trim() || !String(familyNameAr || '').trim()) return res.status(400).json({ error: 'المؤسسة والاسم الأول واسم العائلة حقول مطلوبة وصحيحة.' });
   if (genderId && (!uuid(genderId) || !(await prisma.gender.findFirst({ where: { id: genderId, isActive: true } })))) return res.status(400).json({ error: 'الجنس المحدد غير صالح.' });
   if (specializationId && (!uuid(specializationId) || !(await prisma.specialization.findFirst({ where: { id: specializationId, institutionId, isActive: true } })))) return res.status(400).json({ error: 'التخصص المحدد غير صالح.' });
+  if (existing.archivedAt && !archivedAt && !await enforcePlanLimit(req, res, 'staff')) return;
   try {
     const updated = await prisma.staffMember.update({
       where: { id: existing.id },
@@ -122,6 +124,7 @@ export async function restoreStaffById(req: AuthRequest, res: Response): Promise
   const institutionId = institutionIdFrom(req);
   const existing = await prisma.staffMember.findFirst({ where: { id: String(req.params.id), institutionId, archivedAt: { not: null } } });
   if (!existing) return res.status(404).json({ error: 'الموظف المؤرشف غير موجود.' });
+  if (!await enforcePlanLimit(req, res, 'staff')) return;
   const restored = await prisma.$transaction(async (tx) => {
     const result = await tx.staffMember.update({ where: { id: existing.id }, data: { archivedAt: null, updatedAt: new Date(), updatedBy: uuid(req.user?.uid) } });
     await recordAuditEvent(tx, { institutionId, actorUserId: req.user?.uid, action: 'RESTORE', entityType: 'StaffMember', entityId: existing.id });

@@ -1,7 +1,10 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import { platformPrisma } from '../db/platform-prisma';
 import { recordPlatformAuditEvent } from './platform-audit.service';
 import { withPlatformInstitutionContext } from '../db/platform-institution-context';
+import { lockPlatformInstitution } from './platform-plan-coordination.service';
+import { getEffectiveSubscriptionState } from './subscription.service';
+import { getInstitutionUsage } from '../db/platform-metrics.repository';
 import {
   createPendingAccountPasswordHash,
   issueAccountSetupToken,
@@ -46,15 +49,19 @@ export async function getInitialAdminStatus(institutionId: string, client: Prism
   }, client);
 }
 
-export async function provisionInitialSchoolAdmin(input: { institutionId: string; email: string; firstNameAr: string; familyNameAr: string; firstNameHe?: string; familyNameHe?: string; phoneNumber?: string; nationalId?: string; actorUserId?: string }) {
+interface InitialAdminInput { institutionId: string; email: string; firstNameAr: string; familyNameAr: string; firstNameHe?: string; familyNameHe?: string; phoneNumber?: string; nationalId?: string; actorUserId?: string }
+
+export async function provisionInitialSchoolAdminInTransaction(tx: Prisma.TransactionClient, input: InitialAdminInput) {
   const normalizedEmail = input.email.trim().toLowerCase();
   if (!normalizedEmail || !input.firstNameAr.trim() || !input.familyNameAr.trim()) throw Object.assign(new Error('Administrator email and required name fields are required.'), { statusCode: 400 });
-  return withPlatformInstitutionContext(input.institutionId, async (tx) => {
+    if (!await lockPlatformInstitution(tx, input.institutionId)) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
     const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { id: true, nameAr: true, archivedAt: true } });
     if (!institution) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
     if (institution.archivedAt) throw Object.assign(new Error('Archived institutions cannot receive an administrator setup link.'), { statusCode: 409, code: 'INSTITUTION_ARCHIVED' });
-    const subscription = await tx.institutionSubscription.findFirst({ where: { institutionId: input.institutionId, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] } }, orderBy: { startsAt: 'desc' } });
+    // Preserve onboarding eligibility for SUSPENDED subscriptions; read it only after the institution lock.
+    const subscription = await tx.institutionSubscription.findFirst({ where: { institutionId: input.institutionId, status: { in: [...ACTIVE_SUBSCRIPTION_STATUSES] } }, include: { plan: true }, orderBy: { startsAt: 'desc' } });
     if (!subscription) throw Object.assign(new Error('An active subscription is required before provisioning the initial administrator.'), { statusCode: 409 });
+    const state = await getEffectiveSubscriptionState(input.institutionId, tx, (id) => getInstitutionUsage(id, tx));
     if (await getInitialAdmin(tx, input.institutionId)) throw Object.assign(new Error('The initial administrator is already provisioned.'), { statusCode: 409 });
 
     const existingUser = await tx.user.findUnique({ where: { normalizedEmail }, include: { institutionUsers: { select: { institutionId: true } } } });
@@ -62,6 +69,15 @@ export async function provisionInitialSchoolAdmin(input: { institutionId: string
     if (existingUser?.institutionUsers.length) throw Object.assign(new Error('This email is already linked to a school account.'), { statusCode: 409 });
 
     if (existingUser) throw Object.assign(new Error('This email is already registered.'), { statusCode: 409 });
+    for (const [field, currentUsage] of [['maxStaff', state.usage.staff], ['maxUsers', state.usage.users]] as const) {
+      const projectedUsage = currentUsage + 1; // This flow always creates one counted StaffMember and InstitutionUser.
+      const limit = subscription.plan[field];
+      if (limit !== null && projectedUsage > limit) {
+        throw Object.assign(new Error(`${field} cannot be lower than current usage (${projectedUsage}).`), {
+          statusCode: 409, code: 'PLAN_LIMIT_BELOW_USAGE', field, currentUsage: projectedUsage,
+        });
+      }
+    }
     const user = await tx.user.create({ data: { email: normalizedEmail, normalizedEmail, passwordHash: await createPendingAccountPasswordHash(), isActive: true, mustChangePassword: true } });
     const staffMember = await tx.staffMember.create({ data: { institutionId: input.institutionId, nationalId: input.nationalId || null, firstNameAr: input.firstNameAr.trim(), familyNameAr: input.familyNameAr.trim(), firstNameHe: input.firstNameHe || null, familyNameHe: input.familyNameHe || null, phoneNumber: input.phoneNumber || null, email: normalizedEmail } });
     const institutionUser = await tx.institutionUser.create({ data: { institutionId: input.institutionId, userId: user.id, staffMemberId: staffMember.id, isActive: true, createdBy: input.actorUserId || null } });
@@ -70,7 +86,10 @@ export async function provisionInitialSchoolAdmin(input: { institutionId: string
     const token = await issueAccountSetupToken(tx, user.id);
     await recordPlatformAuditEvent({ actorUserId: input.actorUserId, action: 'INITIAL_ADMIN_PROVISIONED', entityType: 'InstitutionUser', entityId: institutionUser.id, targetInstitutionId: input.institutionId, metadata: { userId: user.id, staffMemberId: staffMember.id, email: normalizedEmail } }, tx);
     return { institutionId: input.institutionId, userId: user.id, institutionUserId: institutionUser.id, staffMemberId: staffMember.id, email: normalizedEmail, setup: setupDeliveryMetadata(token) };
-  });
+}
+
+export async function provisionInitialSchoolAdmin(input: InitialAdminInput) {
+  return withPlatformInstitutionContext(input.institutionId, (tx) => provisionInitialSchoolAdminInTransaction(tx, input));
 }
 
 export async function reissueInitialAdminSetup(input: { institutionId: string; actorUserId?: string }) {

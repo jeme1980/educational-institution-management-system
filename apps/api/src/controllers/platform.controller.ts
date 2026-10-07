@@ -4,7 +4,8 @@ import type { ContextRequest } from '../middleware/context';
 import { platformPrisma } from '../db/platform-prisma';
 import { recordPlatformAuditEvent } from '../services/platform-audit.service';
 import { assignPlatformSubscription, renewPlatformSubscription, transitionPlatformSubscription } from '../services/platform-subscription.service';
-import { getPlatformEffectiveSubscriptionState } from '../services/subscription.service';
+import { getEffectiveSubscriptionState, getPlatformEffectiveSubscriptionState } from '../services/subscription.service';
+import { lockPlatformInstitutions, lockPlatformPlan } from '../services/platform-plan-coordination.service';
 import { getInstitutionUsage, getReferenceDependencyCounts, type PlatformReferenceDependencyKind } from '../db/platform-metrics.repository';
 import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup, revokeInitialAdminSetup } from '../services/school-onboarding.service';
 
@@ -308,6 +309,7 @@ export async function createInstitution(req: ContextRequest, res: Response): Pro
       if (!town || town.regionId !== body.regionId) { res.status(400).json({ error: 'Selected town does not belong to the selected region.' }); return; }
     }
     const result = await platformPrisma.$transaction(async (tx) => {
+      if (planId && !await lockPlatformPlan(tx, planId)) throw Object.assign(new Error('Plan not found or inactive.'), { statusCode: 400 });
       const plan = planId ? await tx.plan.findUnique({ where: { id: planId }, select: { id: true, isActive: true } }) : null;
       if (planId && (!plan || !plan.isActive)) throw Object.assign(new Error('Plan not found or inactive.'), { statusCode: 400 });
       const institution = await tx.institution.create({ data: { schoolCode, slug, nameAr: String(body.nameAr).trim(), nameHe: body.nameHe ? String(body.nameHe).trim() : null, phoneNumber: body.phoneNumber ? String(body.phoneNumber).trim() : null, email, typeId: body.typeId, regionId: body.regionId, statusId: body.statusId, defaultLanguageId: body.defaultLanguageId, townId: uuid(body.townId) ? body.townId : null, logoUrl: body.logoUrl || null, brandingSettings: body.brandingSettings || null, createdBy: req.user?.uid || null } });
@@ -425,17 +427,27 @@ export async function updatePlan(req: ContextRequest, res: Response): Promise<vo
   if (parsed.error) { res.status(400).json({ code: parsed.error.code, error: parsed.error.message, ...(parsed.error.field ? { field: parsed.error.field } : {}) }); return; }
   try {
     const plan = await platformPrisma.$transaction(async (tx) => {
+      if (!await lockPlatformPlan(tx, id)) throw Object.assign(new Error('Plan not found.'), { statusCode: 404 });
       const currentPlan = await tx.plan.findUnique({ where: { id } });
       if (!currentPlan) throw Object.assign(new Error('Plan not found.'), { statusCode: 404 });
       const limits = ['maxStudents', 'maxStaff', 'maxUsers'] as const;
-      const subscriptions = await tx.institutionSubscription.findMany({ where: { planId: id, status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] }, AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }, { OR: [{ trialEndsAt: null }, { trialEndsAt: { gt: new Date() } }] }] }, select: { institutionId: true } });
-      const institutionIds = [...new Set(subscriptions.map((subscription) => subscription.institutionId))];
-      const usage = await Promise.all(institutionIds.map((institutionId) => getInstitutionUsage(institutionId, tx)));
-      for (const field of limits) {
-        const requested = parsed.data?.[field];
-        if (requested !== undefined && requested !== null) {
-          const currentUsage = Math.max(0, ...usage.map((item) => field === 'maxStudents' ? item.students : field === 'maxStaff' ? item.staff : item.users));
-          if (Number(requested) < currentUsage) throw Object.assign(new Error(`${field} cannot be lower than current usage (${currentUsage}).`), { statusCode: 409, code: 'PLAN_LIMIT_BELOW_USAGE', field, currentUsage });
+      if (limits.some((field) => parsed.data?.[field] !== undefined && parsed.data?.[field] !== null)) {
+        // Include historical subscribers in the lock set, then decide from post-lock state.
+        const subscriptions = await tx.institutionSubscription.findMany({ where: { planId: id }, select: { institutionId: true } });
+        const institutionIds = [...new Set(subscriptions.map((subscription) => subscription.institutionId))].sort();
+        await lockPlatformInstitutions(tx, institutionIds);
+        const usage = [] as { students: number; staff: number; users: number }[];
+        for (const institutionId of institutionIds) {
+          const state = await getEffectiveSubscriptionState(institutionId, tx, (id) => getInstitutionUsage(id, tx));
+          const previouslyApplicable = await tx.institutionSubscription.findFirst({ where: { institutionId, planId: id, status: { in: ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] }, AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }, { OR: [{ trialEndsAt: null }, { trialEndsAt: { gt: new Date() } }] }] }, select: { id: true } });
+          if ((state.subscription?.planId === id && state.isActive) || previouslyApplicable) usage.push(state.usage);
+        }
+        for (const field of limits) {
+          const requested = parsed.data?.[field];
+          if (requested !== undefined && requested !== null) {
+            const currentUsage = Math.max(0, ...usage.map((item) => field === 'maxStudents' ? item.students : field === 'maxStaff' ? item.staff : item.users));
+            if (Number(requested) < currentUsage) throw Object.assign(new Error(`${field} cannot be lower than current usage (${currentUsage}).`), { statusCode: 409, code: 'PLAN_LIMIT_BELOW_USAGE', field, currentUsage });
+          }
         }
       }
       const updated = await tx.plan.update({ where: { id }, data: parsed.data as any });

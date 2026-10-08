@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import test from 'node:test';
 import { testAdminPrisma as platformPrisma } from '../db/test-admin-prisma';
 import { platformPrisma as platformRuntimePrisma } from '../db/platform-prisma';
@@ -17,13 +18,18 @@ const invoke = async (handler: any, req: any) => {
 
 test('Phase 9D-1: platform institution creation flow', async () => {
   const base = await platformPrisma.institution.findFirstOrThrow();
-  const suffix = Date.now().toString().slice(-8);
-  const plan = await platformPrisma.plan.create({ data: { code: `10C6C_${suffix}`, nameAr: 'Phase 10C-6C fixture plan', maxStudents: 100, isActive: true } });
   const schoolUser = await platformPrisma.user.findFirstOrThrow({ where: { institutionUsers: { some: {} } } });
-  const actor = await platformPrisma.user.create({ data: { email: `phase9d1-${suffix}@example.com`, normalizedEmail: `phase9d1-${suffix}@example.com`, passwordHash: await hashPassword('Platform@2026!'), isPlatformAdmin: true } });
+  const nonce = randomUUID().replaceAll('-', '');
+  const adminEmail = `phase9d1-admin-${nonce}@example.com`;
+  let planId = '';
+  let actorId = '';
   let institutionId = '';
   let provisioned: any;
   try {
+    const plan = await platformPrisma.plan.create({ data: { code: `10C6C_${nonce}`, nameAr: 'Phase 10C-6C fixture plan', maxStudents: 100, isActive: true } });
+    planId = plan.id;
+    const actor = await platformPrisma.user.create({ data: { email: `phase9d1-${nonce}@example.com`, normalizedEmail: `phase9d1-${nonce}@example.com`, passwordHash: await hashPassword('Platform@2026!'), isPlatformAdmin: true } });
+    actorId = actor.id;
     const runtimePlan = await platformRuntimePrisma.plan.findUnique({ where: { id: plan.id }, select: { id: true, isActive: true } });
     assert.equal(runtimePlan?.isActive, true, 'Platform runtime must see the isolated fixture plan');
     const allowed = await invoke((req: any, res: any) => requirePlatformAdmin(req, res, () => res.json({ allowed: true })), { user: { uid: actor.id } });
@@ -31,10 +37,10 @@ test('Phase 9D-1: platform institution creation flow', async () => {
     const denied = await invoke((req: any, res: any) => requirePlatformAdmin(req, res, () => res.json({ allowed: true })), { user: { uid: schoolUser.id } });
     assert.equal(denied.statusCode, 403);
 
-    const request = { user: { uid: actor.id }, body: { schoolCode: `E2E_${suffix}`, slug: `e2e-${suffix}`, nameAr: 'مؤسسة اختبار المنصة', nameHe: 'מוסד בדיקה', email: `school-${suffix}@example.com`, typeId: base.typeId, regionId: base.regionId, statusId: base.statusId, defaultLanguageId: base.defaultLanguageId }, params: {}, query: {} };
+    const request = { user: { uid: actor.id }, body: { schoolCode: `E2E_${nonce.slice(0, 16)}`, slug: `e2e-${nonce}`, nameAr: 'مؤسسة اختبار المنصة', nameHe: 'מוסד בדיקה', email: `school-${nonce}@example.com`, typeId: base.typeId, regionId: base.regionId, statusId: base.statusId, defaultLanguageId: base.defaultLanguageId }, params: {}, query: {} };
     const created = await invoke(createInstitution, request);
+    institutionId = created.body?.institution?.id || '';
     assert.equal(created.statusCode, 201);
-    institutionId = created.body.institution.id;
     assert.equal(created.body.subscription, null);
 
     const counts = await Promise.all([
@@ -56,8 +62,9 @@ test('Phase 9D-1: platform institution creation flow', async () => {
     assert.equal((await invoke(createInstitution, { ...request, body: { nameAr: '' } })).statusCode, 400);
 
     await assignPlatformSubscription({ institutionId, planId: plan.id, actorUserId: actor.id });
-    provisioned = await provisionInitialSchoolAdmin({ institutionId, email: `admin-${suffix}@example.com`, firstNameAr: 'مدير', familyNameAr: 'الاختبار', actorUserId: actor.id });
+    provisioned = await provisionInitialSchoolAdmin({ institutionId, email: adminEmail, firstNameAr: 'مدير', familyNameAr: 'الاختبار', actorUserId: actor.id });
     assert.ok(provisioned.institutionUserId);
+    assert.equal((await platformPrisma.user.findUniqueOrThrow({ where: { id: provisioned.userId } })).normalizedEmail, adminEmail);
   } finally {
     if (institutionId) {
       await platformPrisma.platformAuditLog.deleteMany({ where: { targetInstitutionId: institutionId } });
@@ -73,7 +80,7 @@ test('Phase 9D-1: platform institution creation flow', async () => {
       await platformPrisma.institutionSubscription.deleteMany({ where: { institutionId } });
       await platformPrisma.institution.delete({ where: { id: institutionId } });
     }
-    await platformPrisma.user.delete({ where: { id: actor.id } });
-    await platformPrisma.plan.delete({ where: { id: plan.id } }).catch(() => undefined);
+    if (actorId) await platformPrisma.user.delete({ where: { id: actorId } });
+    if (planId) await platformPrisma.plan.delete({ where: { id: planId } });
   }
 });

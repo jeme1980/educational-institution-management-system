@@ -277,6 +277,8 @@ model Institution {
   auditLogs                  AuditLog[]
   subscriptions              InstitutionSubscription[]
   interventions              Intervention[]
+  interventionStudents       InterventionStudent[]
+  interventionSkills         InterventionSkill[]
   annualSpecializations      AcademicYearSpecialization[]
   rollovers                  AcademicYearRollover[]
   rolloverEntityMaps         AcademicYearRolloverEntityMap[]
@@ -433,12 +435,12 @@ model AcademicYearSpecialization {
   updatedAt        DateTime       @updatedAt
   institution      Institution    @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   academicYear     AcademicYear   @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  specialization   Specialization @relation(fields: [institutionId, specializationId], references: [institutionId, id], onDelete: Restrict)
+  specialization   Specialization @relation(fields: [institutionId, specializationId], references: [institutionId, id], onDelete: Restrict, map: "academic_year_specializations_institutionId_specializationId_fk")
 
-  @@unique([institutionId, academicYearId, specializationId])
+  @@unique([institutionId, academicYearId, specializationId], map: "academic_year_specializations_institutionId_academicYearId_spec")
   @@unique([institutionId, id])
-  @@index([institutionId, academicYearId, isActive])
-  @@index([institutionId, specializationId])
+  @@index([institutionId, academicYearId, isActive], map: "academic_year_specializations_institutionId_academicYearId_isAc")
+  @@index([institutionId, specializationId], map: "academic_year_specializations_institutionId_specializationId_id")
   @@map("academic_year_specializations")
 }
 
@@ -484,17 +486,17 @@ model AcademicYearRolloverClassMapping {
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
   institution          Institution               @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  rollover             AcademicYearRollover      @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
-  sourceClass          Class                     @relation("RolloverSourceClassMapping", fields: [institutionId, sourceClassId], references: [institutionId, id], onDelete: Restrict)
-  targetClass          Class?                    @relation("RolloverTargetClassMapping", fields: [institutionId, targetClassId], references: [institutionId, id], onDelete: Restrict)
-  targetStage          EducationStage?           @relation(fields: [targetStageId], references: [id], onDelete: Restrict)
-  targetGradeLevel     GradeLevel?               @relation(fields: [targetGradeLevelId], references: [id], onDelete: Restrict)
+  rollover             AcademicYearRollover      @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade, map: "academic_year_rollover_class_mappings_rollover_fkey")
+  sourceClass          Class                     @relation("RolloverSourceClassMapping", fields: [institutionId, sourceClassId], references: [institutionId, id], onDelete: Restrict, map: "academic_year_rollover_class_mappings_source_class_fkey")
+  targetClass          Class?                    @relation("RolloverTargetClassMapping", fields: [institutionId, targetClassId], references: [institutionId, id], onDelete: Restrict, map: "academic_year_rollover_class_mappings_target_class_fkey")
+  targetStage          EducationStage?           @relation(fields: [targetStageId], references: [id], onDelete: Restrict, map: "academic_year_rollover_class_mappings_stage_fkey")
+  targetGradeLevel     GradeLevel?               @relation(fields: [targetGradeLevelId], references: [id], onDelete: Restrict, map: "academic_year_rollover_class_mappings_grade_fkey")
   studentDecisions     StudentRolloverDecision[]
 
-  @@unique([rolloverId, sourceClassId])
+  @@unique([rolloverId, sourceClassId], map: "academic_year_rollover_class_mappings_rolloverId_sourceClassId_")
   @@unique([institutionId, id])
-  @@index([institutionId, rolloverId, validationStatus])
-  @@index([institutionId, sourceClassId])
+  @@index([institutionId, rolloverId, validationStatus], map: "academic_year_rollover_class_mappings_institutionId_rolloverId_")
+  @@index([institutionId, sourceClassId], map: "academic_year_rollover_class_mappings_institutionId_sourceClass")
   @@map("academic_year_rollover_class_mappings")
 }
 
@@ -507,12 +509,12 @@ model AcademicYearRolloverEntityMap {
   targetEntityId String               @db.Uuid
   createdAt      DateTime             @default(now())
   institution    Institution          @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  rollover       AcademicYearRollover @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
+  rollover       AcademicYearRollover @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade, map: "academic_year_rollover_entity_maps_institutionId_rolloverId_fke")
 
-  @@unique([rolloverId, entityType, sourceEntityId])
+  @@unique([rolloverId, entityType, sourceEntityId], map: "academic_year_rollover_entity_maps_rolloverId_entityType_source")
   @@unique([institutionId, id])
-  @@index([institutionId, rolloverId, entityType])
-  @@index([institutionId, entityType, sourceEntityId])
+  @@index([institutionId, rolloverId, entityType], map: "academic_year_rollover_entity_maps_institutionId_rolloverId_ent")
+  @@index([institutionId, entityType, sourceEntityId], map: "academic_year_rollover_entity_maps_institutionId_entityType_sou")
   @@map("academic_year_rollover_entity_maps")
 }
 
@@ -535,18 +537,18 @@ model StudentRolloverDecision {
   institution          Institution                       @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   rollover             AcademicYearRollover              @relation(fields: [institutionId, rolloverId], references: [institutionId, id], onDelete: Cascade)
   student              Student                           @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Restrict)
-  sourceEnrollment     StudentEnrollment                 @relation("RolloverSourceEnrollment", fields: [institutionId, sourceEnrollmentId], references: [institutionId, id], onDelete: Restrict)
+  sourceEnrollment     StudentEnrollment                 @relation("RolloverSourceEnrollment", fields: [institutionId, sourceEnrollmentId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_institutionId_sourceEnrollmentId_fke")
   targetAcademicYear   AcademicYear?                     @relation(fields: [institutionId, targetAcademicYearId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_target_year_fkey")
   targetClass          Class?                            @relation(fields: [institutionId, targetAcademicYearId, targetClassId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_class_fkey")
   targetEnrollment     StudentEnrollment?                @relation("RolloverTargetEnrollment", fields: [institutionId, targetAcademicYearId, targetEnrollmentId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "student_rollover_decisions_target_enrollment_fkey")
-  targetClassMapping   AcademicYearRolloverClassMapping? @relation(fields: [institutionId, targetClassMappingId], references: [institutionId, id], onDelete: Restrict)
+  targetClassMapping   AcademicYearRolloverClassMapping? @relation(fields: [institutionId, targetClassMappingId], references: [institutionId, id], onDelete: Restrict, map: "student_rollover_decisions_class_mapping_fkey")
 
   @@unique([rolloverId, studentId])
   @@unique([institutionId, id])
-  @@index([institutionId, rolloverId, validationStatus])
+  @@index([institutionId, rolloverId, validationStatus], map: "student_rollover_decisions_institutionId_rolloverId_validationS")
   @@index([institutionId, studentId])
   @@index([institutionId, sourceEnrollmentId])
-  @@index([institutionId, targetClassMappingId])
+  @@index([institutionId, targetClassMappingId], map: "student_rollover_decisions_institutionId_targetClassMappingId_i")
   @@map("student_rollover_decisions")
 }
 
@@ -998,7 +1000,6 @@ model Class {
   @@unique([institutionId, academicYearId, classCode])
   @@unique([institutionId, id])
   @@unique([institutionId, academicYearId, id])
-  @@unique([institutionId, academicYearId, stageId, gradeLevelId, parallelNumber])
   @@index([stageId])
   @@index([gradeLevelId])
   @@index([typeId])
@@ -1142,7 +1143,7 @@ model Guardian {
   studentGuardians     StudentGuardian[]
 
   @@unique([institutionId, nationalId])
-  @@unique([institutionId, id])
+  @@unique([institutionId, id], map: "guardians_institution_id_key")
   @@index([institutionId])
   @@map("guardians")
 }
@@ -1161,8 +1162,8 @@ model StudentGuardian {
   updatedAt              DateTime     @updatedAt
   versionNumber          Int          @default(1)
   institution            Institution  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  student                Student      @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade)
-  guardian               Guardian     @relation(fields: [institutionId, guardianId], references: [institutionId, id], onDelete: Cascade)
+  student                Student      @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade, map: "student_guardians_institution_student_fkey")
+  guardian               Guardian     @relation(fields: [institutionId, guardianId], references: [institutionId, id], onDelete: Cascade, map: "student_guardians_institution_guardian_fkey")
   relationType           RelationType @relation(fields: [relationTypeId], references: [id], onDelete: Restrict)
 
   @@unique([institutionId, studentId, guardianId])
@@ -1185,9 +1186,9 @@ model StudentMedicalProfile {
   updatedAt             DateTime    @updatedAt
   versionNumber         Int         @default(1)
   institution           Institution @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  student               Student     @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade)
+  student               Student     @relation(fields: [institutionId, studentId], references: [institutionId, id], onDelete: Cascade, map: "student_medical_profiles_institution_student_fkey")
 
-  @@unique([institutionId, studentId])
+  @@unique([institutionId, studentId], map: "student_medical_profiles_institution_student_key")
   @@index([institutionId])
   @@map("student_medical_profiles")
 }
@@ -1321,7 +1322,7 @@ model StudyGroup {
   academicYear      AcademicYear        @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
   classRoom         Class?              @relation(fields: [institutionId, academicYearId, classId], references: [institutionId, academicYearId, id], onDelete: Restrict)
   subject           Subject             @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  staffAssignment   StaffAssignment?    @relation(fields: [institutionId, academicYearId, staffAssignmentId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  staffAssignment   StaffAssignment?    @relation(fields: [institutionId, academicYearId, staffAssignmentId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "study_groups_institutionId_academicYearId_staffAssignmentId_fke")
   students          StudyGroupStudent[]
   examGroups        ExamStudyGroup[]
   interventions     Intervention[]
@@ -1405,14 +1406,14 @@ model Intervention {
   archivedAt       DateTime?
   institution      Institution           @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   academicYear     AcademicYear          @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  subject          Subject               @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  subject          Subject               @relation(fields: [institutionId, academicYearId, subjectId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "interventions_institutionId_subjectId_fkey")
   studyGroup       StudyGroup            @relation(fields: [institutionId, studyGroupId], references: [institutionId, id], onDelete: Restrict)
   baselineExam     Exam                  @relation("InterventionBaselineExam", fields: [institutionId, baselineExamId], references: [institutionId, id], onDelete: Restrict)
   students         InterventionStudent[]
   skills           InterventionSkill[]
 
   @@unique([institutionId, id])
-  @@index([institutionId, academicYearId, subjectId, studyGroupId])
+  @@index([institutionId, academicYearId, subjectId, studyGroupId], map: "interventions_institutionId_academicYearId_subjectId_studyGroup")
   @@index([institutionId, baselineExamId])
   @@index([institutionId, status, archivedAt])
   @@map("interventions")
@@ -1424,6 +1425,7 @@ model InterventionStudent {
   interventionId      String            @db.Uuid
   studentEnrollmentId String            @db.Uuid
   createdAt           DateTime          @default(now())
+  institution         Institution       @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   intervention        Intervention      @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
   studentEnrollment   StudentEnrollment @relation(fields: [institutionId, studentEnrollmentId], references: [institutionId, id], onDelete: Restrict)
 
@@ -1441,6 +1443,7 @@ model InterventionSkill {
   baselineMastery Decimal?     @db.Decimal(5, 2)
   targetMastery   Decimal?     @db.Decimal(5, 2)
   createdAt       DateTime     @default(now())
+  institution     Institution  @relation(fields: [institutionId], references: [id], onDelete: Restrict)
   intervention    Intervention @relation(fields: [institutionId, interventionId], references: [institutionId, id], onDelete: Cascade)
   skill           Skill        @relation(fields: [institutionId, skillId], references: [institutionId, id], onDelete: Restrict)
 
@@ -1548,7 +1551,7 @@ model Survey {
   updatedAt            DateTime                    @updatedAt
   archivedAt           DateTime?
   institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "surveys_institution_year_fkey")
   sections             SurveySection[]
   domains              SurveyDomain[]
   indicators           SurveyIndicator[]
@@ -1582,7 +1585,7 @@ model SurveySection {
   createdAt        DateTime                @default(now())
   updatedAt        DateTime                @updatedAt
   institution      Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  survey           Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  survey           Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict, map: "survey_sections_survey_fkey")
   domains          SurveyDomain[]
   indicatorResults SurveyIndicatorResult[]
 
@@ -1607,8 +1610,8 @@ model SurveyDomain {
   createdAt         DateTime                 @default(now())
   updatedAt         DateTime                 @updatedAt
   institution       Institution              @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  survey            Survey                   @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
-  section           SurveySection            @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  survey            Survey                   @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict, map: "survey_domains_survey_fkey")
+  section           SurveySection            @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domains_section_fkey")
   indicators        SurveyIndicator[]
   indicatorResults  SurveyIndicatorResult[]
   domainResults     SurveyDomainResult[]
@@ -1637,8 +1640,8 @@ model SurveyIndicator {
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
   institution        Institution             @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  survey             Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
-  domain             SurveyDomain            @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  survey             Survey                  @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict, map: "survey_indicators_survey_fkey")
+  domain             SurveyDomain            @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicators_domain_fkey")
   results            SurveyIndicatorResult[]
 
   @@unique([institutionId, surveyId, code])
@@ -1664,8 +1667,8 @@ model SurveyRound {
   createdAt            DateTime                    @default(now())
   updatedAt            DateTime                    @updatedAt
   institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_rounds_year_fkey")
+  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_rounds_survey_fkey")
   importBatches        SurveyImportBatch[]
   indicatorResults     SurveyIndicatorResult[]
   domainResults        SurveyDomainResult[]
@@ -1693,7 +1696,7 @@ model SurveySegment {
   createdAt            DateTime                    @default(now())
   updatedAt            DateTime                    @updatedAt
   institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  survey               Survey                      @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict)
+  survey               Survey                      @relation(fields: [institutionId, surveyId], references: [institutionId, id], onDelete: Restrict, map: "survey_segments_survey_fkey")
   indicatorResults     SurveyIndicatorResult[]
   domainResults        SurveyDomainResult[]
   domainComparisons    SurveyDomainComparison[]
@@ -1722,18 +1725,18 @@ model SurveyImportBatch {
   createdAt            DateTime                    @default(now())
   updatedAt            DateTime                    @updatedAt
   institution          Institution                 @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  round                SurveyRound                 @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  importedByUser       User?                       @relation(fields: [importedByUserId], references: [id], onDelete: SetNull)
+  academicYear         AcademicYear                @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_import_batches_year_fkey")
+  survey               Survey                      @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_import_batches_survey_fkey")
+  round                SurveyRound                 @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_import_batches_round_fkey")
+  importedByUser       User?                       @relation(fields: [importedByUserId], references: [id], onDelete: SetNull, map: "survey_import_batches_user_fkey")
   indicatorResults     SurveyIndicatorResult[]
   domainResults        SurveyDomainResult[]
   participationResults SurveyParticipationResult[]
 
-  @@unique([institutionId, surveyId, roundId, fileHash])
+  @@unique([institutionId, surveyId, roundId, fileHash], map: "survey_import_batches_institutionId_surveyId_roundId_fileHash_k")
   @@unique([institutionId, id])
   @@unique([institutionId, surveyId, roundId, id])
-  @@index([institutionId, surveyId, roundId, createdAt])
+  @@index([institutionId, surveyId, roundId, createdAt], map: "survey_import_batches_institutionId_surveyId_roundId_createdAt_")
   @@index([importedByUserId])
   @@map("survey_import_batches")
 }
@@ -1756,14 +1759,14 @@ model SurveyIndicatorResult {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
   institution        Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear       AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey             Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  round              SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  section            SurveySection      @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  domain             SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  indicator          SurveyIndicator    @relation(fields: [institutionId, surveyId, indicatorId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  segment            SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  importBatch        SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict)
+  academicYear       AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_indicator_results_year_fkey")
+  survey             Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_indicator_results_survey_fkey")
+  round              SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicator_results_round_fkey")
+  section            SurveySection      @relation(fields: [institutionId, surveyId, sectionId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicator_results_section_fkey")
+  domain             SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicator_results_domain_fkey")
+  indicator          SurveyIndicator    @relation(fields: [institutionId, surveyId, indicatorId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicator_results_indicator_fkey")
+  segment            SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_indicator_results_segment_fkey")
+  importBatch        SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict, map: "survey_indicator_results_batch_fkey")
 
   @@unique([roundId, indicatorId, segmentId])
   @@index([institutionId, surveyId, roundId])
@@ -1788,12 +1791,12 @@ model SurveyDomainResult {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   institution     Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear    AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey          Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  round           SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  domain          SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  segment         SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  importBatch     SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict)
+  academicYear    AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_domain_results_year_fkey")
+  survey          Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_domain_results_survey_fkey")
+  round           SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_results_round_fkey")
+  domain          SurveyDomain       @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_results_domain_fkey")
+  segment         SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_results_segment_fkey")
+  importBatch     SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict, map: "survey_domain_results_batch_fkey")
 
   @@unique([roundId, domainId, segmentId])
   @@index([institutionId, surveyId, roundId])
@@ -1817,16 +1820,16 @@ model SurveyDomainComparison {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   institution       Institution   @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear      AcademicYear  @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey            Survey        @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
-  round             SurveyRound   @relation("SurveyDomainComparisonRound", fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  domain            SurveyDomain  @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  segment           SurveySegment @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
-  comparisonRound   SurveyRound?  @relation("SurveyDomainComparisonTargetRound", fields: [institutionId, surveyId, comparisonRoundId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  academicYear      AcademicYear  @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_domain_comparisons_year_fkey")
+  survey            Survey        @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_domain_comparisons_survey_fkey")
+  round             SurveyRound   @relation("SurveyDomainComparisonRound", fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_comparisons_round_fkey")
+  domain            SurveyDomain  @relation(fields: [institutionId, surveyId, domainId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_comparisons_domain_fkey")
+  segment           SurveySegment @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_comparisons_segment_fkey")
+  comparisonRound   SurveyRound?  @relation("SurveyDomainComparisonTargetRound", fields: [institutionId, surveyId, comparisonRoundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_domain_comparisons_target_round_fkey")
 
-  @@unique([roundId, domainId, segmentId, comparisonType])
+  @@unique([roundId, domainId, segmentId, comparisonType], map: "survey_domain_comparisons_roundId_domainId_segmentId_comparison")
   @@index([institutionId, surveyId, roundId])
-  @@index([institutionId, surveyId, comparisonRoundId])
+  @@index([institutionId, surveyId, comparisonRoundId], map: "survey_domain_comparisons_institutionId_surveyId_comparisonRoun")
   @@map("survey_domain_comparisons")
 }
 
@@ -1844,10 +1847,10 @@ model SurveyParticipationResult {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   institution      Institution        @relation(fields: [institutionId], references: [id], onDelete: Restrict)
-  academicYear     AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict)
-  survey           Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict)
+  academicYear     AcademicYear       @relation(fields: [institutionId, academicYearId], references: [institutionId, id], onDelete: Restrict, map: "survey_participation_results_year_fkey")
+  survey           Survey             @relation(fields: [institutionId, academicYearId, surveyId], references: [institutionId, academicYearId, id], onDelete: Restrict, map: "survey_participation_results_survey_fkey")
   round            SurveyRound        @relation(fields: [institutionId, surveyId, roundId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_participation_results_round_fkey")
-  segment          SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict)
+  segment          SurveySegment      @relation(fields: [institutionId, surveyId, segmentId], references: [institutionId, surveyId, id], onDelete: Restrict, map: "survey_participation_results_segment_fkey")
   importBatch      SurveyImportBatch? @relation(fields: [institutionId, surveyId, roundId, importBatchId], references: [institutionId, surveyId, roundId, id], onDelete: Restrict, map: "survey_participation_results_batch_fkey")
 
   @@unique([roundId, segmentId])

@@ -38,7 +38,6 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
           }
         </div>
       } @else {
-        <ng-container>
         <div ui-modal-body class="grid gap-4">
           <p class="text-sm text-on-surface-variant">لم يتم إعداد مدير أول للمؤسسة. سيحصل المدير على رابط آمن لاستخدامه مرة واحدة واختيار كلمة المرور.</p>
           <label>البريد الإلكتروني *<input class="ui-form-control" type="email" required aria-label="البريد الإلكتروني" (input)="email.set($any($event.target).value)" /></label>
@@ -47,8 +46,9 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
           <label>الهاتف<input class="ui-form-control" type="tel" aria-label="الهاتف" (input)="phoneNumber.set($any($event.target).value)" /></label>
           @if (formError()) { <p role="alert" class="text-sm text-danger">{{ formError() }}</p> }
         </div>
+      }
+      @if (!loading() && !error() && !admin()) {
         <div ui-modal-footer><ui-button type="button" [loading]="saving()" [disabled]="saving()" (activated)="issue()">إصدار رابط إعداد المدير</ui-button></div>
-        </ng-container>
       }
     </ui-modal>
   `,

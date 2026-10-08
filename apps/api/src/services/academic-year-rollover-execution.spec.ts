@@ -38,12 +38,13 @@ test('execute body accepts only a SHA-256 fingerprint', () => {
   assert.equal(academicYearRolloverExecuteSchema.safeParse({ executionPlanFingerprint: 'a'.repeat(64), extra: true }).success, false);
 });
 
-test('execute route uses settings:update and no web execute integration exists', () => {
+test('execute route uses settings:update and web submits the plan fingerprint', () => {
   const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'academic-year-rollover.routes.js'), 'utf8');
   const webService = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'web', 'src', 'app', 'pages', 'academic-years', 'services', 'rollover-api.service.ts'), 'utf8');
   const executeRoute = routes.split('\n').find(line => line.includes("rollover/:rolloverId/execute")) || '';
   assert.match(executeRoute, /requirePermission.*'settings', 'update'/);
-  assert.doesNotMatch(webService, /\/execute/);
+  assert.match(webService, /executeAcademicYearRollover\(rolloverId: string, executionPlanFingerprint: string\)/);
+  assert.match(webService, /rollover\/\$\{rolloverId\}\/execute`, \{ method: 'POST', body: JSON\.stringify\(\{ executionPlanFingerprint \}\) \}/);
 });
 
 test('execute source contains no historical-data or current-year writes', () => {

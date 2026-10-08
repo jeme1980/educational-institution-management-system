@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { ConfirmDialogService } from '../../shared/services/confirm-dialog.service';
 import { PlatformInstitutionsComponent } from './platform-institutions.component';
@@ -22,7 +23,7 @@ describe('PlatformInstitutionsComponent subscription onboarding', () => {
       if (!options?.method) return jsonResponse([]);
       return jsonResponse({ id: 'institution-1' }, options.method === 'POST' ? 201 : 200);
     } };
-    await TestBed.configureTestingModule({ imports: [PlatformInstitutionsComponent], providers: [{ provide: ApiService, useValue: api }, { provide: ConfirmDialogService, useValue: {} }] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [PlatformInstitutionsComponent], providers: [provideRouter([]), { provide: ApiService, useValue: api }, { provide: ConfirmDialogService, useValue: {} }] }).compileComponents();
     fixture = TestBed.createComponent(PlatformInstitutionsComponent);
     await fixture.whenStable();
     fixture.detectChanges();

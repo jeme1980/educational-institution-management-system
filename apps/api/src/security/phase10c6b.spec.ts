@@ -1,12 +1,18 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import ExcelJS from 'exceljs';
 import { PrismaClient } from '@prisma/client';
 import app from '../server';
+import { prisma } from '../db/prisma';
+import { platformPrisma } from '../db/platform-prisma';
 import { createLocalAccessToken } from '../middleware/auth';
 import { MAX_SPREADSHEET_FILE_BYTES, XLSX_MIME } from './spreadsheet-security';
+
+after(async () => {
+  await Promise.all([prisma.$disconnect(), platformPrisma.$disconnect()]);
+});
 
 const adminUrl = process.env['TEST_ADMIN_DATABASE_URL'] || process.env['MIGRATION_DATABASE_URL'] || process.env['DATABASE_URL'];
 const json = async (response: Response) => response.json().catch(() => null);

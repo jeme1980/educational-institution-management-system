@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { platformPrisma } from '../db/platform-prisma';
+
+after(async () => {
+  await platformPrisma.$disconnect();
+});
 
 const tenantTables = [
   'students', 'classes', 'topics', 'skills', 'student_enrollments',

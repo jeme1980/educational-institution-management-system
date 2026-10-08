@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const template = readFileSync(new URL('./interventions.component.html', import.meta.url), 'utf8');
-const source = readFileSync(new URL('./interventions.component.ts', import.meta.url), 'utf8');
+const componentPath = resolve(process.cwd(), 'src/app/pages/interventions/pages');
+const template = readFileSync(resolve(componentPath, 'interventions.component.html'), 'utf8');
+const source = readFileSync(resolve(componentPath, 'interventions.component.ts'), 'utf8');
 
 describe('Interventions workspace actions', () => {
   it('wires the new-plan button to the existing create route', () => {

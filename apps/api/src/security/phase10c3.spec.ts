@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { PrismaClient } from '@prisma/client';
 import app from '../server';
 import { prisma } from '../db/prisma';
@@ -9,6 +9,10 @@ import { platformPrisma } from '../db/platform-prisma';
 import { createLocalAccessToken } from '../middleware/auth';
 import { createPublicLookup, deletePublicLookup, updatePublicLookup } from '../controllers/public-lookups.controller';
 import { hashPassword } from './password';
+
+after(async () => {
+  await Promise.all([platformPrisma.$disconnect(), prisma.$disconnect()]);
+});
 
 type ReferencePrivileges = {
   provider_select: boolean;

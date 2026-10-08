@@ -14,6 +14,7 @@ describe('PlatformAdminSetupComponent', () => {
 
   beforeEach(async () => {
     calls = [];
+    shouldFail = false;
     const api = { apiFetch: async (path: string, options?: RequestInit) => {
       calls.push(`${options?.method || 'GET'} ${path}`);
       if (shouldFail) return jsonResponse({ error: 'failed' }, 500);
@@ -30,6 +31,7 @@ describe('PlatformAdminSetupComponent', () => {
     fixture = TestBed.createComponent(PlatformAdminSetupComponent);
     fixture.componentRef.setInput('institutionId', 'institution-1');
     fixture.componentRef.setInput('institutionName', 'School');
+    await fixture.componentInstance.load();
     await fixture.whenStable();
     fixture.detectChanges();
   });

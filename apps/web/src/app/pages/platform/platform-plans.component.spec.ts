@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { PlatformPlansComponent } from './platform-plans.component';
 
@@ -20,14 +21,14 @@ describe('PlatformPlansComponent', () => {
       if (options.method === 'POST') return jsonResponse({ id: 'plan-2', code: body.code, nameAr: body.nameAr, maxStudents: body.maxStudents, isActive: true }, 201);
       return jsonResponse({ ...plans[0], ...body });
     } };
-    await TestBed.configureTestingModule({ imports: [PlatformPlansComponent], providers: [{ provide: ApiService, useValue: api }] }).compileComponents();
+    await TestBed.configureTestingModule({ imports: [PlatformPlansComponent], providers: [provideRouter([]), { provide: ApiService, useValue: api }] }).compileComponents();
     fixture = TestBed.createComponent(PlatformPlansComponent);
     await fixture.whenStable();
     fixture.detectChanges();
   });
 
   it('opens edit with current values and sends an allowlisted PATCH', async () => {
-    const actions = [...fixture.nativeElement.querySelectorAll('td:last-child ui-button button')] as HTMLButtonElement[];
+    const actions = [...fixture.nativeElement.querySelector('ui-table-actions').querySelectorAll('ui-button button')] as HTMLButtonElement[];
     expect(actions).toHaveLength(2);
     expect(actions.every((button) => button.classList.contains('ui-button--icon-only'))).toBe(true);
     expect(actions[0].getAttribute('aria-label')).toContain('تعديل');

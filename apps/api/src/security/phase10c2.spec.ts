@@ -1,15 +1,20 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import test from 'node:test';
+import test, { after } from 'node:test';
 import { PrismaClient } from '@prisma/client';
 import app from '../server';
 import { platformPrisma } from '../db/platform-prisma';
+import { prisma } from '../db/prisma';
 import { inspectRuntimeDatabaseRole } from '../services/runtime-database-role.service';
 import { assignPlatformSubscription, transitionPlatformSubscription } from '../services/platform-subscription.service';
 import { getInitialAdminStatus, provisionInitialSchoolAdmin, reissueInitialAdminSetup } from '../services/school-onboarding.service';
 import { completeAccountSetup } from '../controllers/account-setup.controller';
 import { hashPassword } from './password';
 import { setupTokenHash } from '../services/account-setup.service';
+
+after(async () => {
+  await Promise.all([platformPrisma.$disconnect(), prisma.$disconnect()]);
+});
 
 type PrivilegeRow = {
   schema_create: boolean;

@@ -26,12 +26,10 @@ Use an isolated empty test database; never overwrite production during a drill.
 
 1. Create the empty restore database.
 2. Restore the custom dump with migration/admin credentials.
-3. Run `npm run db:setup-runtime-role` and `npm run db:setup-platform-role` against the restored database.
-4. Run `npm run db:migrate:deploy` and confirm the migration status is up to date.
-5. Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` to restore the restricted definer role and its versioned functions.
-   Apply `npm run db:install-provider-delete-hardening --workspace @school-management-system/api` after the Provider deactivate/reactivate API is deployed so restored `platform_app` cannot hard-delete Provider rows.
-   Once the application uses the narrow platform metrics functions, apply `npm run db:install-platform-final-privilege-hardening --workspace @school-management-system/api` and verify the restored platform ACL and NOINHERIT role attribute.
-6. Run the explicit production bootstrap only if reference data is absent; it must be idempotent and must not reset existing passwords.
+3. Point deployment-only `MIGRATION_DATABASE_URL` and the two restricted runtime URLs at the restored database. Keep the migration credential out of the API runtime.
+4. Run `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-production.ps1` against the isolated restored database. This reapplies roles before and after Prisma migrations, installs Platform Metrics, applies Provider DELETE and final privilege hardening, runs idempotent reference bootstrap, and verifies migration history and final ACL. Prisma receives the migration credential through its child-process `DATABASE_URL` mapping.
+5. Confirm the restored release supports Provider deactivate/reactivate and the narrow Platform Metrics functions before applying traffic to it.
+6. Do not reset existing platform administrator passwords during bootstrap.
 7. Point a test API process at the restored school/platform runtime URLs.
 8. Verify `/api/ready` returns 200 and restricted-role checks report both roles as safe.
 9. Run representative counts for institutions, users, students, staff, exams, results, subscriptions, and audit logs.
@@ -43,8 +41,8 @@ Use an isolated empty test database; never overwrite production during a drill.
 1. Disable or drain writes and declare the incident.
 2. Identify the latest verified backup and its checksum.
 3. Create a replacement database and restore it.
-4. Provision `school_app` and `platform_app` with `NOSUPERUSER NOBYPASSRLS`.
-5. Run migration status and bootstrap/reference validation.
+4. Point deployment-only and restricted runtime database URLs at the replacement database, then run `scripts/deploy-production.ps1` from the compatible release. It provisions both roles, checks and deploys migrations, applies every required hardening installer, runs bootstrap, and verifies the final ACL.
+5. Keep the migration credential out of the API runtime environment.
 6. Start the API against the replacement database and wait for readiness.
 7. Run smoke tests and representative security checks.
 8. Switch proxy traffic to the validated API/database pair.

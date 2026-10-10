@@ -18,37 +18,41 @@ Artifacts and working directories:
 | Web | `apps/web/dist/app/browser` | `npm run start:web` |
 | API | `apps/api/dist` | `npm run start:api` |
 
-Build once in a clean checkout with `npm ci`, `npm run build:api`, and `npm run build:web`; deploy the resulting artifacts without rebuilding on the target host.
+Run the single preparation entrypoint from a trusted release checkout on Windows PowerShell. It performs `npm ci --include=dev` (build tools are development dependencies), builds both artifacts, upgrades and verifies the database, and stops on the first failure. Publish the resulting immutable artifacts to the API/Web hosts; the process supervisor starts them with runtime-only credentials.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-production.ps1
+```
 
 ## Environment contract
 
-Copy the variable names from `.env.example` or `apps/api/.env.example` into the deployment secret store. Never commit or print values. Production requires:
+Copy the variable names from `.env.example` into the deployment secret store. Never commit or print values. Production requires:
 
 - `NODE_ENV=production`, `AUTH_JWT_SECRET`, token TTLs, `PORT`, `CORS_ORIGINS`, and `APP_URL`.
 - `RLS_RUNTIME_DATABASE_URL` for `school_app`.
 - `PLATFORM_DATABASE_URL` for `platform_app`.
 - `MIGRATION_DATABASE_URL` for migrations/bootstrap only.
-- `ACCOUNT_SETUP_URL_BASE` when setup links are enabled.
+- `ACCOUNT_SETUP_URL_BASE` as a public HTTPS `/account/setup` page, without a token or localhost address.
 - `PLATFORM_ADMIN_EMAIL` and `PLATFORM_ADMIN_PASSWORD` only during the explicit bootstrap operation; remove or rotate them immediately afterward.
 
-`school_app` and `platform_app` must be `NOSUPERUSER`, `NOBYPASSRLS`, and must not inherit another role. The API must never use the migration/admin URL at runtime.
+`school_app` and `platform_app` must be `NOSUPERUSER`, `NOBYPASSRLS`, `NOINHERIT`, and must have no role memberships. Prisma's schema names `DATABASE_URL`; `apps/api/scripts/run-prisma-migration.ps1` maps `MIGRATION_DATABASE_URL` to it only within the Prisma child process for validate/status/deploy. The API supervisor must not receive `MIGRATION_DATABASE_URL` or a migration-valued `DATABASE_URL`. Its school and platform connections remain `RLS_RUNTIME_DATABASE_URL` and `PLATFORM_DATABASE_URL`.
 
 ## Fresh deployment order
 
-1. Create an empty PostgreSQL database and configure the migration/admin secret.
-2. Run `npm ci` and `npm run build:api` / `npm run build:web` in the build environment.
-3. Provision `school_app` and `platform_app` with `npm run db:setup-runtime-role --workspace @school-management-system/api` and `npm run db:setup-platform-role --workspace @school-management-system/api`. The role scripts tolerate tables not yet created; roles must exist for migrations that grant them privileges.
-4. Run `npm run db:migrate:deploy` with `MIGRATION_DATABASE_URL`.
-5. Re-run both role provisioning commands to apply grants and policies to the migrated tables.
-6. Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` with a provisioning credential capable of creating the NOLOGIN definer role. This installs the versioned `apps/api/scripts/sql/platform-metrics-api.sql` artifact after its tables exist; Prisma's migration credential need not have `CREATEROLE`.
-7. Run `npm run db:bootstrap` once with migration credentials. This creates reference data and an optional platform administrator; it does not create demo schools or reset passwords.
-8. Configure runtime URLs and start the API with `npm run start:api`.
-9. Confirm `GET /api/ready` is HTTP 200 before sending traffic.
-10. Publish `apps/web/dist/app/browser` and validate the SPA deep-link fallback.
+1. Create an empty PostgreSQL database and configure deployment and restricted runtime secrets in the secret store. Take and verify a backup before upgrading an existing database.
+2. Run `scripts/deploy-production.ps1`. Its preflight validates all required variables and the HTTPS account-setup URL before changing the database. `-ValidateOnly` runs this check without install, build, or DB writes.
+3. The helper runs `npm ci --include=dev`, builds API and Web artifacts, then provisions `school_app` and `platform_app` before migration because migrations grant those roles privileges.
+4. It runs Prisma validate and migrate status through `run-prisma-migration.ps1`; a fresh database's *unapplied migrations* status is accepted. It then runs `prisma migrate deploy` with the migration credential and requires post-migration status success.
+5. It repeats both role-provisioning commands because new migration tables need their grants and policies.
+6. It installs Platform Metrics (`db:install-platform-metrics-api`), then Provider DELETE hardening (`db:install-provider-delete-hardening`), then final Platform privilege hardening (`db:install-platform-final-privilege-hardening`). These are mandatory on both fresh and upgrade runs. The deployment credential needs the role-management rights required by the Metrics installer.
+7. It runs idempotent production reference bootstrap and `scripts/verify-production-db.cjs`, which checks migration history, restricted role attributes/memberships, Provider DELETE denial, seven direct SELECT denials, and Metrics execute privileges. Do not start the new API if any step fails.
+8. Publish `apps/api/dist` and start the built API under a process supervisor with runtime-only secrets using `npm run start:api`. This command has no port cleanup or migrations. On an occupied port, the new process fails; the supervisor handles rollout without terminating the old process implicitly.
+9. Check `GET /api/health` and `GET /api/ready` for HTTP 200 before routing traffic to the new API. Readiness checks both restricted database clients.
+10. Publish `apps/web/dist/app/browser` and serve it via the HTTPS reverse proxy or `npm run start:web` behind that proxy. Confirm `/api` forwarding and SPA deep-link fallback; do not use Angular's development server in production.
 
 Do not use `migrate dev`, `db push`, `migrate reset`, or `db:seed:dev` in production.
 
-The role scripts use `psql` when available. On hosts where it is not on `PATH`, set `PSQL_PATH` to the approved PostgreSQL client binary before provisioning. Existing role passwords are preserved by default; use `-RotatePassword` only as an explicit credential-rotation operation.
+The role scripts use `psql` when available. On hosts where it is not on `PATH`, set `PSQL_PATH` to the approved PostgreSQL client binary before provisioning. Existing role passwords are preserved by default; use `-RotatePassword` only as an explicit credential-rotation operation. The role and hardening installers are safe to rerun: provisioning reapplies grants, Metrics replaces its functions, and the two hardening SQL artifacts repeat `REVOKE`/`NOINHERIT`. `migrate deploy` is a no-op when current.
 
 ## Reverse proxy requirements
 
@@ -80,14 +84,9 @@ The role scripts use `psql` when available. On hosts where it is not on `PATH`, 
 
 ### Deploy
 
-- Deploy immutable API/Web artifacts.
-- Run `npm run db:migrate:deploy`.
-- Provision runtime roles only when grants changed.
-- Run `npm run db:install-platform-metrics-api --workspace @school-management-system/api` when the platform metrics SQL artifact changes.
-- For Phase 10C-4P, deploy the API/Web version that rejects Provider DELETE and supports deactivate/reactivate first. Verify both PATCH transitions, then run `npm run db:install-provider-delete-hardening --workspace @school-management-system/api` with `MIGRATION_DATABASE_URL`. This applies `apps/api/scripts/sql/provider-delete-hardening.sql` to existing databases; subsequent platform role provisioning also leaves Provider DELETE revoked. Run Provider security regression after the revoke. On a fresh database, provision roles before migrations and repeat provisioning after migrations as described above.
-- For final platform privilege hardening, first provision runtime roles, deploy migrations, install the platform metrics API, and deploy the application version using its narrow functions. After Provider deactivation and its DELETE hardening are active, run `npm run db:install-platform-final-privilege-hardening --workspace @school-management-system/api` with `MIGRATION_DATABASE_URL`. This revokes direct `platform_app` SELECT on the seven operational tenant tables and sets the role to NOINHERIT. Verify the ACL and platform workflow security tests after applying it; rerunning platform role provisioning must preserve the same final grants.
-- Run bootstrap only when required.
-- Start API, verify readiness, publish Web, then validate proxy/TLS behavior.
+- Run the preparation entrypoint once. It always applies every required installer, including Provider DELETE and final Platform privilege hardening; no optional manual DB step is hidden in the checklist.
+- On an existing installation, ensure the Provider deactivate/reactivate API and narrow Platform Metrics function callers are already supported by the released artifact before its corresponding hardening step takes effect. Drain or coordinate traffic when upgrading an older incompatible API.
+- Start API with runtime-only credentials, verify health/readiness, publish Web, then validate proxy/TLS behavior.
 
 ### Post-deploy smoke test
 
@@ -96,11 +95,13 @@ Check `/`, `/api/health`, `/api/ready`, platform login, school login, a referenc
 ### Rollback
 
 1. Stop or drain writes and record the failing release.
-2. Restore the previous API and Web artifacts without changing environment values.
+2. If the database migration is backward-compatible, restore the previous compatible API and Web artifacts without changing runtime environment values.
 3. Confirm database compatibility before rollback; never assume Prisma has down migrations.
 4. If a destructive migration is involved, restore the database backup to a replacement database, provision roles, validate readiness/RLS, and switch traffic only after smoke tests pass.
 
 The default database rollback policy is forward-fix. Destructive changes require a staged rollout and a tested restore path.
+
+No Node/npm version pin exists in the repository; this remains separate non-blocking release debt. Review `npm audit --omit=dev` separately. Do not run `npm audit fix` as part of deployment preparation.
 
 ## RPO/RTO targets
 

@@ -7,9 +7,11 @@ import { getEffectiveSubscriptionState } from './subscription.service';
 import { getInstitutionUsage } from '../db/platform-metrics.repository';
 import {
   createPendingAccountPasswordHash,
+  initialAdminSetupDeliveryMetadata,
+  initialAdminSetupUrlBase,
   issueAccountSetupToken,
   resolveAccountSetupStatus,
-  setupDeliveryMetadata,
+  type SetupStatusResult,
 } from './account-setup.service';
 
 const ACTIVE_SUBSCRIPTION_STATUSES = ['TRIAL', 'ACTIVE', 'PAST_DUE', 'SUSPENDED'] as const;
@@ -45,13 +47,15 @@ export async function getInitialAdminStatus(institutionId: string, client: Prism
       pendingSetup: admin.user.mustChangePassword,
       latestToken: latest,
     });
-    return { hasInitialAdmin: true, status, admin: { id: admin.user.id, email: admin.user.email, displayName: `${admin.staffMember.firstNameAr} ${admin.staffMember.familyNameAr}`.trim(), isActive: admin.user.isActive, activatedAt: admin.user.mustChangePassword ? null : admin.user.updatedAt }, setup: latest ? { expiresAt: latest.expiresAt, usedAt: latest.usedAt } : null };
+    const setup: SetupStatusResult | null = latest ? { expiresAt: latest.expiresAt, usedAt: latest.usedAt } : null;
+    return { hasInitialAdmin: true, status, admin: { id: admin.user.id, email: admin.user.email, displayName: `${admin.staffMember.firstNameAr} ${admin.staffMember.familyNameAr}`.trim(), isActive: admin.user.isActive, activatedAt: admin.user.mustChangePassword ? null : admin.user.updatedAt }, setup };
   }, client);
 }
 
 interface InitialAdminInput { institutionId: string; email: string; firstNameAr: string; familyNameAr: string; firstNameHe?: string; familyNameHe?: string; phoneNumber?: string; nationalId?: string; actorUserId?: string }
 
 export async function provisionInitialSchoolAdminInTransaction(tx: Prisma.TransactionClient, input: InitialAdminInput) {
+  const setupBase = initialAdminSetupUrlBase();
   const normalizedEmail = input.email.trim().toLowerCase();
   if (!normalizedEmail || !input.firstNameAr.trim() || !input.familyNameAr.trim()) throw Object.assign(new Error('Administrator email and required name fields are required.'), { statusCode: 400 });
     if (!await lockPlatformInstitution(tx, input.institutionId)) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
@@ -85,7 +89,7 @@ export async function provisionInitialSchoolAdminInTransaction(tx: Prisma.Transa
     await tx.institutionUserRole.create({ data: { institutionId: input.institutionId, institutionUserId: institutionUser.id, roleId: role.id, createdBy: input.actorUserId || null } });
     const token = await issueAccountSetupToken(tx, user.id);
     await recordPlatformAuditEvent({ actorUserId: input.actorUserId, action: 'INITIAL_ADMIN_PROVISIONED', entityType: 'InstitutionUser', entityId: institutionUser.id, targetInstitutionId: input.institutionId, metadata: { userId: user.id, staffMemberId: staffMember.id, email: normalizedEmail } }, tx);
-    return { institutionId: input.institutionId, userId: user.id, institutionUserId: institutionUser.id, staffMemberId: staffMember.id, email: normalizedEmail, setup: setupDeliveryMetadata(token) };
+    return { institutionId: input.institutionId, userId: user.id, institutionUserId: institutionUser.id, staffMemberId: staffMember.id, email: normalizedEmail, setup: initialAdminSetupDeliveryMetadata(token, setupBase) };
 }
 
 export async function provisionInitialSchoolAdmin(input: InitialAdminInput) {
@@ -93,6 +97,7 @@ export async function provisionInitialSchoolAdmin(input: InitialAdminInput) {
 }
 
 export async function reissueInitialAdminSetup(input: { institutionId: string; actorUserId?: string }) {
+  const setupBase = initialAdminSetupUrlBase();
   return withPlatformInstitutionContext(input.institutionId, async (tx) => {
     const institution = await tx.institution.findUnique({ where: { id: input.institutionId }, select: { archivedAt: true } });
     if (institution?.archivedAt) throw Object.assign(new Error('Archived institutions cannot receive an administrator setup link.'), { statusCode: 409, code: 'INSTITUTION_ARCHIVED' });
@@ -102,7 +107,7 @@ export async function reissueInitialAdminSetup(input: { institutionId: string; a
     if (!admin.user.mustChangePassword) throw Object.assign(new Error('The initial administrator account is already active.'), { statusCode: 409 });
     const token = await issueAccountSetupToken(tx, admin.userId);
     await recordPlatformAuditEvent({ actorUserId: input.actorUserId, action: 'ACCOUNT_SETUP_REISSUED', entityType: 'InstitutionUser', entityId: admin.id, targetInstitutionId: input.institutionId, metadata: { userId: admin.userId } }, tx);
-    return { institutionId: input.institutionId, email: admin.user.email, setup: setupDeliveryMetadata(token) };
+    return { institutionId: input.institutionId, email: admin.user.email, setup: initialAdminSetupDeliveryMetadata(token, setupBase) };
   });
 }
 

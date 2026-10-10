@@ -23,7 +23,7 @@ const errorResponse = (res: Response, error: any) => {
   throw error;
 };
 
-type ReferenceValidationError = { message: string; fieldErrors: Record<string, string> };
+interface ReferenceValidationError { message: string; fieldErrors: Record<string, string> }
 
 const providerInput = (body: Record<string, unknown>, partial = false) => {
   const data: { providerCode?: string; name?: string; isActive?: boolean; sortOrder?: number } = {};
@@ -274,17 +274,22 @@ export async function getInitialAdmin(req: ContextRequest, res: Response): Promi
   res.json(await getInitialAdminStatus(id));
 }
 
-const onboardingResponse = (value: any) => process.env['NODE_ENV'] === 'production' ? { ...value, setup: { expiresAt: value.setup.expiresAt } } : value;
-
 export async function provisionInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
   try {
     const result = await provisionInitialSchoolAdmin({ institutionId: String(req.params.id || ''), email: String(req.body?.email || ''), firstNameAr: String(req.body?.firstNameAr || ''), familyNameAr: String(req.body?.familyNameAr || req.body?.lastNameAr || ''), firstNameHe: req.body?.firstNameHe, familyNameHe: req.body?.familyNameHe || req.body?.lastNameHe, phoneNumber: req.body?.phoneNumber, nationalId: req.body?.nationalId, actorUserId: req.user?.uid });
-    res.status(201).json(onboardingResponse(result));
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.status(201).json(result);
   } catch (error) { errorResponse(res, error); }
 }
 
 export async function reissueInitialAdmin(req: ContextRequest, res: Response): Promise<void> {
-  try { res.json(onboardingResponse(await reissueInitialAdminSetup({ institutionId: String(req.params.id || ''), actorUserId: req.user?.uid }))); } catch (error) { errorResponse(res, error); }
+  try {
+    const result = await reissueInitialAdminSetup({ institutionId: String(req.params.id || ''), actorUserId: req.user?.uid });
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.json(result);
+  } catch (error) { errorResponse(res, error); }
 }
 
 export async function revokeInitialAdmin(req: ContextRequest, res: Response): Promise<void> {

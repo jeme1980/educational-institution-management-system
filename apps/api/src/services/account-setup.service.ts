@@ -1,12 +1,15 @@
 import crypto from 'node:crypto';
 import type { Prisma } from '@prisma/client';
 import { hashPassword } from '../security/password';
+import { HttpError } from '../middleware/errorHandler.middleware';
 
 export const ACCOUNT_SETUP_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 type SetupTokenDb = Pick<Prisma.TransactionClient, 'userAccountSetupToken'>;
 
 export type AccountSetupStatus = 'PENDING_SETUP' | 'SETUP_EXPIRED' | 'ACTIVE' | 'DISABLED';
+export interface SetupMutationResult { expiresAt: Date; setupUrl: string }
+export interface SetupStatusResult { expiresAt: Date; usedAt: Date | null }
 
 export function setupTokenHash(token: string): string {
   return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
@@ -36,9 +39,27 @@ export async function issueAccountSetupToken(db: SetupTokenDb, userId: string): 
   return { rawToken, expiresAt };
 }
 
-export function accountSetupUrl(rawToken: string): string {
-  const base = process.env['ACCOUNT_SETUP_URL_BASE'] || 'http://localhost:4200/account/setup';
+export function accountSetupUrl(rawToken: string, base = process.env['ACCOUNT_SETUP_URL_BASE'] || 'http://localhost:4200/account/setup'): string {
   return `${base}${base.includes('?') ? '&' : '?'}token=${encodeURIComponent(rawToken)}`;
+}
+
+/** Resolve before provisioning writes so a missing production delivery URL cannot create an undeliverable account. */
+export function initialAdminSetupUrlBase(): string {
+  const base = process.env['ACCOUNT_SETUP_URL_BASE']?.trim();
+  if (process.env['NODE_ENV'] !== 'production') return base || 'http://localhost:4200/account/setup';
+  if (!base) throw new HttpError(503, 'ACCOUNT_SETUP_URL_BASE is required for initial administrator delivery.', 'ACCOUNT_SETUP_URL_NOT_CONFIGURED');
+  let url: URL;
+  try { url = new URL(base); } catch { throw new HttpError(503, 'ACCOUNT_SETUP_URL_BASE must be a valid HTTPS account setup URL.', 'ACCOUNT_SETUP_URL_INVALID'); }
+  const hostname = url.hostname.toLowerCase();
+  if (url.protocol !== 'https:' || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.startsWith('127.') || hostname === '[::1]' || hostname === '0.0.0.0'
+    || url.username || url.password || url.hash || url.searchParams.has('token') || !url.pathname.replace(/\/$/, '').endsWith('/account/setup')) {
+    throw new HttpError(503, 'ACCOUNT_SETUP_URL_BASE must be a public HTTPS account setup URL.', 'ACCOUNT_SETUP_URL_INVALID');
+  }
+  return base;
+}
+
+export function initialAdminSetupDeliveryMetadata(setup: { rawToken: string; expiresAt: Date }, base: string): SetupMutationResult {
+  return { expiresAt: setup.expiresAt, setupUrl: accountSetupUrl(setup.rawToken, base) };
 }
 
 export function setupDeliveryMetadata(setup: { rawToken: string; expiresAt: Date }): { expiresAt: Date; setupUrl?: string } {

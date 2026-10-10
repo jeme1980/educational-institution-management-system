@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnChanges, OnDestroy, SimpleChanges, inject, input, output, signal } from '@angular/core';
 import { ApiService } from '../../core/services/api.service';
 import { UiBadgeComponent, UiBadgeTone } from '../../shared/components/ui-badge/ui-badge.component';
 import { UiButtonComponent } from '../../shared/components/ui-button/ui-button.component';
@@ -12,7 +12,16 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, UiBadgeComponent, UiButtonComponent, UiModalComponent],
   template: `
-    <ui-modal [open]="true" [title]="'إعداد مدير المؤسسة — ' + institutionName()" size="md" (closed)="closed.emit()">
+    <ui-modal [open]="true" [title]="'إعداد مدير المؤسسة — ' + institutionName()" size="md" (closed)="close()">
+      @if (setupUrl()) {
+        <div ui-modal-body class="grid gap-2 rounded-md border border-surface-border bg-surface-container-low p-3 text-sm text-on-surface">
+          <p>يظهر رابط الإعداد لهذه العملية فقط. انسخه الآن وسلّمه عبر قناة موثوقة؛ إذا فُقد يمكنك إعادة إصداره.</p>
+          <input class="ui-form-control w-full" type="text" dir="ltr" [value]="setupUrl()" readonly aria-label="رابط إعداد المدير" />
+          <ui-button type="button" variant="secondary" (activated)="copySetupLink()">نسخ الرابط</ui-button>
+          @if (copyFeedback()) { <p role="status" aria-live="polite">{{ copyFeedback() }}</p> }
+        </div>
+      }
+      @if (formError()) { <div ui-modal-body role="alert" class="text-sm text-danger">{{ formError() }}</div> }
       @if (loading()) { <div ui-modal-body class="text-sm text-on-surface-variant">جارٍ تحميل حالة إعداد المدير...</div> }
       @else if (error()) { <div ui-modal-body role="alert" class="rounded-md border border-danger-container bg-danger-container p-3 text-sm text-on-danger-container">{{ error() }}</div> }
       @else if (admin(); as current) {
@@ -23,8 +32,7 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
           </div>
           @if (current.status === 'PENDING_SETUP' || current.status === 'SETUP_EXPIRED') {
             <div class="rounded-md border border-surface-border p-3 text-sm text-on-surface-variant">
-              @if (setupUrl()) { <p class="break-all font-mono text-xs text-on-surface">{{ setupUrl() }}</p><ui-button type="button" variant="secondary" (activated)="copySetupLink()">نسخ الرابط</ui-button> }
-              @else { <p>الرابط الأصلي لا يُعاد عرضه بعد الإصدار. استخدم إعادة الإصدار لإنشاء رابط جديد آمن.</p> }
+              @if (!setupUrl()) { <p>الرابط الأصلي لا يُعاد عرضه بعد الإصدار. استخدم إعادة الإصدار لإنشاء رابط جديد آمن.</p> }
               <p class="mt-2">ينتهي الرابط في {{ current.setup?.expiresAt ? (current.setup.expiresAt | date:'medium') : 'غير متاح' }}.</p>
             </div>
             <div class="flex flex-wrap gap-2">
@@ -44,7 +52,6 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
           <label>الاسم الأول *<input class="ui-form-control" required aria-label="الاسم الأول" (input)="firstNameAr.set($any($event.target).value)" /></label>
           <label>اسم العائلة *<input class="ui-form-control" required aria-label="اسم العائلة" (input)="familyNameAr.set($any($event.target).value)" /></label>
           <label>الهاتف<input class="ui-form-control" type="tel" aria-label="الهاتف" (input)="phoneNumber.set($any($event.target).value)" /></label>
-          @if (formError()) { <p role="alert" class="text-sm text-danger">{{ formError() }}</p> }
         </div>
       }
       @if (!loading() && !error() && !admin()) {
@@ -53,7 +60,7 @@ import { ConfirmDialogService } from '../../shared/services/confirm-dialog.servi
     </ui-modal>
   `,
 })
-export class PlatformAdminSetupComponent {
+export class PlatformAdminSetupComponent implements OnChanges, OnDestroy {
   readonly institutionId = input.required<string>();
   readonly institutionName = input('المؤسسة');
   readonly closed = output<void>();
@@ -66,24 +73,46 @@ export class PlatformAdminSetupComponent {
   readonly formError = signal('');
   readonly admin = signal<any | null>(null);
   readonly setupUrl = signal('');
+  readonly copyFeedback = signal('');
   readonly email = signal('');
   readonly firstNameAr = signal('');
   readonly familyNameAr = signal('');
   readonly phoneNumber = signal('');
 
-  constructor() { void this.load(); }
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['institutionId']) {
+      this.setupUrl.set('');
+      this.copyFeedback.set('');
+      this.formError.set('');
+      void this.load();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.setupUrl.set('');
+    this.copyFeedback.set('');
+  }
+
+  close(): void {
+    this.setupUrl.set('');
+    this.copyFeedback.set('');
+    this.closed.emit();
+  }
 
   async load(): Promise<void> {
+    const institutionId = this.institutionId();
     this.loading.set(true); this.error.set('');
     try {
-      const response = await this.api.apiFetch(`/api/platform/institutions/${this.institutionId()}/initial-admin`);
+      const response = await this.api.apiFetch(`/api/platform/institutions/${institutionId}/initial-admin`);
+      if (this.institutionId() !== institutionId) return;
       if (!response.ok) { this.error.set('تعذر تحميل حالة إعداد المدير.'); return; }
       const item = await response.json();
+      if (this.institutionId() !== institutionId) return;
       this.admin.set(item.status === 'NOT_PROVISIONED' ? null : item);
     } catch {
-      this.error.set('تعذر تحميل حالة إعداد المدير. حاول مرة أخرى.');
+      if (this.institutionId() === institutionId) this.error.set('تعذر تحميل حالة إعداد المدير. حاول مرة أخرى.');
     } finally {
-      this.loading.set(false);
+      if (this.institutionId() === institutionId) this.loading.set(false);
     }
   }
 
@@ -98,25 +127,40 @@ export class PlatformAdminSetupComponent {
   }
 
   async revoke(): Promise<void> {
+    const institutionId = this.institutionId();
     const confirmed = await this.confirmDialog.confirm({ title: 'إلغاء رابط إعداد المدير', message: 'سيصبح الرابط الحالي غير صالح ولن يمكن استخدامه. هل تريد المتابعة؟', confirmText: 'إلغاء الرابط', variant: 'danger' });
-    if (confirmed) await this.mutate(`/api/platform/institutions/${this.institutionId()}/initial-admin/revoke`, {});
+    if (confirmed && this.institutionId() === institutionId) await this.mutate(`/api/platform/institutions/${institutionId}/initial-admin/revoke`, {});
   }
 
   async copySetupLink(): Promise<void> {
     if (!this.setupUrl()) return;
-    try { await navigator.clipboard.writeText(this.setupUrl()); } catch { this.formError.set('تعذر نسخ الرابط. انسخه يدويًا.'); }
+    try {
+      await navigator.clipboard.writeText(this.setupUrl());
+      this.copyFeedback.set('تم نسخ الرابط.');
+    } catch {
+      this.copyFeedback.set('تعذر نسخ الرابط. انسخه يدويًا.');
+    }
   }
 
   statusLabel(status: string): string { return ({ NOT_PROVISIONED: 'لم يتم الإعداد', PENDING_SETUP: 'بانتظار الإكمال', SETUP_EXPIRED: 'الرابط منتهٍ', ACTIVE: 'مكتمل', DISABLED: 'معطّل' } as Record<string, string>)[status] || status; }
   statusTone(status: string): UiBadgeTone { return ({ NOT_PROVISIONED: 'disabled', PENDING_SETUP: 'warning', SETUP_EXPIRED: 'danger', ACTIVE: 'success', DISABLED: 'neutral' } as Record<string, UiBadgeTone>)[status] || 'neutral'; }
 
   private async mutate(url: string, body: Record<string, unknown>): Promise<void> {
+    const institutionId = this.institutionId();
     this.saving.set(true);
     try {
       const response = await this.api.apiFetch(url, { method: 'POST', body: JSON.stringify(body) });
+      if (this.institutionId() !== institutionId) return;
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) { this.formError.set(payload.error || 'تعذر تنفيذ العملية.'); return; }
+      if (!response.ok) {
+        this.formError.set((payload.code || payload.error?.code)?.startsWith('ACCOUNT_SETUP_URL_')
+          ? 'تعذر إصدار الرابط لأن عنوان إعداد الحساب غير مهيأ. تواصل مع مسؤول النظام.'
+          : typeof payload.error === 'string' ? payload.error : payload.error?.message || 'تعذر تنفيذ العملية.');
+        return;
+      }
       this.setupUrl.set(payload.setup?.setupUrl || '');
+      this.copyFeedback.set('');
+      this.formError.set('');
       await this.load();
       this.changed.emit();
     } catch {

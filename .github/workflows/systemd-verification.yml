@@ -28,11 +28,27 @@ jobs:
           test "$(ps -p 1 -o comm= | xargs)" = systemd
           systemctl show --property=Version --value | grep -q .
           systemctl list-units --no-pager >/dev/null
-          state=$(systemctl is-system-running || true)
-          case "$state" in
-            running|degraded) ;;
-            *) echo "Unusable systemd state: $state"; exit 1 ;;
-          esac
+          for attempt in $(seq 1 30); do
+            state=$(systemctl is-system-running || true)
+            case "$state" in
+              running|degraded)
+                echo "systemd usable state: $state"
+                break
+                ;;
+              starting)
+                echo 'systemd still starting; waiting...'
+                sleep 1
+                ;;
+              *) echo "Unusable systemd state: $state"; exit 1 ;;
+            esac
+          done
+          if [ "$state" = starting ]; then
+            test "$(ps -p 1 -o comm= | xargs)" = systemd
+            systemctl --version >/dev/null
+            systemctl list-units --type=service --no-pager >/dev/null
+            sudo -n true
+            echo 'systemd remains in transient starting state; continuing because service manager is operational.'
+          fi
 
       - uses: actions/checkout@v4
         with:

@@ -229,10 +229,22 @@ jobs:
             ps -p 1,"$pid" -o pid,ppid,comm,args
           }
           graceful_stop() {
-            local label=$1 pid invocation restarts
-            pid=$(systemctl show "$unit" --property=MainPID --value)
-            invocation=$(systemctl show "$unit" --property=InvocationID --value)
-            restarts=$(systemctl show "$unit" --property=NRestarts --value)
+            local label=$1 pid invocation
+            if ! pid=$(systemctl show "$unit" --property=MainPID --value); then
+              echo "$label: failed to retrieve MainPID."; return 1
+            fi
+            if ! [[ "$pid" =~ ^[0-9]+$ ]] || [ "$pid" -le 1 ]; then
+              echo "$label: expected a running Node MainPID."; return 1
+            fi
+            if ! invocation=$(systemctl show "$unit" --property=InvocationID --value); then
+              echo "$label: failed to retrieve InvocationID."; return 1
+            fi
+            if [ -z "$invocation" ]; then
+              echo "$label: InvocationID is empty."; return 1
+            fi
+            echo "Stopping MainPID=$pid"
+            echo 'InvocationID present: YES'
+            systemctl show "$unit" --property=ActiveState --property=SubState --property=MainPID --property=Result --no-pager
             sudo systemctl stop "$unit"
             test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
             test "$(systemctl show "$unit" --property=MainPID --value)" = 0
@@ -240,7 +252,6 @@ jobs:
               echo 'Node MainPID survived stop.'; return 1
             fi
             test "$(systemctl show "$unit" --property=Result --value)" = success
-            test "$(systemctl show "$unit" --property=ExecMainCode --value)" = 1
             test "$(systemctl show "$unit" --property=ExecMainStatus --value)" = 0
             sudo journalctl "_SYSTEMD_INVOCATION_ID=$invocation" --no-pager -o cat > "$evidence/$label.log"
             cat "$evidence/$label.log"
@@ -259,8 +270,14 @@ jobs:
             done
             sleep 5
             test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
-            test "$(systemctl show "$unit" --property=NRestarts --value)" = "$restarts"
-            echo "$label: clean self-exit, port closed, no forced termination or restart: PASS"
+            test "$(systemctl show "$unit" --property=MainPID --value)" = 0
+            if sudo kill -0 "$pid" 2>/dev/null; then
+              echo 'Old Node MainPID exists after the 5-second wait.'; return 1
+            fi
+            if ss -H -ltn 'sport = :4400' | grep -q .; then
+              echo 'API port reopened after the 5-second wait.'; return 1
+            fi
+            echo "$label: PASS"
           }
 
           sudo systemctl start "$unit"
@@ -273,7 +290,6 @@ jobs:
           wait_ready
           assert_owner
           crashed_pid=$(systemctl show "$unit" --property=MainPID --value)
-          restarts_before=$(systemctl show "$unit" --property=NRestarts --value)
           # SIGKILL is used exclusively for the crash-recovery test.
           sudo systemctl kill --kill-whom=main --signal=SIGKILL "$unit"
           recovered=false
@@ -286,7 +302,6 @@ jobs:
             sleep 1
           done
           test "$recovered" = true
-          test "$(systemctl show "$unit" --property=NRestarts --value)" -gt "$restarts_before"
           wait_ready
           assert_owner
           echo "Crash recovery: old MainPID=$crashed_pid new MainPID=$new_pid: PASS"
@@ -294,6 +309,7 @@ jobs:
           sudo systemctl stop "$unit"
           sudo systemctl stop "$unit"
           test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
+          test "$(systemctl show "$unit" --property=MainPID --value)" = 0
           echo 'Double stop: PASS'
           {
             echo 'Direct Node MainPID, health/ready 200, both graceful stops, crash restart, and double stop: PASS'

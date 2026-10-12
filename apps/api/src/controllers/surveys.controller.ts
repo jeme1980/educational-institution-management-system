@@ -45,6 +45,11 @@ const previewSummary = (workbook: SurveyExcelValidatedWorkbook | null, errorCoun
   errorCount,
 });
 const publicPreviewErrors = (errors: Array<{ sheet: string; row: number; column: string; code: string; message: string }>) => errors.map(({ sheet, row, column, code, message }) => ({ sheet, row, column, code, message }));
+const throwSurveyExcelLimitError = (error: SurveyExcelWorkbookError): void => {
+  if (error.errors.some((item) => ['TOO_MANY_SHEETS', 'TOO_MANY_ROWS', 'TOO_MANY_COLUMNS', 'ARCHIVE_TOO_LARGE'].includes(item.code))) {
+    throw new HttpError(413, 'The spreadsheet exceeds supported workbook dimensions.', 'SURVEY_IMPORT_TOO_LARGE', { errors: publicPreviewErrors(error.errors) });
+  }
+};
 const contextFailure = (error: SurveyExcelSemanticError): HttpError => {
   const status = error.code === 'SURVEY_ARCHIVED' ? 409 : 404;
   return new HttpError(status, error.message, error.code);
@@ -122,6 +127,7 @@ export async function previewSurveyResults(req: AuthRequest, res: Response) {
     parsed = await parseSurveyExcelWorkbook(file);
   } catch (error) {
     if (!(error instanceof SurveyExcelWorkbookError)) throw error;
+    throwSurveyExcelLimitError(error);
     const malformed = error.errors.find((item) => item.code === 'MALFORMED_WORKBOOK');
     if (malformed) throw new HttpError(400, malformed.message, malformed.code);
     return res.json({ valid: false, context: { surveyId, roundId }, summary: previewSummary(null, error.errors.length), errors: publicPreviewErrors(error.errors) });
@@ -154,6 +160,7 @@ export async function importSurveyResults(req: AuthRequest, res: Response) {
     parsed = await parseSurveyExcelWorkbook(upload.buffer);
   } catch (error) {
     if (!(error instanceof SurveyExcelWorkbookError)) throw error;
+    throwSurveyExcelLimitError(error);
     throw new HttpError(400, 'The spreadsheet cannot be imported.', 'SURVEY_IMPORT_PREVIEW_INVALID', { errors: publicPreviewErrors(error.errors) });
   }
   const syntactic = validateSurveyExcelWorkbook(parsed);

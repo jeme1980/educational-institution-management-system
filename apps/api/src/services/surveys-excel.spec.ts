@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import ExcelJS from 'exceljs';
-import { parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from './surveys-excel.parser';
+import { assertSurveyExcelDimensions, MAX_SURVEY_IMPORT_COLUMNS, MAX_SURVEY_IMPORT_ROWS, MAX_SURVEY_IMPORT_WORKSHEETS, parseSurveyExcelWorkbook, SurveyExcelWorkbookError } from './surveys-excel.parser';
 import { validateSurveyExcelWorkbook } from './surveys-excel.validation';
 import type { SurveyExcelSheetName } from './surveys-excel.types';
 
@@ -138,14 +138,14 @@ test('unknown and PII-like columns are rejected by the allowlist', async () => {
   assert.equal(JSON.stringify(validateSurveyExcelWorkbook(await parseSurveyExcelWorkbook(buffer)).workbook).includes('student-1'), false);
 });
 
-test('worksheets outside the four-sheet contract are rejected', async () => {
+test('worksheets outside the four-sheet contract are rejected by the sheet limit', async () => {
   const buffer = await workbookBuffer((_config, workbook) => {
     const sheet = workbook.addWorksheet('Students');
     sheet.addRow(['studentId']);
     sheet.addRow(['student-1']);
   });
-  const errors = validateSurveyExcelWorkbook(await parseSurveyExcelWorkbook(buffer)).errors;
-  assert.ok(errors.some((item) => item.code === 'UNKNOWN_SHEET' && item.sheet === 'Students'));
+  await assert.rejects(() => parseSurveyExcelWorkbook(buffer), (error: unknown) =>
+    error instanceof SurveyExcelWorkbookError && error.errors[0].code === 'TOO_MANY_SHEETS');
 });
 
 test('completely blank rows are ignored while the original source row is preserved', async () => {
@@ -165,4 +165,55 @@ test('formula cells are rejected before syntactic validation', async () => {
     () => parseSurveyExcelWorkbook(buffer),
     (error: unknown) => error instanceof SurveyExcelWorkbookError && error.errors[0].code === 'FORMULA_NOT_ALLOWED' && error.errors[0].row === 2,
   );
+});
+
+test('sparse far row rejects before column or cell traversal', async () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('IndicatorResults');
+  sheet.getCell(`A${MAX_SURVEY_IMPORT_ROWS + 1}`).value = 'FAR_ROW';
+  sheet.eachRow = () => { throw new Error('row traversal started'); };
+  sheet.getRow = () => { throw new Error('cell traversal started'); };
+  assert.throws(() => assertSurveyExcelDimensions(workbook), (error: unknown) =>
+    error instanceof SurveyExcelWorkbookError && error.errors[0].code === 'TOO_MANY_ROWS');
+});
+
+test('sparse far column rejects before cell traversal', async () => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Comparisons');
+  sheet.getCell(2, MAX_SURVEY_IMPORT_COLUMNS + 1).value = 'FAR_COLUMN';
+  sheet.getRow = () => { throw new Error('cell traversal started'); };
+  assert.throws(() => assertSurveyExcelDimensions(workbook), (error: unknown) =>
+    error instanceof SurveyExcelWorkbookError && error.errors[0].code === 'TOO_MANY_COLUMNS');
+});
+
+test('exact and just-below row and column bounds remain valid', async () => {
+  for (const rowCount of [MAX_SURVEY_IMPORT_ROWS - 1, MAX_SURVEY_IMPORT_ROWS]) {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Comparisons');
+    sheet.getCell(rowCount, MAX_SURVEY_IMPORT_COLUMNS).value = 'AT_BOUND';
+    assert.doesNotThrow(() => assertSurveyExcelDimensions(workbook));
+  }
+  const workbook = new ExcelJS.Workbook();
+  workbook.addWorksheet('Comparisons').getCell(2, MAX_SURVEY_IMPORT_COLUMNS - 1).value = 'BELOW_BOUND';
+  assert.doesNotThrow(() => assertSurveyExcelDimensions(workbook));
+});
+
+test('the four-sheet contract rejects a fifth sheet before row traversal', async () => {
+  const workbook = new ExcelJS.Workbook();
+  for (let index = 0; index < MAX_SURVEY_IMPORT_WORKSHEETS + 1; index += 1) {
+    const sheet = workbook.addWorksheet(`Sheet${index}`);
+    sheet.eachRow = () => { throw new Error('row traversal started'); };
+  }
+  assert.throws(() => assertSurveyExcelDimensions(workbook), (error: unknown) =>
+    error instanceof SurveyExcelWorkbookError && error.errors[0].code === 'TOO_MANY_SHEETS');
+});
+
+test('binary workbooks with sparse over-limit row or column reject before parsing rows', async () => {
+  for (const [cell, code] of [[`A${MAX_SURVEY_IMPORT_ROWS + 1}`, 'TOO_MANY_ROWS'], ['I2', 'TOO_MANY_COLUMNS']]) {
+    const buffer = await workbookBuffer((_config, workbook) => {
+      workbook.addWorksheet('IndicatorResults').getCell(cell).value = 'OUT_OF_BOUND';
+    });
+    await assert.rejects(() => parseSurveyExcelWorkbook(buffer), (error: unknown) =>
+      error instanceof SurveyExcelWorkbookError && error.errors[0].code === code);
+  }
 });

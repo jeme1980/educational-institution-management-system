@@ -1,4 +1,6 @@
 import ExcelJS from 'exceljs';
+import { MAX_SPREADSHEET_ROWS } from '../security/spreadsheet-security';
+import { SurveyXlsxArchiveError, validateSurveyXlsxArchiveSafety } from './surveys-excel.archive';
 import {
   SURVEY_EXCEL_COLUMNS,
   SURVEY_EXCEL_SHEET_NAMES,
@@ -16,6 +18,27 @@ export class SurveyExcelWorkbookError extends Error {
   constructor(public readonly errors: SurveyExcelValidationError[]) {
     super('Survey Excel workbook parsing failed');
     this.name = 'SurveyExcelWorkbookError';
+  }
+}
+
+// The four-sheet template has at most eight defined columns. Reuse the
+// established spreadsheet limit of 5,000 data rows plus one header row.
+export const MAX_SURVEY_IMPORT_ROWS = MAX_SPREADSHEET_ROWS + 1;
+export const MAX_SURVEY_IMPORT_COLUMNS = Math.max(...Object.values(SURVEY_EXCEL_COLUMNS).map((columns) => columns.length));
+export const MAX_SURVEY_IMPORT_WORKSHEETS = SURVEY_EXCEL_SHEET_NAMES.length;
+
+export function assertSurveyExcelDimensions(workbook: ExcelJS.Workbook): void {
+  if (workbook.worksheets.length > MAX_SURVEY_IMPORT_WORKSHEETS) {
+    throw new SurveyExcelWorkbookError([{ sheet: '', row: 0, column: '', code: 'TOO_MANY_SHEETS', message: 'The workbook has too many worksheets.' }]);
+  }
+  for (const sheet of workbook.worksheets) {
+    // rowCount is checked first: ExcelJS computes columnCount by visiting rows.
+    if (sheet.rowCount > MAX_SURVEY_IMPORT_ROWS) {
+      throw new SurveyExcelWorkbookError([{ sheet: sheet.name, row: 0, column: '', code: 'TOO_MANY_ROWS', message: 'The worksheet has too many rows.' }]);
+    }
+    if (sheet.columnCount > MAX_SURVEY_IMPORT_COLUMNS) {
+      throw new SurveyExcelWorkbookError([{ sheet: sheet.name, row: 0, column: '', code: 'TOO_MANY_COLUMNS', message: 'The worksheet has too many columns.' }]);
+    }
   }
 }
 
@@ -65,12 +88,25 @@ const parsedRow = <T extends object>(sheetName: SurveyExcelSheetName, sourceRow:
 };
 
 export async function parseSurveyExcelWorkbook(buffer: Uint8Array): Promise<SurveyExcelParsedWorkbook> {
+  try {
+    await validateSurveyXlsxArchiveSafety(buffer);
+  } catch (error) {
+    if (!(error instanceof SurveyXlsxArchiveError)) throw error;
+    const tooLarge = error.kind === 'LIMIT';
+    throw new SurveyExcelWorkbookError([{
+      sheet: '', row: 0, column: '',
+      code: tooLarge ? 'ARCHIVE_TOO_LARGE' : 'MALFORMED_WORKBOOK',
+      message: tooLarge ? 'The XLSX archive exceeds supported resource limits.' : 'The file is not a valid XLSX workbook.',
+    }]);
+  }
   const workbook = new ExcelJS.Workbook();
   try {
     await workbook.xlsx.load(buffer as any);
   } catch {
     throw new SurveyExcelWorkbookError([{ sheet: '', row: 0, column: '', code: 'MALFORMED_WORKBOOK', message: 'The file is not a valid XLSX workbook.' }]);
   }
+
+  assertSurveyExcelDimensions(workbook);
 
   const missingSheets = SURVEY_EXCEL_SHEET_NAMES.filter((sheetName) => !workbook.getWorksheet(sheetName));
   if (missingSheets.length) {

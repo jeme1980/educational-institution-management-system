@@ -61,10 +61,12 @@
     "exceljs": "^4.4.0",
     "helmet": "^8.3.0",
     "jose": "^6.2.8",
+    "yauzl": "3.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
+    "@types/yauzl": "3.4.0",
     "prisma": "6.19.0"
   }
 }

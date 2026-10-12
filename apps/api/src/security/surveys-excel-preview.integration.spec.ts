@@ -9,7 +9,7 @@ import { prisma } from '../db/prisma';
 import { platformPrisma } from '../db/platform-prisma';
 import { testAdminPrisma as admin } from '../db/test-admin-prisma';
 import { createLocalAccessToken } from '../middleware/auth';
-import { XLSX_MIME } from './spreadsheet-security';
+import { MAX_SPREADSHEET_FILE_BYTES, XLSX_MIME } from './spreadsheet-security';
 import { parseSurveyExcelWorkbook } from '../services/surveys-excel.parser';
 import { validateSurveyExcelWorkbook } from '../services/surveys-excel.validation';
 
@@ -84,7 +84,7 @@ async function createFixture(): Promise<Fixture> {
   return { institutionAId: institutionA.id, yearAId: yearA.id, surveyAId: surveyA.id, archivedSurveyAId: archivedSurveyA.id, surveyBId: surveyB.id, roundA1Id: roundA1.id, roundA2Id: roundA2.id, roundBId: roundB.id, readToken, updateToken };
 }
 
-async function workbookBuffer(indicatorCode = 'INDICATOR_A', reportedPercentage = 81, segmentCode = 'SCHOOL'): Promise<Buffer> {
+async function workbookBuffer(indicatorCode = 'INDICATOR_A', reportedPercentage = 81, segmentCode = 'SCHOOL', farCell?: string): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   const sheets: Array<[string, string[], unknown[]]> = [
     ['IndicatorResults', ['indicatorCode', 'segmentCode', 'reportedPercentage', 'respondentCount', 'earnedTotal', 'possibleTotal'], [indicatorCode, segmentCode, reportedPercentage, 10, null, null]],
@@ -93,6 +93,7 @@ async function workbookBuffer(indicatorCode = 'INDICATOR_A', reportedPercentage 
     ['Participation', ['segmentCode', 'participantCount', 'eligibleCount', 'responseRate'], [segmentCode, 10, 12, 83.33]],
   ];
   for (const [name, headers, row] of sheets) { const sheet = workbook.addWorksheet(name); sheet.addRow(headers); sheet.addRow(row); }
+  if (farCell) workbook.getWorksheet('IndicatorResults')!.getCell(farCell).value = 'OUT_OF_BOUNDS';
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
@@ -195,6 +196,13 @@ test('survey Excel HTTP preview is authenticated, tenant-safe, and read-only', a
       assert.equal(body.valid, false);
       assert.ok(body.errors.some((error: any) => error.code === 'INVALID_PERCENTAGE'));
     });
+    await t.test('oversized logical workbook returns a stable 413 preview error', async () => {
+      const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(await workbookBuffer('INDICATOR_A', 81, 'SCHOOL', 'A1000000')) });
+      assert.equal(response.status, 413);
+      const body = await response.json();
+      assert.equal(body.error.code, 'SURVEY_IMPORT_TOO_LARGE');
+      assert.ok(body.error.details.errors.some((error: any) => error.code === 'TOO_MANY_ROWS'));
+    });
     await t.test('semantic row errors return HTTP 200 and accumulate', async () => {
       const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(await workbookBuffer('UNKNOWN_INDICATOR', 81, 'UNKNOWN_SEGMENT')) });
       assert.equal(response.status, 200);
@@ -227,6 +235,18 @@ test('survey Excel HTTP preview is authenticated, tenant-safe, and read-only', a
       const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(Buffer.from('text'), 'results.txt', 'text/plain') });
       assert.equal(response.status, 400);
       assert.equal((await response.json()).error.code, 'UNSUPPORTED_SPREADSHEET_TYPE');
+    });
+    await t.test('the existing MIME and extension checks each reject unsupported uploads', async () => {
+      for (const [fileName, mime] of [['results.txt', XLSX_MIME], ['results.xlsx', 'text/plain']]) {
+        const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(validFile, fileName, mime) });
+        assert.equal(response.status, 400);
+        assert.equal((await response.json()).error.code, 'UNSUPPORTED_SPREADSHEET_TYPE');
+      }
+    });
+    await t.test('the existing 10 MB upload limit still rejects oversized files', async () => {
+      const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(Buffer.alloc(MAX_SPREADSHEET_FILE_BYTES + 1)) });
+      assert.equal(response.status, 413);
+      assert.equal((await response.json()).error.code, 'PAYLOAD_TOO_LARGE');
     });
     await t.test('malformed XLSX binary is rejected', async () => {
       const response = await fetch(route(), { method: 'POST', headers: headers(fixture!.updateToken), body: formWithFile(Buffer.from('not an xlsx')) });

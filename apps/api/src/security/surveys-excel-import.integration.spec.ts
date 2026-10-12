@@ -10,6 +10,8 @@ import { platformPrisma } from '../db/platform-prisma';
 import { testAdminPrisma as admin } from '../db/test-admin-prisma';
 import { createLocalAccessToken } from '../middleware/auth';
 import { sha256SurveyExcelFile } from '../services/surveys-excel.preflight';
+import { MAX_SURVEY_XLSX_ARCHIVE_ENTRIES } from '../services/surveys-excel.archive';
+import { MAX_SURVEY_IMPORT_ROWS } from '../services/surveys-excel.parser';
 import { XLSX_MIME } from './spreadsheet-security';
 
 type Actor = { userId: string; token: string };
@@ -100,7 +102,7 @@ async function createFixture(): Promise<Fixture> {
   };
 }
 
-async function workbookBuffer(options: { indicatorCode?: string; percentage?: number; segmentCode?: string; empty?: boolean; marker?: string } = {}): Promise<Buffer> {
+async function workbookBuffer(options: { indicatorCode?: string; percentage?: number; segmentCode?: string; empty?: boolean; marker?: string; farCell?: string } = {}): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = options.marker || 'stable-import';
   const sheets: Array<[string, string[], unknown[]]> = [
@@ -110,6 +112,24 @@ async function workbookBuffer(options: { indicatorCode?: string; percentage?: nu
     ['Participation', ['segmentCode', 'participantCount', 'eligibleCount', 'responseRate'], [options.segmentCode || 'SCHOOL', 0, null, 0]],
   ];
   for (const [name, headers, row] of sheets) { const sheet = workbook.addWorksheet(name); sheet.addRow(headers); if (!options.empty) sheet.addRow(row); }
+  if (options.farCell) workbook.getWorksheet('IndicatorResults')!.getCell(options.farCell).value = 'OUT_OF_BOUNDS';
+  return Buffer.from(await workbook.xlsx.writeBuffer());
+}
+
+async function archiveBomb(kind: 'TOTAL' | 'SINGLE' | 'ENTRIES'): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  if (kind === 'TOTAL') {
+    const formula = `${'1+'.repeat(500)}1`;
+    for (let index = 0; index < 3; index += 1) {
+      const sheet = workbook.addWorksheet(`Sheet${index}`);
+      for (let row = 0; row < 3_000; row += 1) sheet.addRow(Array.from({ length: 8 }, () => ({ formula })));
+    }
+  } else if (kind === 'SINGLE') {
+    const sheet = workbook.addWorksheet('Sheet');
+    for (let index = 0; index < 5_000; index += 1) sheet.addRow([`${String(index).padStart(5, '0')}_${'A'.repeat(10_990)}`]);
+  } else {
+    for (let index = 0; index <= MAX_SURVEY_XLSX_ARCHIVE_ENTRIES; index += 1) workbook.addWorksheet(`Sheet${index}`).addRow(['value']);
+  }
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
@@ -188,6 +208,39 @@ test('survey Excel HTTP import is authorized, tenant-safe, atomic, and insert-on
       const empty = await post(await workbookBuffer({ empty: true }), { token: f.updateActor.token, roundId: f.spareRoundId });
       assert.equal(empty.status, 400);
       assert.equal((await empty.json()).error.code, 'SURVEY_IMPORT_EMPTY');
+      assert.deepEqual(await counts(allSurveyIds), before);
+    });
+
+    await t.test('oversized logical row and column dimensions return 413 before any import writes', async () => {
+      const before = await counts(allSurveyIds);
+      for (const [farCell, expectedCode] of [
+        [`A${MAX_SURVEY_IMPORT_ROWS + 1}`, 'TOO_MANY_ROWS'],
+        ['I2', 'TOO_MANY_COLUMNS'],
+      ]) {
+        const response = await post(await workbookBuffer({ farCell }), { token: f.updateActor.token, roundId: f.spareRoundId });
+        assert.equal(response.status, 413);
+        const body = await response.json();
+        assert.equal(body.error.code, 'SURVEY_IMPORT_TOO_LARGE');
+        assert.ok(body.error.details.errors.some((error: any) => error.code === expectedCode));
+        assert.deepEqual(await counts(allSurveyIds), before);
+      }
+    });
+
+    await t.test('archive expansion, single-member, entry-count, and malformed rejections write nothing', async () => {
+      const before = await counts(allSurveyIds);
+      for (const kind of ['TOTAL', 'SINGLE', 'ENTRIES'] as const) {
+        const buffer = await archiveBomb(kind);
+        assert.ok(buffer.length < 10 * 1024 * 1024);
+        const response = await post(buffer, { token: f.updateActor.token, roundId: f.spareRoundId });
+        assert.equal(response.status, 413);
+        assert.equal((await response.json()).error.code, 'SURVEY_IMPORT_TOO_LARGE');
+        assert.deepEqual(await counts(allSurveyIds), before);
+      }
+      const malformed = await post(Buffer.from('not a ZIP archive'), { token: f.updateActor.token, roundId: f.spareRoundId });
+      assert.equal(malformed.status, 400);
+      const body = await malformed.json();
+      assert.equal(body.error.code, 'SURVEY_IMPORT_PREVIEW_INVALID');
+      assert.ok(body.error.details.errors.some((error: any) => error.code === 'MALFORMED_WORKBOOK'));
       assert.deepEqual(await counts(allSurveyIds), before);
     });
 

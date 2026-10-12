@@ -1,0 +1,329 @@
+name: Linux systemd API verification
+
+on:
+  push:
+    branches:
+      - codex/systemd-verification
+
+permissions:
+  contents: read
+
+jobs:
+  systemd-verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Require real host systemd and passwordless sudo
+        run: |
+          set -euo pipefail
+          uname -a
+          cat /etc/os-release
+          ps -p 1 -o comm=
+          systemctl --version
+          systemctl is-system-running || true
+          sudo -n true
+          test "$(ps -p 1 -o comm= | xargs)" = systemd
+          systemctl show --property=Version --value | grep -q .
+          systemctl list-units --no-pager >/dev/null
+          state=$(systemctl is-system-running || true)
+          case "$state" in
+            running|degraded) ;;
+            *) echo "Unusable systemd state: $state"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Use compatible Node 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install locked dependencies and build the real API
+        run: |
+          set -euo pipefail
+          node --version
+          npm --version
+          node -e 'const [major, minor] = process.versions.node.split(".").map(Number); if (major !== 22 || minor < 12) process.exit(1)'
+          npm ci --include=dev
+          npm run build:api
+          test -f "$GITHUB_WORKSPACE/apps/api/dist/server.js"
+          # systemd must execute the exact Node selected by setup-node.
+          sudo ln -sf "$(command -v node)" /usr/bin/node
+          /usr/bin/node --version
+
+      - name: Prepare host PostgreSQL and temporary credentials
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null || ! command -v pg_lsclusters >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y postgresql postgresql-client
+          fi
+          sudo systemctl start postgresql
+          pg_lsclusters
+          sudo -u postgres psql --no-psqlrc -Atqc 'SELECT version()'
+          admin_password=$(openssl rand -hex 32)
+          school_password=$(openssl rand -hex 32)
+          platform_password=$(openssl rand -hex 32)
+          jwt_secret=$(openssl rand -hex 48)
+          for value in "$admin_password" "$school_password" "$platform_password" "$jwt_secret"; do
+            echo "::add-mask::$value"
+          done
+          migration_url="postgresql://ci_systemd_deploy:$admin_password@127.0.0.1:5432/ci_systemd_verification?schema=public"
+          school_url="postgresql://school_app:$school_password@127.0.0.1:5432/ci_systemd_verification?schema=public"
+          platform_url="postgresql://platform_app:$platform_password@127.0.0.1:5432/ci_systemd_verification?schema=public"
+          for value in "$migration_url" "$school_url" "$platform_url"; do
+            echo "::add-mask::$value"
+          done
+          # Deployment-only admin; never injected into the API service.
+          sudo -u postgres psql --no-psqlrc --set ON_ERROR_STOP=1 --quiet <<SQL
+          CREATE ROLE ci_systemd_deploy LOGIN SUPERUSER PASSWORD '$admin_password';
+          CREATE DATABASE ci_systemd_verification OWNER ci_systemd_deploy;
+          SQL
+          {
+            echo "MIGRATION_DATABASE_URL=$migration_url"
+            echo "RLS_RUNTIME_DB_PASSWORD=$school_password"
+            echo "PLATFORM_RUNTIME_DB_PASSWORD=$platform_password"
+            echo 'RLS_RUNTIME_DB_ROLE=school_app'
+            echo 'PLATFORM_RUNTIME_DB_ROLE=platform_app'
+          } >> "$GITHUB_ENV"
+          runtime_env="$RUNNER_TEMP/educational-api-verification.env"
+          test "$(realpath -m "$runtime_env")" != "$GITHUB_WORKSPACE/educational-api-verification.env"
+          umask 077
+          cat > "$runtime_env" <<ENV
+          NODE_ENV=production
+          PORT=4400
+          APP_URL=https://verification.example.com
+          CORS_ORIGINS=https://verification.example.com
+          ACCOUNT_SETUP_URL_BASE=https://verification.example.com/account/setup
+          ACCESS_TOKEN_TTL=15m
+          REFRESH_TOKEN_TTL_DAYS=7
+          AUTH_JWT_SECRET=$jwt_secret
+          RLS_RUNTIME_DATABASE_URL=$school_url
+          PLATFORM_DATABASE_URL=$platform_url
+          ENV
+          if grep -Eq '^(MIGRATION_DATABASE_URL|DATABASE_URL|RLS_RUNTIME_DB_PASSWORD|PLATFORM_RUNTIME_DB_PASSWORD)=' "$runtime_env"; then
+            echo 'Deployment credentials found in runtime environment.'; exit 1
+          fi
+          sudo chown root:root "$runtime_env"
+          sudo chmod 600 "$runtime_env"
+
+      - name: Provision restricted roles before migrations
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          # Only temporary runner copies get executable-name adaptation.
+          $temporaryScripts = Join-Path $env:RUNNER_TEMP 'systemd-db-scripts'
+          Copy-Item -LiteralPath 'apps/api/scripts' -Destination $temporaryScripts -Recurse
+          Get-ChildItem -LiteralPath $temporaryScripts -Filter '*.ps1' | ForEach-Object {
+            $source = Get-Content -LiteralPath $_.FullName -Raw
+            Set-Content -LiteralPath $_.FullName -Value $source.Replace('npx.cmd', 'npx') -Encoding utf8
+          }
+          & (Join-Path $temporaryScripts 'setup-runtime-role.ps1') -Profile School
+          & (Join-Path $temporaryScripts 'setup-runtime-role.ps1') -Profile Platform
+
+      - name: Validate and deploy existing migrations
+        run: |
+          set -euo pipefail
+          export DATABASE_URL="$MIGRATION_DATABASE_URL"
+          schema=apps/api/prisma/schema.prisma
+          npx --no-install prisma validate --schema "$schema"
+          set +e
+          npx --no-install prisma migrate status --schema "$schema" > "$RUNNER_TEMP/prisma-status.log" 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            test "$status" -eq 1
+            grep -q 'not yet been applied' "$RUNNER_TEMP/prisma-status.log"
+          fi
+          echo 'Prisma migration preflight passed.'
+          npx --no-install prisma migrate deploy --schema "$schema"
+          npx --no-install prisma migrate status --schema "$schema"
+
+      - name: Reapply grants and mandatory production hardening
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $temporaryScripts = Join-Path $env:RUNNER_TEMP 'systemd-db-scripts'
+          & (Join-Path $temporaryScripts 'setup-runtime-role.ps1') -Profile School
+          & (Join-Path $temporaryScripts 'setup-runtime-role.ps1') -Profile Platform
+          & (Join-Path $temporaryScripts 'install-platform-metrics-api.ps1')
+          & (Join-Path $temporaryScripts 'install-provider-delete-hardening.ps1')
+          & (Join-Path $temporaryScripts 'install-platform-final-privilege-hardening.ps1')
+
+      - name: Bootstrap references and verify migration history and ACLs
+        run: |
+          set -euo pipefail
+          NODE_ENV=production node apps/api/dist/db/run-production-bootstrap.js
+          node scripts/verify-production-db.cjs
+
+      - name: Test direct Node supervision, graceful stop, and crash recovery
+        run: |
+          set -euo pipefail
+          unit=educational-api-verification.service
+          runtime_env="$RUNNER_TEMP/educational-api-verification.env"
+          entrypoint="$GITHUB_WORKSPACE/apps/api/dist/server.js"
+          evidence="$RUNNER_TEMP/systemd-verification-evidence"
+          mkdir -p "$evidence"
+          test -f "$entrypoint"
+          test "$(realpath "$RUNNER_TEMP")" != "$(realpath "$GITHUB_WORKSPACE")"
+          sudo test -f "$runtime_env"
+          if sudo grep -Eq '^(MIGRATION_DATABASE_URL|DATABASE_URL)=' "$runtime_env"; then
+            echo 'Migration credentials found in service environment.'; exit 1
+          fi
+          sudo tee "/etc/systemd/system/$unit" >/dev/null <<UNIT
+          [Unit]
+          Description=Temporary real API systemd verification
+          After=network.target postgresql.service
+
+          [Service]
+          Type=simple
+          User=$(id -un)
+          WorkingDirectory=$GITHUB_WORKSPACE
+          ExecStart=/usr/bin/node $entrypoint
+          Environment=NODE_ENV=production
+          EnvironmentFile=$runtime_env
+          Restart=on-failure
+          RestartSec=2
+          KillSignal=SIGTERM
+          TimeoutStopSec=30s
+          StandardOutput=journal
+          StandardError=journal
+          UNIT
+          sudo systemd-analyze verify "/etc/systemd/system/$unit"
+          sudo systemctl daemon-reload
+
+          wait_ready() {
+            for attempt in $(seq 1 60); do
+              if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:4400/api/health || true)" = 200 ] &&
+                 [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:4400/api/ready || true)" = 200 ]; then
+                return 0
+              fi
+              sleep 1
+            done
+            echo 'Health/readiness did not reach HTTP 200.'
+            return 1
+          }
+          assert_owner() {
+            local pid
+            pid=$(systemctl show "$unit" --property=MainPID --value)
+            test "$pid" -gt 1
+            test "$(ps -p "$pid" -o comm= | xargs)" = node
+            test "$(ps -p "$pid" -o ppid= | xargs)" = 1
+            sudo python3 - "$pid" "$entrypoint" <<'PY'
+          import pathlib, sys
+          pid, entrypoint = sys.argv[1:]
+          args = pathlib.Path(f'/proc/{pid}/cmdline').read_bytes().split(b'\0')
+          assert args[:2] == [b'/usr/bin/node', entrypoint.encode()], args[:2]
+          keys = {item.split(b'=', 1)[0] for item in pathlib.Path(f'/proc/{pid}/environ').read_bytes().split(b'\0')}
+          assert not keys.intersection({b'MIGRATION_DATABASE_URL', b'DATABASE_URL', b'RLS_RUNTIME_DB_PASSWORD', b'PLATFORM_RUNTIME_DB_PASSWORD'})
+          print('Direct Node ownership and runtime credential separation: PASS')
+          PY
+            echo "MainPID=$pid"
+            ps -p 1,"$pid" -o pid,ppid,comm,args
+          }
+          graceful_stop() {
+            local label=$1 pid invocation restarts
+            pid=$(systemctl show "$unit" --property=MainPID --value)
+            invocation=$(systemctl show "$unit" --property=InvocationID --value)
+            restarts=$(systemctl show "$unit" --property=NRestarts --value)
+            sudo systemctl stop "$unit"
+            test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
+            test "$(systemctl show "$unit" --property=MainPID --value)" = 0
+            if sudo kill -0 "$pid" 2>/dev/null; then
+              echo 'Node MainPID survived stop.'; return 1
+            fi
+            test "$(systemctl show "$unit" --property=Result --value)" = success
+            test "$(systemctl show "$unit" --property=ExecMainCode --value)" = 1
+            test "$(systemctl show "$unit" --property=ExecMainStatus --value)" = 0
+            sudo journalctl "_SYSTEMD_INVOCATION_ID=$invocation" --no-pager -o cat > "$evidence/$label.log"
+            cat "$evidence/$label.log"
+            grep -q 'Received SIGTERM; beginning graceful shutdown.' "$evidence/$label.log"
+            grep -q 'API shutdown complete.' "$evidence/$label.log"
+            if grep -Eq 'HTTP server shutdown failed|status=9/KILL|stop-sigterm.*timed out|Killing process' "$evidence/$label.log"; then
+              echo 'Shutdown failure or forced termination found.'; return 1
+            fi
+            if ss -H -ltn 'sport = :4400' | grep -q .; then
+              echo 'API port still listening after stop.'; return 1
+            fi
+            for endpoint in health ready; do
+              if curl --fail --silent --max-time 2 "http://127.0.0.1:4400/api/$endpoint" >/dev/null; then
+                echo "API $endpoint still reachable after stop."; return 1
+              fi
+            done
+            sleep 5
+            test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
+            test "$(systemctl show "$unit" --property=NRestarts --value)" = "$restarts"
+            echo "$label: clean self-exit, port closed, no forced termination or restart: PASS"
+          }
+
+          sudo systemctl start "$unit"
+          wait_ready
+          sudo systemctl status "$unit" --no-pager
+          assert_owner
+          graceful_stop first-graceful-stop
+
+          sudo systemctl start "$unit"
+          wait_ready
+          assert_owner
+          crashed_pid=$(systemctl show "$unit" --property=MainPID --value)
+          restarts_before=$(systemctl show "$unit" --property=NRestarts --value)
+          # SIGKILL is used exclusively for the crash-recovery test.
+          sudo systemctl kill --kill-whom=main --signal=SIGKILL "$unit"
+          recovered=false
+          for attempt in $(seq 1 30); do
+            new_pid=$(systemctl show "$unit" --property=MainPID --value)
+            if [ "$new_pid" -gt 1 ] && [ "$new_pid" != "$crashed_pid" ] && systemctl is-active --quiet "$unit"; then
+              recovered=true
+              break
+            fi
+            sleep 1
+          done
+          test "$recovered" = true
+          test "$(systemctl show "$unit" --property=NRestarts --value)" -gt "$restarts_before"
+          wait_ready
+          assert_owner
+          echo "Crash recovery: old MainPID=$crashed_pid new MainPID=$new_pid: PASS"
+          graceful_stop second-graceful-stop
+          sudo systemctl stop "$unit"
+          sudo systemctl stop "$unit"
+          test "$(systemctl show "$unit" --property=ActiveState --value)" = inactive
+          echo 'Double stop: PASS'
+          {
+            echo 'Direct Node MainPID, health/ready 200, both graceful stops, crash restart, and double stop: PASS'
+            echo 'OBSERVABILITY_GAP_PRISMA_DISCONNECT: shutdown completion follows Promise.allSettled, but individual disconnect success is not logged.'
+            echo 'IN_FLIGHT_RUNTIME_TEST = NOT_AVAILABLE_WITHOUT_TEST_HARNESS'
+          } | tee "$evidence/result.txt" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Always collect journal and remove runner-only resources
+        if: always()
+        run: |
+          set -uo pipefail
+          cleanup_failed=0
+          unit=educational-api-verification.service
+          if sudo test -f "/etc/systemd/system/$unit"; then
+            sudo systemctl stop "$unit" || cleanup_failed=1
+            sudo journalctl -u "$unit" --no-pager -o short-iso || true
+            test "$(systemctl show "$unit" --property=MainPID --value)" = 0 || cleanup_failed=1
+            sudo rm -f "/etc/systemd/system/$unit"
+            sudo systemctl daemon-reload || cleanup_failed=1
+            sudo systemctl reset-failed "$unit" 2>/dev/null || true
+          fi
+          sudo rm -f "$RUNNER_TEMP/educational-api-verification.env"
+          if command -v psql >/dev/null && sudo -u postgres psql --no-psqlrc -Atqc 'SELECT 1' >/dev/null 2>&1; then
+            # These names are exclusive to this disposable verification database.
+            sudo -u postgres psql --no-psqlrc --set ON_ERROR_STOP=1 --quiet <<'SQL' || cleanup_failed=1
+          DROP DATABASE IF EXISTS ci_systemd_verification WITH (FORCE);
+          DROP ROLE IF EXISTS platform_metrics_definer;
+          DROP ROLE IF EXISTS platform_app;
+          DROP ROLE IF EXISTS school_app;
+          DROP ROLE IF EXISTS ci_systemd_deploy;
+          SQL
+          fi
+          test "$cleanup_failed" = 0

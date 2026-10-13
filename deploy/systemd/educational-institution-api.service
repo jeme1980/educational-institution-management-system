@@ -1,0 +1,23 @@
+[Unit]
+Description=Educational Institution Management API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=school-saas
+Group=school-saas
+WorkingDirectory=/opt/educational-institution-management-system/current
+ExecStart=/usr/bin/node /opt/educational-institution-management-system/current/apps/api/dist/server.js
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/educational-institution-management-system/api.env
+Restart=on-failure
+RestartSec=2s
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+StandardOutput=journal
+StandardError=journal
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

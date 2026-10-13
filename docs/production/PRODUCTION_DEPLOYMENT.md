@@ -2,6 +2,8 @@
 
 ## Scope and topology
 
+The official production API runtime is Linux + systemd, with Ubuntu 24.04 LTS as the verified baseline. Windows remains supported for development and existing operator/deployment preparation tooling; Windows child-process SIGTERM behavior is not a production supervisor requirement.
+
 The supported topology is:
 
 ```text
@@ -9,16 +11,16 @@ Browser -- HTTPS --> reverse proxy --> Web SPA
                               \--> /api --> API --> PostgreSQL
 ```
 
-The reverse proxy terminates TLS, redirects HTTP to HTTPS, serves the SPA artifact, forwards `/api` to the API process, preserves the original host/protocol headers, and applies a request body limit of at least 10 MB for the spreadsheet import route.
+The reverse proxy terminates TLS, redirects HTTP to HTTPS, serves the SPA artifact, forwards `/api` to the API process, preserves the original host/protocol headers, and applies a request body limit of at least 10 MB for the spreadsheet import route. The existing `app.set('trust proxy', 1)` contract requires exactly one trusted reverse-proxy hop; restrict direct client access to the API and have that proxy set the forwarded headers.
 
 Artifacts and working directories:
 
 | Component | Artifact | Start method |
 | --- | --- | --- |
 | Web | `apps/web/dist/app/browser` | `npm run start:web` |
-| API | `apps/api/dist` | `npm run start:api` |
+| API | `apps/api/dist` | `educational-institution-api.service`, direct `/usr/bin/node .../apps/api/dist/server.js` |
 
-Run the single preparation entrypoint from a trusted release checkout on Windows PowerShell. It performs `npm ci --include=dev` (build tools are development dependencies), builds both artifacts, upgrades and verifies the database, and stops on the first failure. Publish the resulting immutable artifacts to the API/Web hosts; the process supervisor starts them with runtime-only credentials.
+Run the single preparation entrypoint from a trusted release checkout on Windows PowerShell. It performs `npm ci --include=dev` (build tools are development dependencies), builds both artifacts, upgrades and verifies the database, and stops on the first failure. It prepares the release and database; it does not own the long-lived API PID. The deployment operator/pipeline publishes the validated release to the Linux runtime host and invokes systemd after preparation succeeds. `scripts/start-api.mjs` remains an operator/development entrypoint and is not part of the production systemd service chain.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy-production.ps1
@@ -46,7 +48,7 @@ Copy the variable names from `.env.example` into the deployment secret store. Ne
 5. It repeats both role-provisioning commands because new migration tables need their grants and policies.
 6. It installs Platform Metrics (`db:install-platform-metrics-api`), then Provider DELETE hardening (`db:install-provider-delete-hardening`), then final Platform privilege hardening (`db:install-platform-final-privilege-hardening`). These are mandatory on both fresh and upgrade runs. The deployment credential needs the role-management rights required by the Metrics installer.
 7. It runs idempotent production reference bootstrap and `scripts/verify-production-db.cjs`, which checks migration history, restricted role attributes/memberships, Provider DELETE denial, seven direct SELECT denials, and Metrics execute privileges. Do not start the new API if any step fails.
-8. Publish `apps/api/dist` and start the built API under a process supervisor with runtime-only secrets using `npm run start:api`. This command has no port cleanup or migrations. On an occupied port, the new process fails; the supervisor handles rollout without terminating the old process implicitly.
+8. Publish the validated release, including `apps/api/dist`, package metadata and compatible production dependencies, to `/opt/educational-institution-management-system/current`. Install/start `educational-institution-api.service` as described below; for an existing enabled service, invoke `sudo systemctl restart educational-institution-api.service` after release and database preparation succeeds. The service directly executes the built API, with no npm/shell wrapper, port cleanup, or migrations. On an occupied port the new API fails; coordinate rollout through systemd.
 9. Check `GET /api/health` and `GET /api/ready` for HTTP 200 before routing traffic to the new API. Readiness checks both restricted database clients.
 10. Publish `apps/web/dist/app/browser` and serve it via the HTTPS reverse proxy or `npm run start:web` behind that proxy. Confirm `/api` forwarding and SPA deep-link fallback; do not use Angular's development server in production.
 
@@ -69,8 +71,65 @@ The role scripts use `psql` when available. On hosts where it is not on `PATH`, 
 - `/api/health` is liveness and should return HTTP 200 while the process is alive.
 - `/api/ready` checks both restricted database clients and returns HTTP 503 when either dependency is unavailable or privileged.
 - Alert on readiness failure, repeated process restarts, database errors, HTTP 5xx rate, backup failure, and storage exhaustion.
-- Run the API under a service/container/process manager configured for restart-on-failure, boot startup, environment injection, stdout/stderr capture, and graceful SIGTERM handling.
+- systemd owns the direct Node API MainPID, startup, SIGTERM delivery on stop/restart, restart-on-failure, enabled boot startup, runtime environment injection, and journal capture. The application does not self-restart.
 - The API closes its HTTP listener and disconnects both Prisma clients on SIGTERM/SIGINT. The SPA server closes its listener on the same signals.
+
+## Linux host layout and systemd installation
+
+Use one production layout:
+
+| Resource | Path / identity |
+| --- | --- |
+| Current release | `/opt/educational-institution-management-system/current` |
+| Built API | `/opt/educational-institution-management-system/current/apps/api/dist/server.js` |
+| Runtime environment | `/etc/educational-institution-management-system/api.env` |
+| Repository unit template | `deploy/systemd/educational-institution-api.service` |
+| Installed unit | `/etc/systemd/system/educational-institution-api.service` |
+| Service user and group | `school-saas` |
+
+The host must provide a compatible Node runtime at `/usr/bin/node`. The successful verification used Node 22; this phase introduces no package or Node-version migration. The published release must include dependencies built/installed for Linux and that Node runtime; do not copy Windows-native dependency binaries. Keep the release root-owned and readable/executable by `school-saas`, including parent-directory traversal and Node dependencies. The service account must not own or write release artifacts. Do not publish checkout `.env` files or deployment credentials inside the release.
+
+Provision the non-login system identity once on a fresh host (check existing identity before rerunning):
+
+```bash
+sudo groupadd --system school-saas
+sudo useradd --system --gid school-saas --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin school-saas
+sudo install -d -o root -g school-saas -m 0750 /opt/educational-institution-management-system
+sudo install -d -o root -g root -m 0700 /etc/educational-institution-management-system
+```
+
+The operator/pipeline places the validated release at `current` with root ownership and service-group read/traverse access. Supply `api.env` from the approved secret store using the runtime-only allowlist in [ENVIRONMENT.md](ENVIRONMENT.md), then set its owner to root and mode to `0600`. systemd reads the file as root before dropping to the service identity; the account does not need direct access to this file. The environment directory stays root-owned with mode `0700`. Never include migration/admin or provisioning passwords in the service environment.
+
+From the validated release checkout containing the unit template, install and activate it:
+
+```bash
+test -x /usr/bin/node
+test -f /opt/educational-institution-management-system/current/apps/api/dist/server.js
+sudo test -f /etc/educational-institution-management-system/api.env
+sudo chown root:root /etc/educational-institution-management-system/api.env
+sudo chmod 0600 /etc/educational-institution-management-system/api.env
+sudo install -o root -g root -m 0644 deploy/systemd/educational-institution-api.service /etc/systemd/system/educational-institution-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable educational-institution-api.service
+sudo systemctl start educational-institution-api.service
+sudo systemctl status educational-institution-api.service --no-pager
+```
+
+For routine operations:
+
+```bash
+sudo systemctl restart educational-institution-api.service
+sudo systemctl stop educational-institution-api.service
+sudo journalctl -u educational-institution-api.service --no-pager
+```
+
+After every start/restart, require HTTP 200 from both `/api/health` and `/api/ready` through the intended production endpoint before declaring rollout complete. Readiness verifies both restricted database connections; process startup alone is insufficient.
+
+Normal `systemctl stop` sends SIGTERM directly to Node, which gracefully shuts down and exits. An intentional stop stays inactive even with `Restart=on-failure`. A crash/non-zero failure is restarted by systemd after `RestartSec=2s`. Enabling the unit connects it to `multi-user.target`, so it starts after host boot. `TimeoutStopSec=30s` is the supervisor's emergency bound; verified normal shutdown completed well within it. Forced termination after an overlong stop is an operational failure, not normal graceful behavior.
+
+A single-instance systemd restart is not zero downtime: deployment restart can cause a brief interruption. Multiple API instances with coordinated reverse-proxy/load-balancer rollout would be required for zero downtime and are outside this phase.
+
+Runtime proof: [GitHub Actions run 38235612526](https://github.com/jeme1980/educational-institution-management-system/actions/runs/38235612526) passed on Ubuntu 24.04 with real systemd, direct Node MainPID/PPID 1, health/readiness, two graceful SIGTERM stops, closed port, clean-stop inactivity, crash recovery to a new PID, and double stop. The temporary workflow remains on the fork verification branch; it is not production application content. The production template adds the documented non-root host identity and fixed layout; this Windows workstation performs static unit validation, not a production-host installation or boot test.
 
 ## Deployment checklist
 
@@ -95,11 +154,13 @@ Check `/`, `/api/health`, `/api/ready`, platform login, school login, a referenc
 ### Rollback
 
 1. Stop or drain writes and record the failing release.
-2. If the database migration is backward-compatible, restore the previous compatible API and Web artifacts without changing runtime environment values.
+2. If the database migration is backward-compatible, restore the previous compatible API release at `/opt/educational-institution-management-system/current` and the compatible Web artifacts without changing runtime environment values. Run `sudo systemctl restart educational-institution-api.service`, then require HTTP 200 from both `/api/health` and `/api/ready` before returning traffic.
 3. Confirm database compatibility before rollback; never assume Prisma has down migrations.
 4. If a destructive migration is involved, restore the database backup to a replacement database, provision roles, validate readiness/RLS, and switch traffic only after smoke tests pass.
 
 The default database rollback policy is forward-fix. Destructive changes require a staged rollout and a tested restore path.
+
+Database recovery and restore validation remain governed by [BACKUP_RESTORE.md](BACKUP_RESTORE.md); runtime rollback does not introduce down migrations.
 
 No Node/npm version pin exists in the repository; this remains separate non-blocking release debt. Review `npm audit --omit=dev` separately. Do not run `npm audit fix` as part of deployment preparation.
 

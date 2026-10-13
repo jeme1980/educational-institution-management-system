@@ -31,6 +31,14 @@ The legacy `DATABASE_URL_UNPOOLED` variable is intentionally absent from the exa
 
 Use `.env.example` as the canonical production variable list; `apps/api/.env.example` mirrors the required API and deployment values. Inject deployment secrets only into the deployment helper. Inject only `NODE_ENV`, `PORT`, `APP_URL`, `CORS_ORIGINS`, `AUTH_JWT_SECRET`, `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL_DAYS`, `ACCOUNT_SETUP_URL_BASE`, `RLS_RUNTIME_DATABASE_URL`, and `PLATFORM_DATABASE_URL` into the API supervisor. The Web server uses `NODE_ENV`, `WEB_PORT`, and `WEB_API_ORIGINS`. Keep `MIGRATION_DATABASE_URL` and provisioning passwords out of both runtime processes.
 
+## Linux systemd runtime environment file
+
+The official production API supervisor is Linux + systemd (verified baseline: Ubuntu 24.04 LTS). `educational-institution-api.service` reads `/etc/educational-institution-management-system/api.env`, outside the repository and application release. Use systemd environment-file syntax: one `NAME=value` per line, without shell `export`, command substitution, or shell expansion. Include only the API runtime allowlist above; `NODE_ENV=production` is also set in the unit.
+
+Keep the directory root-owned with mode `0700` and `api.env` root-owned with mode `0600`. Populate it through the deployment secret store, never source control or logs. systemd reads it before switching to the non-root `school-saas` user/group. The account therefore does not need ownership or direct read access to the secret file.
+
+Prohibit `MIGRATION_DATABASE_URL`, `DATABASE_URL`, `RLS_RUNTIME_DB_PASSWORD`, `PLATFORM_RUNTIME_DB_PASSWORD`, `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`, test/admin DB credentials, and other deployment/backup secrets from this runtime file and service environment. The two restricted runtime connection URLs retain their own required passwords; deployment/admin passwords must never be substituted for them. Windows/PowerShell deployment tooling uses its separate deployment environment and does not supervise the long-lived API process. See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for release paths and systemd installation/operations.
+
 ## Database role policy
 
 | Connection | Role | Privilege model |

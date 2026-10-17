@@ -18,7 +18,7 @@
   }
 
   <ui-page-header title="الأعوام الأكاديمية والفترات" description="إدارة الهيكل الزمني والفصول الدراسية للمؤسسة التعليمية وتحديد الفترات النشطة بكفاءة." eyebrow="الهيكل الزمني والفصول">
-    <div ui-page-actions><ng-container *appHasPermission="'settings:update'"><ui-button size="sm" variant="secondary" (activated)="openRollover()">ترفيع السنة</ui-button></ng-container><ui-button size="sm" variant="primary" (activated)="openYearModal()"><mat-icon icon class="text-base">add_circle</mat-icon>إضافة عام أكاديمي جديد</ui-button></div>
+    <div ui-page-actions class="flex flex-wrap items-center gap-2"><ng-container *appHasPermission="'settings:update'"><ui-button size="md" variant="secondary" (activated)="openRollover()">ترفيع السنة</ui-button></ng-container><ui-button size="md" variant="primary" (activated)="openYearModal()"><mat-icon icon class="text-base !size-5">add_circle</mat-icon>إضافة عام أكاديمي جديد</ui-button></div>
   </ui-page-header>
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"><ui-stat-card label="الأعوام المسجلة" [value]="totalYears()" helper="أعوام دراسية مسجلة" icon="calendar_today" tone="success" /><ui-stat-card label="العام النشط الحالي" [value]="activeYearLabel()" helper="المرجع الحالي للنظام" icon="star" tone="primary" /><ui-stat-card label="إجمالي الفترات الدراسية" [value]="totalPeriodsCount()" helper="فترات مخصصة" icon="date_range" tone="neutral" /><ui-stat-card label="الأعوام المؤرشفة" [value]="closedYearsCount()" helper="أعوام مغلقة" icon="archive" tone="warning" /></div>
 

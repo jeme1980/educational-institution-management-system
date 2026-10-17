@@ -607,7 +607,16 @@
 .intervention-data-quality mat-icon { color: var(--warning); }
 .intervention-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .intervention-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.intervention-group-card { border-inline-start: var(--space-1) solid var(--group-accent) !important; }
+.intervention-group-card > .ui-section-card { position: relative; }
+.intervention-group-card > .ui-section-card::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: var(--space-1);
+  background: var(--group-accent);
+  pointer-events: none;
+}
 .intervention-group-card .ui-section-card__content { display: grid; gap: var(--space-4); padding: var(--space-4) var(--space-5); }
 .intervention-group__header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .intervention-group__level { color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }

@@ -220,24 +220,69 @@
   @if (selectedQuestion(); as question) {
     <!-- Drawer backdrop closes through the visible close button for keyboard users. -->
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-    <div class="drawer-backdrop" (click)="selectedQuestion.set(null)"><aside class="drawer" (click)="$event.stopPropagation()"><button class="drawer-close" (click)="selectedQuestion.set(null)"><mat-icon>close</mat-icon></button><span class="eyebrow">تفاصيل السؤال</span><h2>السؤال {{ question.questionNumber }}</h2><p class="mt-2 text-sm text-slate-500">{{ question.text }}</p><div class="detail-grid"><div><span>النوع</span><b>{{ question.typeName }}</b></div><div><span>العلامة القصوى</span><b>{{ question.points }}</b></div><div><span>الموضوع</span><b>{{ question.topicName }}</b></div><div><span>المهارة</span><b>{{ question.skillName }}</b></div><div><span>نسبة النجاح</span><b>{{ format(question.successRate) }}%</b></div><div><span>عدم الإجابة</span><b>{{ format(question.unansweredRate) }}%</b></div></div><div class="mt-5 rounded-xl bg-amber-50 p-4 text-xs leading-6 text-amber-900"><strong>توصية تربوية:</strong> {{ question.difficulty === 'صعب' ? 'راجع صياغة السؤال وأعد تدريس المهارة المرتبطة باستخدام مثال محلول ونشاط قصير.' : 'ثبّت التعلم بتغذية راجعة مركزة وأسئلة مشابهة متدرجة.' }}</div><p class="mt-4 text-xs text-slate-400">الإجابة الصحيحة وتوزيع البدائل سيظهران عند تخزين محتوى السؤال وإجابات الطلاب في Backend.</p></aside></div>
+    <div class="drawer-backdrop analysis-drawer-backdrop" (click)="selectedQuestion.set(null)">
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+      <aside class="drawer analysis-drawer question-analysis-drawer" role="dialog" aria-modal="true" aria-labelledby="question-analysis-title" tabindex="-1" (click)="$event.stopPropagation()" [style.--analysis-accent]="question.level.color">
+        <header class="analysis-drawer__header">
+          <div class="analysis-drawer__identity">
+            <span class="eyebrow">تفاصيل السؤال</span>
+            <h2 id="question-analysis-title">السؤال {{ question.questionNumber }}</h2>
+            <span class="analysis-drawer__status" [style.color]="question.level.color">{{ question.level.name }}</span>
+          </div>
+          <ui-button class="analysis-drawer__close" variant="ghost" [iconOnly]="true" ariaLabel="إغلاق تفاصيل السؤال" (activated)="selectedQuestion.set(null)"><mat-icon aria-hidden="true">close</mat-icon></ui-button>
+        </header>
+        <section class="analysis-drawer__body" aria-label="تحليل السؤال">
+          <section class="drawer-section question-analysis-identity" aria-labelledby="question-analysis-identity-title">
+            <h3 id="question-analysis-identity-title">بيانات السؤال</h3>
+            <p class="analysis-drawer__guidance question-analysis-text">{{ question.text }}</p>
+            <dl class="analysis-drawer__metrics question-analysis-metadata">
+              <div><dt>النوع</dt><dd>{{ question.typeName }}</dd></div>
+              <div><dt>العلامة القصوى</dt><dd><bdi dir="ltr">{{ question.points }}</bdi></dd></div>
+              <div><dt>الموضوع</dt><dd>{{ question.topicName }}</dd></div>
+              <div><dt>المهارة</dt><dd>{{ question.skillName }}</dd></div>
+            </dl>
+          </section>
+          <section class="drawer-section analysis-drawer__score" aria-labelledby="question-analysis-success-label">
+            <strong><bdi dir="ltr">{{ format(question.successRate) }}%</bdi></strong>
+            <span id="question-analysis-success-label">نسبة النجاح</span>
+          </section>
+          <section class="drawer-section" aria-labelledby="question-analysis-performance-title">
+            <h3 id="question-analysis-performance-title">تفاصيل الأداء</h3>
+            <dl class="analysis-drawer__metrics question-analysis-performance">
+              <div><dt>متوسط العلامة</dt><dd><bdi dir="ltr">{{ format(question.average) }} / {{ question.points }}</bdi></dd></div>
+              <div><dt>مستوى الصعوبة</dt><dd>{{ question.difficulty }}</dd></div>
+              <div><dt>نسبة الخطأ</dt><dd><bdi dir="ltr">{{ format(question.errorRate) }}%</bdi></dd></div>
+              <div><dt>عدم الإجابة</dt><dd><bdi dir="ltr">{{ format(question.unansweredRate) }}%</bdi></dd></div>
+            </dl>
+          </section>
+          <section class="drawer-section" aria-labelledby="question-analysis-guidance-title">
+            <h3 id="question-analysis-guidance-title"><mat-icon aria-hidden="true">tips_and_updates</mat-icon>توصية تربوية</h3>
+            <p class="analysis-drawer__guidance question-analysis-guidance">{{ question.difficulty === 'صعب' ? 'راجع صياغة السؤال وأعد تدريس المهارة المرتبطة باستخدام مثال محلول ونشاط قصير.' : 'ثبّت التعلم بتغذية راجعة مركزة وأسئلة مشابهة متدرجة.' }}</p>
+          </section>
+          <footer class="question-analysis-note">
+            <h3><mat-icon aria-hidden="true">info</mat-icon>ملاحظة تقنية</h3>
+            <p>الإجابة الصحيحة وتوزيع البدائل سيظهران عند تخزين محتوى السؤال وإجابات الطلاب في Backend.</p>
+          </footer>
+        </section>
+      </aside>
+    </div>
   }
   @if (selectedStudent(); as student) {
     <!-- Drawer backdrop closes through the visible close button for keyboard users. -->
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-    <div class="drawer-backdrop student-analysis-backdrop" (click)="selectedStudent.set(null)">
+    <div class="drawer-backdrop analysis-drawer-backdrop student-analysis-backdrop" (click)="selectedStudent.set(null)">
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
-      <aside class="drawer student-analysis-drawer" role="dialog" aria-modal="true" aria-labelledby="student-analysis-title" tabindex="-1" (click)="$event.stopPropagation()" [style.--student-accent]="student.isAbsent ? null : student.level.color">
-        <header class="student-analysis-drawer__header">
-          <div class="student-analysis-drawer__identity">
+      <aside class="drawer analysis-drawer student-analysis-drawer" role="dialog" aria-modal="true" aria-labelledby="student-analysis-title" tabindex="-1" (click)="$event.stopPropagation()" [style.--analysis-accent]="student.isAbsent ? null : student.level.color">
+        <header class="analysis-drawer__header student-analysis-drawer__header">
+          <div class="analysis-drawer__identity student-analysis-drawer__identity">
             <span class="eyebrow">التحليل الفردي</span>
             <h2 id="student-analysis-title">{{ student.studentName }}</h2>
-            <span class="student-analysis-drawer__status" [class.student-analysis-drawer__status--absent]="student.isAbsent" [style.color]="student.isAbsent ? null : student.level.color">{{ student.isAbsent ? 'لم يمتحن' : student.level.name }}</span>
+            <span class="analysis-drawer__status student-analysis-drawer__status" [class.student-analysis-drawer__status--absent]="student.isAbsent" [style.color]="student.isAbsent ? null : student.level.color">{{ student.isAbsent ? 'لم يمتحن' : student.level.name }}</span>
           </div>
-          <ui-button class="student-analysis-drawer__close" variant="ghost" [iconOnly]="true" ariaLabel="إغلاق التحليل الفردي" title="إغلاق تفاصيل الطالب" (activated)="selectedStudent.set(null)"><mat-icon aria-hidden="true">close</mat-icon></ui-button>
+          <ui-button class="analysis-drawer__close student-analysis-drawer__close" variant="ghost" [iconOnly]="true" ariaLabel="إغلاق التحليل الفردي" title="إغلاق تفاصيل الطالب" (activated)="selectedStudent.set(null)"><mat-icon aria-hidden="true">close</mat-icon></ui-button>
         </header>
-        <section class="student-analysis-drawer__body" aria-label="تفاصيل أداء الطالب">
-          <section class="drawer-section student-analysis-score" aria-labelledby="student-analysis-score-label">
+        <section class="analysis-drawer__body student-analysis-drawer__body" aria-label="تفاصيل أداء الطالب">
+          <section class="drawer-section analysis-drawer__score student-analysis-score" aria-labelledby="student-analysis-score-label">
             <strong><bdi dir="ltr">{{ student.isAbsent ? '—' : format(student.normalizedScore) + '%' }}</bdi></strong>
             <span id="student-analysis-score-label">{{ student.isAbsent ? 'لا توجد علامة مرصودة' : 'النسبة المعيارية' }}</span>
           </section>
@@ -250,7 +295,7 @@
           <section class="drawer-section student-analysis-summary" aria-labelledby="student-analysis-summary-title">
             <h3 id="student-analysis-summary-title">ملخص الأداء</h3>
             <p class="drawer-section__description">المؤشرات المسجلة لهذا الطالب في الامتحان.</p>
-            <dl class="student-analysis-metrics">
+            <dl class="analysis-drawer__metrics student-analysis-metrics">
               <div><dt>العلامة الخام</dt><dd>@if (student.isAbsent) {لم يمتحن} @else if (student.totalScore === null) {غير مرصود} @else {<bdi dir="ltr">{{ student.totalScore }} / {{ format(student.possibleScore) }}</bdi>}</dd></div>
               <div><dt>إجابات صحيحة</dt><dd>{{ student.correct }}</dd></div>
               <div><dt>إجابات خاطئة</dt><dd>{{ student.wrong }}</dd></div>
@@ -260,7 +305,7 @@
           <section class="drawer-section student-analysis-next-step" aria-labelledby="student-analysis-next-step-title">
             <h3 id="student-analysis-next-step-title"><mat-icon aria-hidden="true">tips_and_updates</mat-icon>الخطوة التالية</h3>
             <p class="drawer-section__description">اقتراح عرضي مبني على مستوى الأداء الحالي.</p>
-            <p class="student-analysis-guidance">{{ student.isAbsent ? 'يحتاج الطالب إلى متابعة حالة الغياب قبل تفسير الأداء.' : student.level.id === weakSkillLevelId() ? 'جلسات دعم فردية تركز على أضعف المهارات، مع تدريب متدرج وتقويم متابعة.' : 'تدريبات تعميق ومهمة تطبيقية للحفاظ على مستوى الإتقان ورفع الاستقلالية.' }}</p>
+            <p class="analysis-drawer__guidance student-analysis-guidance">{{ student.isAbsent ? 'يحتاج الطالب إلى متابعة حالة الغياب قبل تفسير الأداء.' : student.level.id === weakSkillLevelId() ? 'جلسات دعم فردية تركز على أضعف المهارات، مع تدريب متدرج وتقويم متابعة.' : 'تدريبات تعميق ومهمة تطبيقية للحفاظ على مستوى الإتقان ورفع الاستقلالية.' }}</p>
           </section>
         </section>
       </aside>

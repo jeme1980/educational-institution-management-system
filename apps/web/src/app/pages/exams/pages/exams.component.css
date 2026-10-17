@@ -1,5 +1,5 @@
 :host{display:block}.stat-card{background:linear-gradient(135deg,#fff 0%,#f8fafc 100%)}.exam-row{transition:background-color .18s ease}.exam-row:hover{background:#fffdf5}.action-button{display:inline-flex;height:2.25rem;width:2.25rem;align-items:center;justify-content:center;border-radius:.65rem;font-size:.75rem;transition:background-color .15s ease,transform .15s ease}.action-button:hover{transform:translateY(-1px)}.action-button mat-icon{font-size:18px;height:18px;width:18px}.mobile-action{display:inline-flex;flex:1;align-items:center;justify-content:center;gap:.35rem;border-radius:.7rem;background:#f8fafc;padding:.6rem .7rem;font-size:.7rem;font-weight:800}.mobile-action mat-icon{font-size:17px;height:17px;width:17px}
-.exam-filter-panel{padding:var(--space-3)}
+.exam-filter-panel{padding:var(--space-5)}
 .exam-filter-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-3)}
 .filter-field{display:grid;gap:var(--space-1);min-width:0;color:var(--on-surface);font-size:var(--font-sm);font-weight:var(--font-semibold)}
 .filter-field ui-select{display:block;min-width:0;width:100%}

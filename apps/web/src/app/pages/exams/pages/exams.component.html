@@ -3,8 +3,8 @@
     <app-exam-results-dialog [exam]="exam" [questions]="resultQuestions()" [results]="results()" [loading]="isLoadingResults()" [saving]="isSavingResults()" [warning]="resultsWarning()" (closed)="showResultsPanel.set(false)" (saved)="saveResultsFromDialog($event)" (imported)="refreshImportedResults($event)" (linkGroups)="showResultsPanel.set(false); openStudyGroups(exam)" />
   </div>
 } @else {
-<div class="min-h-[calc(100vh-4rem)] bg-slate-50 p-4 md:p-6" dir="rtl">
-  <div class="mx-auto max-w-[1480px] space-y-6">
+<div class="min-h-[calc(100vh-4rem)] bg-slate-50 py-4 md:py-6" dir="rtl">
+  <div class="core-container core-stack-lg">
     <ui-page-header title="إدارة الامتحانات" description="إنشاء الامتحانات وربطها بالمجموعات والأسئلة ورصد النتائج الأكاديمية." eyebrow="التقييم الأكاديمي">
       <div ui-page-actions class="flex flex-wrap items-center gap-2">
         <ui-button size="sm" variant="secondary" (activated)="refresh()"><mat-icon icon class="text-base">refresh</mat-icon>تحديث</ui-button>

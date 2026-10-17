@@ -529,7 +529,7 @@ input[type='number'] {
    legacy and newer standalone screens without forcing a full template rewrite. */
 .page-shell,
 .report-page,
-.analysis-page {
+.analysis-page:not(.core-container) {
   width: min(100%, 1680px);
   margin-inline: auto;
 }

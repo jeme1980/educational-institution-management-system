@@ -1,5 +1,5 @@
 /* Page layout only. Feature control and visualization styles live in _exam-analysis.scss. */
-.analysis-page{max-width:90rem!important;margin-inline:auto;background:var(--app-background);color:var(--text-primary)}
+.analysis-page{background:var(--app-background);color:var(--text-primary)}
 .analysis-page>section{min-width:0}
 .analysis-header-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .analysis-normalization-note{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-4);border:var(--border-width-thin) solid var(--info);border-radius:var(--radius-lg);background:var(--info-container);color:var(--on-surface);font-size:var(--font-sm);font-weight:var(--font-medium)}

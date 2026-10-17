@@ -225,6 +225,45 @@
   @if (selectedStudent(); as student) {
     <!-- Drawer backdrop closes through the visible close button for keyboard users. -->
     <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
-    <div class="drawer-backdrop" (click)="selectedStudent.set(null)"><aside class="drawer student-analysis-drawer" role="dialog" aria-modal="true" aria-labelledby="student-analysis-title" tabindex="-1" (click)="$event.stopPropagation()"><header class="student-analysis-drawer__header"><div><span class="eyebrow">التحليل الفردي</span><h2 id="student-analysis-title">{{ student.studentName }}</h2><span class="student-analysis-drawer__status" [class.student-analysis-drawer__status--absent]="student.isAbsent" [style.color]="student.isAbsent ? null : student.level.color">{{ student.isAbsent ? 'لم يمتحن' : student.level.name }}</span></div><ui-button variant="ghost" size="sm" [iconOnly]="true" ariaLabel="إغلاق التحليل الفردي" title="إغلاق التحليل الفردي" (activated)="selectedStudent.set(null)"><mat-icon aria-hidden="true">close</mat-icon></ui-button></header><div class="student-analysis-score"><strong>{{ student.isAbsent ? '—' : format(student.normalizedScore) + '%' }}</strong><span>{{ student.isAbsent ? 'لا توجد علامة مرصودة' : 'النسبة المعيارية' }}</span></div><div class="student-analysis-comparison"><div><span>متوسط الصف</span><strong>{{ format(summary().average) }}%</strong></div><div><span>الفارق عن المتوسط</span><strong>{{ student.isAbsent ? '—' : format(student.normalizedScore - summary().average) + '%' }}</strong></div></div><ui-section-card title="ملخص الأداء" description="المؤشرات المسجلة لهذا الطالب في الامتحان."><div class="student-analysis-metrics"><div><span>العلامة الخام</span><strong>{{ student.isAbsent ? 'لم يمتحن' : student.totalScore === null ? 'غير مرصود' : student.totalScore + ' / ' + format(student.possibleScore) }}</strong></div><div><span>إجابات صحيحة</span><strong>{{ student.correct }}</strong></div><div><span>إجابات خاطئة</span><strong>{{ student.wrong }}</strong></div><div><span>غير مجابة</span><strong>{{ student.unanswered }}</strong></div></div></ui-section-card><ui-section-card title="الخطوة التالية" description="اقتراح عرضي مبني على مستوى الأداء الحالي."><p class="student-analysis-guidance">{{ student.isAbsent ? 'يحتاج الطالب إلى متابعة حالة الغياب قبل تفسير الأداء.' : student.level.id === weakSkillLevelId() ? 'جلسات دعم فردية تركز على أضعف المهارات، مع تدريب متدرج وتقويم متابعة.' : 'تدريبات تعميق ومهمة تطبيقية للحفاظ على مستوى الإتقان ورفع الاستقلالية.' }}</p></ui-section-card></aside></div>
+    <div class="drawer-backdrop student-analysis-backdrop" (click)="selectedStudent.set(null)">
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+      <aside class="drawer student-analysis-drawer" role="dialog" aria-modal="true" aria-labelledby="student-analysis-title" tabindex="-1" (click)="$event.stopPropagation()" [style.--student-accent]="student.isAbsent ? null : student.level.color">
+        <header class="student-analysis-drawer__header">
+          <div class="student-analysis-drawer__identity">
+            <span class="eyebrow">التحليل الفردي</span>
+            <h2 id="student-analysis-title">{{ student.studentName }}</h2>
+            <span class="student-analysis-drawer__status" [class.student-analysis-drawer__status--absent]="student.isAbsent" [style.color]="student.isAbsent ? null : student.level.color">{{ student.isAbsent ? 'لم يمتحن' : student.level.name }}</span>
+          </div>
+          <ui-button class="student-analysis-drawer__close" variant="ghost" [iconOnly]="true" ariaLabel="إغلاق التحليل الفردي" title="إغلاق تفاصيل الطالب" (activated)="selectedStudent.set(null)"><mat-icon aria-hidden="true">close</mat-icon></ui-button>
+        </header>
+        <section class="student-analysis-drawer__body" aria-label="تفاصيل أداء الطالب">
+          <section class="drawer-section student-analysis-score" aria-labelledby="student-analysis-score-label">
+            <strong><bdi dir="ltr">{{ student.isAbsent ? '—' : format(student.normalizedScore) + '%' }}</bdi></strong>
+            <span id="student-analysis-score-label">{{ student.isAbsent ? 'لا توجد علامة مرصودة' : 'النسبة المعيارية' }}</span>
+          </section>
+          <section class="drawer-section" aria-label="المقارنة مع الصف">
+            <dl class="student-analysis-comparison">
+              <div><dt>متوسط الصف</dt><dd><bdi dir="ltr">{{ format(summary().average) }}%</bdi></dd></div>
+              <div><dt>الفارق عن المتوسط</dt><dd class="student-analysis-comparison__difference" [class.student-analysis-comparison__difference--positive]="!student.isAbsent && student.normalizedScore > summary().average" [class.student-analysis-comparison__difference--negative]="!student.isAbsent && student.normalizedScore < summary().average"><bdi dir="ltr">{{ !student.isAbsent && student.normalizedScore > summary().average ? '+' : '' }}{{ student.isAbsent ? '—' : format(student.normalizedScore - summary().average) + '%' }}</bdi></dd></div>
+            </dl>
+          </section>
+          <section class="drawer-section student-analysis-summary" aria-labelledby="student-analysis-summary-title">
+            <h3 id="student-analysis-summary-title">ملخص الأداء</h3>
+            <p class="drawer-section__description">المؤشرات المسجلة لهذا الطالب في الامتحان.</p>
+            <dl class="student-analysis-metrics">
+              <div><dt>العلامة الخام</dt><dd>@if (student.isAbsent) {لم يمتحن} @else if (student.totalScore === null) {غير مرصود} @else {<bdi dir="ltr">{{ student.totalScore }} / {{ format(student.possibleScore) }}</bdi>}</dd></div>
+              <div><dt>إجابات صحيحة</dt><dd>{{ student.correct }}</dd></div>
+              <div><dt>إجابات خاطئة</dt><dd>{{ student.wrong }}</dd></div>
+              <div><dt>غير مجابة</dt><dd>{{ student.unanswered }}</dd></div>
+            </dl>
+          </section>
+          <section class="drawer-section student-analysis-next-step" aria-labelledby="student-analysis-next-step-title">
+            <h3 id="student-analysis-next-step-title"><mat-icon aria-hidden="true">tips_and_updates</mat-icon>الخطوة التالية</h3>
+            <p class="drawer-section__description">اقتراح عرضي مبني على مستوى الأداء الحالي.</p>
+            <p class="student-analysis-guidance">{{ student.isAbsent ? 'يحتاج الطالب إلى متابعة حالة الغياب قبل تفسير الأداء.' : student.level.id === weakSkillLevelId() ? 'جلسات دعم فردية تركز على أضعف المهارات، مع تدريب متدرج وتقويم متابعة.' : 'تدريبات تعميق ومهمة تطبيقية للحفاظ على مستوى الإتقان ورفع الاستقلالية.' }}</p>
+          </section>
+        </section>
+      </aside>
+    </div>
   }
 </div>

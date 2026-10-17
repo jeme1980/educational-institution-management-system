@@ -570,23 +570,65 @@
 .students-table__row--absent { background: color-mix(in srgb, var(--surface-container-low) 72%, transparent); }
 .level-badge--not-tested { background: var(--surface-container-high) !important; color: var(--on-surface-variant) !important; }
 
-.student-analysis-drawer { display: grid; align-content: start; gap: var(--space-4); }
-.student-analysis-drawer__header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
-.student-analysis-drawer__header h2 { margin: var(--space-1) 0; color: var(--on-surface); font-size: var(--text-headline-sm); font-weight: var(--font-bold); }
-.student-analysis-drawer__status { display: inline-flex; border-radius: var(--radius-full); background: var(--surface-container-low); padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: var(--font-semibold); }
-.student-analysis-drawer__status--absent { color: var(--on-surface-variant); }
-.student-analysis-score { display: grid; justify-items: center; gap: var(--space-1); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-low); padding: var(--space-5); }
-.student-analysis-score strong { color: var(--primary); font-size: var(--text-display-md); font-weight: var(--font-bold); }
-.student-analysis-score span { color: var(--on-surface-variant); font-size: var(--font-xs); }
-.student-analysis-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.student-analysis-comparison div { display: grid; gap: var(--space-1); border-inline-start: var(--space-1) solid var(--secondary); padding-inline-start: var(--space-3); }
-.student-analysis-comparison span, .student-analysis-metrics span { color: var(--on-surface-variant); font-size: var(--font-xs); }
-.student-analysis-comparison strong, .student-analysis-metrics strong { color: var(--on-surface); font-size: var(--font-md); font-weight: var(--font-bold); }
-.student-analysis-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-.student-analysis-metrics div { display: grid; gap: var(--space-1); border-radius: var(--radius-md); background: var(--surface-container-low); padding: var(--space-3); }
-.student-analysis-guidance { margin: 0; color: var(--on-surface-variant); font-size: var(--font-sm); line-height: 1.8; }
 .drawer-backdrop { position: fixed; z-index: 50; inset: 0; background: color-mix(in srgb, var(--on-surface) 32%, transparent); }
 .drawer { position: absolute; inset-block: 0; inset-inline-end: 0; width: min(100%, 36rem); overflow-y: auto; border-inline-start: 1px solid var(--outline-variant); background: var(--surface-container-lowest); box-shadow: var(--shadow-lg); padding: var(--space-6); }
+
+/* Student details only: keep the question drawer and its interactions unchanged. */
+.analysis-page > .student-analysis-backdrop { margin-block: 0; }
+.drawer.student-analysis-drawer {
+  --student-accent: var(--on-surface-variant);
+  display: flex;
+  flex-direction: column;
+  inline-size: min(100%, clamp(24rem, 28vw, 30rem));
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.student-analysis-drawer__header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-block-end: 1px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+}
+.student-analysis-drawer__identity { min-inline-size: 0; }
+.student-analysis-drawer__header h2 { margin-block: var(--space-1) var(--space-2); color: var(--on-surface); font-size: var(--text-headline-sm); font-weight: var(--font-bold); overflow-wrap: anywhere; }
+.student-analysis-drawer__status { display: inline-flex; align-items: center; border: 1px solid var(--outline-variant); border-radius: var(--radius-full); background: var(--surface-container-low); padding: var(--space-1) var(--space-2); font-size: var(--font-xs); font-weight: var(--font-semibold); }
+.student-analysis-drawer__status--absent { color: var(--on-surface-variant); }
+.student-analysis-drawer__close { flex-shrink: 0; }
+.student-analysis-drawer .student-analysis-drawer__close .ui-button { inline-size: var(--space-11); min-inline-size: var(--space-11); min-block-size: var(--space-11); }
+.student-analysis-drawer__body { display: grid; flex: 1; align-content: start; gap: var(--space-5); min-block-size: 0; overflow-y: auto; overscroll-behavior: contain; padding: var(--space-5); }
+.student-analysis-drawer .drawer-section { min-inline-size: 0; padding: var(--space-4); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
+.student-analysis-drawer .drawer-section h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--on-surface); font-size: var(--font-sm); font-weight: var(--font-semibold); }
+.student-analysis-drawer .drawer-section h3 mat-icon { color: var(--secondary); font-size: var(--font-lg); inline-size: 1em; block-size: 1em; }
+.student-analysis-drawer .drawer-section__description { margin-block: var(--space-1) var(--space-4); color: var(--on-surface-variant); font-size: var(--font-xs); line-height: 1.6; }
+.student-analysis-drawer .student-analysis-score { position: relative; display: grid; justify-items: center; gap: var(--space-1); padding-block: var(--space-6); background: var(--surface-container-low); }
+.student-analysis-score::before { content: ''; position: absolute; inset-block-start: 0; inset-inline: var(--space-5); block-size: var(--space-1); border-end-start-radius: var(--radius-full); border-end-end-radius: var(--radius-full); background: var(--student-accent); }
+.student-analysis-score strong { color: var(--on-surface); font-size: var(--text-display-lg); font-weight: var(--font-bold); line-height: var(--text-display-lg-line); font-variant-numeric: tabular-nums; }
+.student-analysis-score span { color: var(--on-surface-variant); font-size: var(--font-xs); }
+.student-analysis-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: 0; }
+.student-analysis-comparison div { display: grid; align-content: start; gap: var(--space-2); min-inline-size: 0; }
+.student-analysis-comparison div + div { border-inline-start: 1px solid var(--outline-variant); padding-inline-start: var(--space-3); }
+.student-analysis-comparison dt, .student-analysis-metrics dt { color: var(--on-surface-variant); font-size: var(--font-xs); }
+.student-analysis-comparison dd, .student-analysis-metrics dd { margin: 0; color: var(--on-surface); font-size: var(--font-md); font-weight: var(--font-bold); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.student-analysis-comparison .student-analysis-comparison__difference--positive { color: var(--success); }
+.student-analysis-comparison .student-analysis-comparison__difference--negative { color: var(--danger); }
+.student-analysis-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: 0; }
+.student-analysis-metrics div { display: grid; align-content: start; gap: var(--space-2); min-inline-size: 0; border-radius: var(--radius-md); background: var(--surface-container-low); padding: var(--space-3); }
+.student-analysis-guidance { margin: 0; color: var(--on-surface); font-size: var(--font-sm); line-height: 1.8; }
+@media (min-width: 641px) and (max-width: 1023px) {
+  .drawer.student-analysis-drawer { inline-size: min(65vw, 36rem); }
+}
+@media (max-width: 640px) {
+  .drawer.student-analysis-drawer { inline-size: 100%; }
+  .student-analysis-drawer__header, .student-analysis-drawer__body { padding: var(--space-4); }
+}
 
 @media (max-width: 1000px) {
   .students-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -594,7 +636,7 @@
 }
 
 @media (max-width: 640px) {
-  .students-kpis, .students-filters, .student-analysis-comparison { grid-template-columns: 1fr; }
+  .students-kpis, .students-filters { grid-template-columns: 1fr; }
   .students-table-card .ui-section-card__content { padding: 0; }
   .drawer { width: 100%; padding: var(--space-4); }
 }

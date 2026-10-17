@@ -521,9 +521,9 @@
 .recommendations-heading p { margin: var(--space-1) 0 0; color: var(--on-surface-variant); font-size: var(--font-sm); }
 .recommendation-groups { display: grid; gap: var(--space-4); }
 .recommendation-group .ui-section-card__content { padding: var(--space-4) var(--space-5); }
-.recommendation-group--critical { border-inline-start: var(--space-1) solid var(--danger) !important; }
-.recommendation-group--high { border-inline-start: var(--space-1) solid var(--warning) !important; }
-.recommendation-group--moderate { border-inline-start: var(--space-1) solid var(--secondary) !important; }
+.recommendation-group--critical { --group-accent: var(--danger); }
+.recommendation-group--high { --group-accent: var(--warning); }
+.recommendation-group--moderate { --group-accent: var(--secondary); }
 .recommendation-list { display: grid; gap: var(--space-3); }
 .recommendation-card { display: flex; width: 100%; align-items: flex-start; gap: var(--space-3); border: 1px solid var(--outline-variant); border-radius: var(--radius-md); background: var(--surface-container-lowest); color: var(--on-surface); padding: var(--space-4); text-align: start; cursor: pointer; transition: background-color var(--transition-fast) var(--ease-standard), border-color var(--transition-fast) var(--ease-standard), transform var(--transition-fast) var(--ease-standard); }
 .recommendation-card:hover { border-color: var(--secondary); background: var(--surface-container-low); transform: translateY(-1px); }
@@ -607,8 +607,10 @@
 .intervention-data-quality mat-icon { color: var(--warning); }
 .intervention-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .intervention-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
-.intervention-group-card > .ui-section-card { position: relative; }
-.intervention-group-card > .ui-section-card::before {
+.intervention-group-card > .ui-section-card,
+.recommendation-group > .ui-section-card { position: relative; }
+.intervention-group-card > .ui-section-card::before,
+.recommendation-group > .ui-section-card::before {
   content: '';
   position: absolute;
   inset-block: 0;

@@ -1,5 +1,5 @@
 :host { display: block; min-width: 0; }
-.staff-development-page { display: grid; max-width: 90rem; gap: var(--space-5); min-width: 0; margin-inline: auto; padding: var(--space-4); }
+.staff-development-page { display: grid; gap: var(--space-5); min-width: 0; padding-block: var(--space-4); }
 .page-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .metrics-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
 .development-filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(10rem, 1fr)); align-items: end; gap: var(--space-3); }
@@ -27,5 +27,5 @@ tbody tr:hover { background: var(--surface-container-low); }
 .feedback--success { border-color: var(--success); background: var(--success-container); color: var(--success); }
 .feedback--error { border-color: var(--danger); background: var(--danger-container); color: var(--danger); }
 @media (max-width: 64rem) { .development-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 720px) { .staff-development-page { padding: var(--space-3); }.metrics-grid { grid-template-columns: 1fr; }.development-filters, .development-period-fields--range, .development-period-fields--year { grid-template-columns: 1fr; }.development-period-fields { justify-content: stretch; }.page-actions { width: 100%; }.page-actions ui-button { flex: 1 1 auto; }.course-name { max-width: 14rem; } }
+@media (max-width: 720px) { .staff-development-page { padding-block: var(--space-3); }.metrics-grid { grid-template-columns: 1fr; }.development-filters, .development-period-fields--range, .development-period-fields--year { grid-template-columns: 1fr; }.development-period-fields { justify-content: stretch; }.page-actions { width: 100%; }.page-actions ui-button { flex: 1 1 auto; }.course-name { max-width: 14rem; } }
 @media (prefers-reduced-motion: reduce) { .staff-development-page *, .staff-development-page *::before, .staff-development-page *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }

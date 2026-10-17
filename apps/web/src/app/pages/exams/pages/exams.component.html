@@ -1,5 +1,5 @@
 @if(showResultsPanel() && selectedExam(); as exam){
-  <div class="min-h-[calc(100vh-4rem)] bg-slate-50 p-4 md:p-6" dir="rtl">
+  <div class="min-h-[calc(100vh-4rem)] bg-slate-50 py-4 md:py-6" dir="rtl">
     <app-exam-results-dialog [exam]="exam" [questions]="resultQuestions()" [results]="results()" [loading]="isLoadingResults()" [saving]="isSavingResults()" [warning]="resultsWarning()" (closed)="showResultsPanel.set(false)" (saved)="saveResultsFromDialog($event)" (imported)="refreshImportedResults($event)" (linkGroups)="showResultsPanel.set(false); openStudyGroups(exam)" />
   </div>
 } @else {

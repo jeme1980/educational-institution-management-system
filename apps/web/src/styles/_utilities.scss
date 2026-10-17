@@ -1,4 +1,11 @@
-.core-container { width: min(100% - 4rem, 90rem); margin-inline: auto; }
+/* School management pages use the full region remaining after the sidebar.
+   The app shell owns inline padding; page wrappers must not add it again. */
+.school-app-shell { --school-page-inline-gap: var(--space-6); }
+.school-main-content,
+.school-topbar { padding-inline: var(--school-page-inline-gap); }
+.school-main-content { min-inline-size: 0; }
+.school-main-content > :not(router-outlet) { display: block; min-inline-size: 0; }
+.core-container { width: 100%; min-inline-size: 0; margin-inline: 0; }
 .core-stack-sm > * + * { margin-block-start: var(--space-2); }
 .core-stack-md > * + * { margin-block-start: var(--space-4); }
 .core-stack-lg > * + * { margin-block-start: var(--space-6); }
@@ -69,4 +76,6 @@
   }
 }
 
-@media (max-width: 767px) { .core-container { width: min(100% - 2rem, 90rem); } }
+@media (max-width: 1023px) {
+  .school-app-shell { --school-page-inline-gap: var(--space-4); }
+}

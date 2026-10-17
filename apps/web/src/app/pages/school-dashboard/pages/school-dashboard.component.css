@@ -1,5 +1,5 @@
 :host { display: block; }
-.school-dashboard { max-width: 90rem; margin-inline: auto; padding: var(--space-4); color: var(--on-surface); }
+.school-dashboard {  padding-block: var(--space-4); color: var(--on-surface); }
 .school-dashboard > * + * { margin-top: var(--space-5); }
 .filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-4); align-items: end; }
 .filter-field { display: grid; min-width: 0; gap: var(--space-2); color: var(--on-surface-variant); font-size: var(--font-xs); font-weight: var(--font-semibold); }
@@ -37,4 +37,4 @@ th { color: var(--on-surface-variant); background: var(--surface-container-low);
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
 @media (max-width: 1200px) { .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .coverage-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-grid, .dashboard-links { grid-template-columns: 1fr; } .dashboard-grid__wide { grid-column: auto; } .kpi-grid, .coverage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .chart { overflow-x: auto; } .chart canvas { min-width: 34rem; } }
-@media (max-width: 480px) { .school-dashboard { padding: var(--space-3); } .filters, .kpi-grid, .coverage-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) { .school-dashboard { padding-block: var(--space-3); } .filters, .kpi-grid, .coverage-grid { grid-template-columns: 1fr; } }

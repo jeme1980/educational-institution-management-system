@@ -1,5 +1,5 @@
 :host { display: block; min-width: 0; }
-.surveys-page { display: grid; max-width: 90rem; min-width: 0; gap: var(--space-4); margin-inline: auto; padding: var(--space-4); }
+.surveys-page { display: grid; min-width: 0; gap: var(--space-4); padding-block: var(--space-4); }
 .surveys-context { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); color: var(--on-surface-variant); font-size: var(--text-body-sm); }
 .surveys-context strong { color: var(--on-surface); }
 .surveys-search { display: grid; max-width: 24rem; gap: var(--space-1); color: var(--on-surface-variant); font-size: var(--text-label-sm); font-weight: var(--font-semibold); }
@@ -33,4 +33,4 @@ td { height: var(--table-row-height); color: var(--on-surface-variant); font-siz
 .surveys-save-error { grid-column: 1 / -1; margin: 0; }
 .surveys-modal-actions { display: flex; gap: var(--space-2); }
 @media (max-width: 640px) { .surveys-form { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 767px) { .surveys-page { padding: var(--space-3); } }
+@media (max-width: 767px) { .surveys-page { padding-block: var(--space-3); } }

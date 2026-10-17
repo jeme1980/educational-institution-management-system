@@ -2,14 +2,12 @@
 
 .study-groups-page {
   min-height: calc(100vh - 4rem);
-  padding: var(--space-4);
+  padding-block: var(--space-4);
   background: var(--surface);
 }
 
 .study-groups-page__content {
   display: grid;
-  width: min(100%, 90rem);
-  margin-inline: auto;
   gap: var(--space-6);
 }
 
@@ -82,7 +80,7 @@
 @keyframes study-groups-pulse { 50% { opacity: 0.55; } }
 
 @media (min-width: 768px) {
-  .study-groups-page { padding: var(--space-6); }
+  .study-groups-page { padding-block: var(--space-6); }
 }
 
 @media (max-width: 1023px) {

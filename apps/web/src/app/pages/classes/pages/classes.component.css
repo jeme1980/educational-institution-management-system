@@ -2,15 +2,13 @@
 
 .classes-page {
   min-height: calc(100vh - 4rem);
-  padding: var(--space-4);
+  padding-block: var(--space-4);
   background: var(--background-soft-gray);
   color: var(--on-surface);
 }
 
 .classes-page__content {
   display: grid;
-  max-width: 90rem;
-  margin-inline: auto;
   gap: var(--space-5);
 }
 
@@ -49,7 +47,7 @@
 .classes-empty-state button { margin-block-start: var(--space-3); border: 0; background: transparent; color: var(--primary); font: inherit; font-weight: var(--font-semibold); cursor: pointer; }
 
 @media (max-width: 1023px) {
-  .classes-page { padding: var(--space-3); }
+  .classes-page { padding-block: var(--space-3); }
   .classes-filter-panel__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .classes-filter-panel__search { grid-column: 1 / -1; }
 }

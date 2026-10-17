@@ -1,5 +1,5 @@
 :host { display: block; }
-.interventions-page { display: grid; max-width: 90rem; margin-inline: auto; padding: var(--space-4); gap: var(--space-5); color: var(--on-surface); }
+.interventions-page { display: grid; padding-block: var(--space-4); gap: var(--space-5); color: var(--on-surface); }
 .form-grid, .filters, .detail-grid, .selection-grid { display: grid; gap: var(--space-4); }
 .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); padding: var(--space-4); }
 .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -27,4 +27,4 @@ td strong, td small { display: block; } td small { margin-top: var(--space-1); c
 .status[data-status="cancelled"] { background: var(--danger-container); color: var(--on-danger-container); }
 .empty, .error { padding: var(--space-4); text-align: center; } .error { color: var(--on-danger-container); background: var(--danger-container); }
 @media (max-width: 800px) { .form-grid, .filters, .detail-grid, .selection-grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
-@media (max-width: 480px) { .interventions-page { padding: var(--space-3); } }
+@media (max-width: 480px) { .interventions-page { padding-block: var(--space-3); } }

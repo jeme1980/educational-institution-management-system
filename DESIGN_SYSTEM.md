@@ -7,7 +7,7 @@ This document is the visual contract for the Angular school-management applicati
 - Direction: RTL by default. Use `dir="rtl"` at the application or feature boundary; use `dir="ltr"` only for phone numbers, email, codes, and other directional values.
 - Typeface: `IBM Plex Sans Arabic`, with `Noto Sans` and `system-ui` fallbacks.
 - Base unit: 4px. Prefer the spacing tokens in `apps/web/src/styles/_tokens.scss`.
-- Container: a maximum width of 1440px with 32px desktop and 16px mobile margins.
+- School page container: full available width after the sidebar, without a centered maximum width. The shared app shell owns symmetric inline padding: `--space-6` (24px) on desktop and `--space-4` (16px) below 1024px, aligned with the topbar. Page wrappers must not add horizontal padding or centered width caps. Keep width constraints only on internal content that needs them, such as dialogs, text, and form controls.
 - Controls: 40px minimum height, visible focus state, and a restrained 4px default radius.
 - Standard table rows: 52px minimum height, tabular numerals, subtle borders, and no heavy shadows.
 

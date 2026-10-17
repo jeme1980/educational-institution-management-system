@@ -338,10 +338,6 @@ input[type='number'] {
 
 @media (max-width: 767px) {
   h1 { font-size: 1.5rem; line-height: 2rem; }
-
-  main {
-    padding-inline: 12px !important;
-  }
 }
 
 /* Custom modern scrollbars */
@@ -529,9 +525,10 @@ input[type='number'] {
    legacy and newer standalone screens without forcing a full template rewrite. */
 .page-shell,
 .report-page,
-.analysis-page:not(.core-container) {
-  width: min(100%, 1680px);
-  margin-inline: auto;
+.analysis-page {
+  width: 100%;
+  min-inline-size: 0;
+  margin-inline: 0;
 }
 
 .ui-page-header {

@@ -1,5 +1,5 @@
 :host { display: block; min-width: 0; }
-.structure-page { display: grid; max-width: 90rem; min-width: 0; gap: var(--space-4); margin-inline: auto; padding: var(--space-4); }
+.structure-page { display: grid; min-width: 0; gap: var(--space-4); padding-block: var(--space-4); }
 .structure-back { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); color: var(--primary); font-size: var(--text-body-sm); text-decoration: none; }
 .structure-back:hover { text-decoration: underline; }
 .structure-back:focus-visible, .structure-select:focus-visible { outline: var(--focus-ring-width) solid var(--focus-ring); outline-offset: var(--focus-ring-offset); }
@@ -46,4 +46,4 @@ td { height: var(--table-row-height); color: var(--on-surface-variant); font-siz
 .structure-modal-actions { display: flex; gap: var(--space-2); }
 @media (max-width: 900px) { .structure-panels { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .structure-form { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 767px) { .structure-page { padding: var(--space-3); } .indicator-form, .structure-indicator-options { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 767px) { .structure-page { padding-block: var(--space-3); } .indicator-form, .structure-indicator-options { grid-template-columns: minmax(0, 1fr); } }

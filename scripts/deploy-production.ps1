@@ -27,14 +27,18 @@ function Invoke-CommandChecked([string]$Step, [string]$Executable, [string[]]$Ar
 
 if ((Require-Variable 'NODE_ENV') -ne 'production') { throw 'NODE_ENV must be production.' }
 $migrationUrl = Require-Url 'MIGRATION_DATABASE_URL' 'postgresql'
+$authUrl = Require-Url 'AUTH_RUNTIME_DATABASE_URL' 'postgresql'
+if ([Uri]::UnescapeDataString($authUrl.UserInfo.Split(':')[0]) -ne 'school_auth_app') { throw 'AUTH_RUNTIME_DATABASE_URL role is invalid.' }
 $schoolUrl = Require-Url 'RLS_RUNTIME_DATABASE_URL' 'postgresql'
 $platformUrl = Require-Url 'PLATFORM_DATABASE_URL' 'postgresql'
 $schoolRole = if ($env:RLS_RUNTIME_DB_ROLE) { $env:RLS_RUNTIME_DB_ROLE } else { 'school_app' }
 $platformRole = if ($env:PLATFORM_RUNTIME_DB_ROLE) { $env:PLATFORM_RUNTIME_DB_ROLE } else { 'platform_app' }
 if ([Uri]::UnescapeDataString($schoolUrl.UserInfo.Split(':')[0]) -ne $schoolRole) { throw 'RLS_RUNTIME_DATABASE_URL role is invalid.' }
 if ([Uri]::UnescapeDataString($platformUrl.UserInfo.Split(':')[0]) -ne $platformRole) { throw 'PLATFORM_DATABASE_URL role is invalid.' }
-if ([Uri]::UnescapeDataString($migrationUrl.UserInfo.Split(':')[0]) -in @($schoolRole, $platformRole)) { throw 'MIGRATION_DATABASE_URL must use a separate deployment role.' }
-foreach ($name in @('RLS_RUNTIME_DB_PASSWORD', 'PLATFORM_RUNTIME_DB_PASSWORD', 'CORS_ORIGINS', 'APP_URL', 'ACCESS_TOKEN_TTL', 'REFRESH_TOKEN_TTL_DAYS', 'WEB_API_ORIGINS')) { [void](Require-Variable $name) }
+if ([Uri]::UnescapeDataString($migrationUrl.UserInfo.Split(':')[0]) -in @($schoolRole, $platformRole, 'school_auth_app')) { throw 'MIGRATION_DATABASE_URL must use a separate deployment role.' }
+foreach ($name in @('AUTH_RUNTIME_DB_PASSWORD', 'RLS_RUNTIME_DB_PASSWORD', 'PLATFORM_RUNTIME_DB_PASSWORD', 'CORS_ORIGINS', 'APP_URL', 'ACCESS_TOKEN_TTL', 'REFRESH_TOKEN_TTL_DAYS', 'WEB_API_ORIGINS')) { [void](Require-Variable $name) }
+$refreshDays = 0.0
+if (-not [double]::TryParse((Require-Variable 'REFRESH_TOKEN_TTL_DAYS'), [ref]$refreshDays) -or $refreshDays -le 0 -or $refreshDays -gt 30) { throw 'REFRESH_TOKEN_TTL_DAYS must be positive and at most 30.' }
 if ((Require-Variable 'AUTH_JWT_SECRET').Length -lt 32) { throw 'AUTH_JWT_SECRET is invalid.' }
 foreach ($name in @('PORT', 'WEB_PORT')) {
   $port = 0
@@ -91,6 +95,7 @@ Invoke-CommandChecked 'platform grants' 'npm.cmd' @('run', 'db:setup-platform-ro
 Invoke-CommandChecked 'Platform Metrics API' 'npm.cmd' @('run', 'db:install-platform-metrics-api', '--workspace', '@school-management-system/api')
 Invoke-CommandChecked 'Provider DELETE hardening' 'npm.cmd' @('run', 'db:install-provider-delete-hardening', '--workspace', '@school-management-system/api')
 Invoke-CommandChecked 'final Platform privilege hardening' 'npm.cmd' @('run', 'db:install-platform-final-privilege-hardening', '--workspace', '@school-management-system/api')
+Invoke-CommandChecked 'school runtime capability API' 'powershell.exe' @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'apps/api/scripts/install-school-runtime-api.ps1')
 Invoke-CommandChecked 'production reference bootstrap' 'npm.cmd' @('run', 'db:bootstrap')
-Invoke-CommandChecked 'final migration and ACL verification' 'node.exe' @('scripts/verify-production-db.cjs')
-Write-Output 'Deployment preparation passed. Start API and Web artifacts through the runtime supervisor, then check /api/health and /api/ready.'
+Invoke-CommandChecked 'final migration and ACL verification' 'node.exe' @('scripts/verify-production-db.cjs', '--mode', 'pre-cutover')
+Write-Output 'PRE_CUTOVER preparation passed; deployment is NOT accepted. Switch runtime, verify auth/session/plan smoke flows, explicitly revoke reviewed legacy grants, then require verify-production-db.cjs --mode post-cutover.'

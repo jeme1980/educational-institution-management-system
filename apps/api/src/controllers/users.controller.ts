@@ -1,4 +1,5 @@
-﻿import { Response } from 'express';
+﻿import { schoolAccountSummaries, createSchoolIdentity, resetSchoolSetupStamp, revokePendingIdentitySessions } from '../db/school-runtime.repository';
+import { Response } from 'express';
 import { ContextRequest } from '../middleware/context';
 import crypto from 'node:crypto';
 import { AuthRequest } from '../middleware/auth';
@@ -313,7 +314,7 @@ export async function getInstitutionUsers(req: ContextRequest, res: Response): P
   const userIds = list.map((item) => item.userId);
   const staffIds = list.map((item) => item.staffMemberId);
   const [users, staffMembers, setupTokens] = await Promise.all([
-    prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, email: true, mustChangePassword: true, isActive: true } }),
+    schoolAccountSummaries(userIds),
     prisma.staffMember.findMany({ where: { id: { in: staffIds } }, select: { id: true, firstNameAr: true, familyNameAr: true, nationalId: true } }),
     prisma.userAccountSetupToken.findMany({ where: { userId: { in: userIds } }, orderBy: { createdAt: 'desc' }, select: { userId: true, expiresAt: true, usedAt: true } }),
   ]);
@@ -371,14 +372,6 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
 
   const displayName = `${staff.firstNameAr} ${staff.familyNameAr}`;
   const normEmail = String(email).trim().toLowerCase();
-  const existing = await prisma.user.findFirst({ where: { normalizedEmail: normEmail }, include: { institutionUsers: { where: { institutionId: instId }, select: { id: true } } } });
-  if (existing?.isPlatformAdmin) {
-    return res.status(409).json({ error: 'Platform administrator accounts cannot be assigned as school users.' });
-  }
-  if (existing?.institutionUsers.length) {
-    return res.status(409).json({ error: 'This email is already linked to this school account.' });
-  }
-
   const normalizedRoleIds = Array.isArray(roleIds) ? [...new Set(roleIds.map(String))] : [];
   if (normalizedRoleIds.length > 0) {
     const roleCount = await prisma.role.count({ where: { id: { in: normalizedRoleIds }, institutionId: instId, isActive: true } });
@@ -386,14 +379,11 @@ export async function createInstitutionUsers(req: ContextRequest, res: Response)
   }
 
   const created = await prisma.$transaction(async (tx) => {
-    const newUser = existing || await tx.user.create({ data: {
-      email: normEmail,
-      normalizedEmail: normEmail,
-      passwordHash: await createPendingAccountPasswordHash(),
-      securityStamp: crypto.randomUUID(),
-      isActive: true,
-      mustChangePassword: true,
-    } });
+    const newUser = await createSchoolIdentity(normEmail, await createPendingAccountPasswordHash(), crypto.randomUUID(), tx);
+    if (!newUser.id) throw Object.assign(new Error('Platform administrator accounts cannot be assigned as school users.'), { statusCode: 409 });
+    if (await tx.institutionUser.findFirst({ where: { userId: newUser.id, institutionId: instId } })) {
+      throw Object.assign(new Error('This email is already linked to this school account.'), { statusCode: 409 });
+    }
     const newInstUser = await tx.institutionUser.create({ data: {
       institutionId: instId,
       userId: newUser.id,
@@ -492,15 +482,16 @@ export async function reissueInstitutionUserSetup(req: ContextRequest, res: Resp
     const result = await prisma.$transaction(async (tx) => {
       const instUser = await tx.institutionUser.findFirst({
         where: { id: instUserId, institutionId: instId },
-        include: { user: true },
+        // Identity summary is tenant-scoped by the capability function.
       });
       if (!instUser) throw Object.assign(new Error('Institution user not found.'), { statusCode: 404, code: 'INSTITUTION_USER_NOT_FOUND' });
-      if (!instUser.isActive || instUser.archivedAt || !instUser.user.isActive) throw Object.assign(new Error('The account is disabled and cannot receive a setup link.'), { statusCode: 409, code: 'ACCOUNT_DISABLED' });
-      if (!instUser.user.mustChangePassword) throw Object.assign(new Error('The account is already active. Initial setup cannot be reissued.'), { statusCode: 409, code: 'ACCOUNT_ALREADY_ACTIVE' });
+      const [account] = await schoolAccountSummaries([instUser.userId], tx);
+      if (!instUser.isActive || instUser.archivedAt || !account?.isActive) throw Object.assign(new Error('The account is disabled and cannot receive a setup link.'), { statusCode: 409, code: 'ACCOUNT_DISABLED' });
+      if (!account?.mustChangePassword) throw Object.assign(new Error('The account is already active. Initial setup cannot be reissued.'), { statusCode: 409, code: 'ACCOUNT_ALREADY_ACTIVE' });
 
       const setup = await issueAccountSetupToken(tx, instUser.userId);
-      await tx.user.update({ where: { id: instUser.userId }, data: { securityStamp: crypto.randomUUID() } });
-      await tx.userSession.updateMany({ where: { userId: instUser.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+      await resetSchoolSetupStamp(instUser.userId, crypto.randomUUID(), tx);
+      await revokePendingIdentitySessions(instUser.userId, tx);
       await recordAuditEvent(tx, { institutionId: instId, actorUserId: req.user?.uid, action: 'ACCOUNT_SETUP_REISSUED', entityType: 'InstitutionUser', entityId: instUser.id, metadata: { userId: instUser.userId, expiresAt: setup.expiresAt.toISOString() } });
       return { instUser, setup };
     });

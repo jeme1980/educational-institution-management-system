@@ -7,6 +7,8 @@ Values belong in the deployment secret store, never in source control or logs.
 | `NODE_ENV` | Required runtime | Must be `production`. |
 | `AUTH_JWT_SECRET` | Required runtime secret | Signs local access tokens; use a long random value. |
 | `RLS_RUNTIME_DATABASE_URL` | Required runtime secret | School connection using `school_app`. |
+| `AUTH_RUNTIME_DATABASE_URL` | Required runtime secret | Dedicated capability-only school_auth_app connection. |
+| `AUTH_RUNTIME_DB_PASSWORD` | Provisioning secret | Never pass to runtime supervisor. |
 | `PLATFORM_DATABASE_URL` | Required runtime secret | Platform connection using `platform_app`. |
 | `MIGRATION_DATABASE_URL` | Required deployment secret | Prisma migration commands, role provisioning, installers, bootstrap, and final DB verification only. The migration wrapper temporarily maps it to Prisma's `DATABASE_URL` in its child process. |
 | `DATABASE_URL` | Not required in production runtime | Prisma schema datasource name. The migration wrapper supplies it transiently; do not inject the migration credential into the API service. |
@@ -29,7 +31,7 @@ Values belong in the deployment secret store, never in source control or logs.
 
 The legacy `DATABASE_URL_UNPOOLED` variable is intentionally absent from the examples because this repository does not use it for runtime or deployment. If a provider supplies an equivalent direct URL, map it to `MIGRATION_DATABASE_URL` in the secret store without committing the value.
 
-Use `.env.example` as the canonical production variable list; `apps/api/.env.example` mirrors the required API and deployment values. Inject deployment secrets only into the deployment helper. Inject only `NODE_ENV`, `PORT`, `APP_URL`, `CORS_ORIGINS`, `AUTH_JWT_SECRET`, `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL_DAYS`, `ACCOUNT_SETUP_URL_BASE`, `RLS_RUNTIME_DATABASE_URL`, and `PLATFORM_DATABASE_URL` into the API supervisor. The Web server uses `NODE_ENV`, `WEB_PORT`, and `WEB_API_ORIGINS`. Keep `MIGRATION_DATABASE_URL` and provisioning passwords out of both runtime processes.
+Use `.env.example` as the canonical production variable list; `apps/api/.env.example` mirrors the required API and deployment values. Inject deployment secrets only into the deployment helper. Inject only `NODE_ENV`, `PORT`, `APP_URL`, `CORS_ORIGINS`, `AUTH_JWT_SECRET`, `ACCESS_TOKEN_TTL`, `REFRESH_TOKEN_TTL_DAYS`, `ACCOUNT_SETUP_URL_BASE`, `RLS_RUNTIME_DATABASE_URL`, `AUTH_RUNTIME_DATABASE_URL`, and `PLATFORM_DATABASE_URL` into the API supervisor. The Web server uses `NODE_ENV`, `WEB_PORT`, and `WEB_API_ORIGINS`. Keep `MIGRATION_DATABASE_URL` and provisioning passwords out of both runtime processes.
 
 ## Linux systemd runtime environment file
 
@@ -44,5 +46,6 @@ Prohibit `MIGRATION_DATABASE_URL`, `DATABASE_URL`, `RLS_RUNTIME_DB_PASSWORD`, `P
 | Connection | Role | Privilege model |
 | --- | --- | --- |
 | School runtime | `RLS_RUNTIME_DATABASE_URL` → `school_app` | `NOSUPERUSER`, `NOBYPASSRLS`, tenant CRUD, reference read-only. |
+| Authentication runtime | `AUTH_RUNTIME_DATABASE_URL` -> `school_auth_app` | LOGIN, NOINHERIT, no table CRUD; auth_api EXECUTE only. |
 | Platform runtime | `PLATFORM_DATABASE_URL` → `platform_app` | `NOSUPERUSER`, `NOBYPASSRLS`, platform workflow grants, no school runtime bypass. |
 | Migration/admin | `MIGRATION_DATABASE_URL` | Deployment-only owner/migration privileges; never injected into API runtime. |

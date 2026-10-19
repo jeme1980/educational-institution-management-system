@@ -1,3 +1,4 @@
+import { checkAuthDatabase, closeAuthDatabase } from './db/auth-runtime.repository';
 import path from 'node:path';
 import dotenv from 'dotenv';
 import cors, { type CorsOptions } from 'cors';
@@ -102,6 +103,7 @@ if (require.main === module) {
   const port = Number(process.env['PORT'] || 4000);
   const start = async () => {
     if (process.env['NODE_ENV'] === 'production') {
+      await checkAuthDatabase();
       const readiness = await checkDatabaseReadiness(prisma, platformPrisma);
       if (readiness.status !== 'ready') {
         throw new Error('Production startup refused an unavailable or privileged runtime database connection.');
@@ -118,7 +120,7 @@ if (require.main === module) {
           console.error('HTTP server shutdown failed:', error.message);
           process.exitCode = 1;
         }
-        await Promise.allSettled([prisma.$disconnect(), platformPrisma.$disconnect()]);
+        await Promise.allSettled([prisma.$disconnect(), platformPrisma.$disconnect(), closeAuthDatabase()]);
         if (!error) console.log('API shutdown complete.');
       });
     };

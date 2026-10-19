@@ -1,3 +1,4 @@
+import { lockSchoolInstitution } from '../db/school-runtime.repository';
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { testAdminPrisma as admin } from '../db/test-admin-prisma';
@@ -141,25 +142,23 @@ for (const resource of ['students', 'staff', 'users'] as const) {
 }
 
 test('limit locks for different institutions are independent', async () => {
-  const institutions = await admin.institution.findMany({ take: 2, select: { id: true } });
+  const base = await admin.institution.findFirstOrThrow();
+  const suffix = Date.now().toString();
+  const institutions = await Promise.all(['a','b'].map(label => admin.institution.create({ data: { schoolCode: 'LI'+label+suffix, slug: 'lock-independence-'+label+'-'+suffix, nameAr: 'Lock independence', typeId: base.typeId, regionId: base.regionId, townId: base.townId, statusId: base.statusId, defaultLanguageId: base.defaultLanguageId } })));
   assert.equal(institutions.length, 2);
   const firstLocked = gate();
   const releaseFirst = gate();
   const first = withRlsContext(institutions[0].id, async () => {
-    const rows = await prisma.$transaction((tx) => tx.$queryRaw<{ id: string }[]>`
-      SELECT id FROM public.institutions WHERE id = ${institutions[0].id}::uuid FOR NO KEY UPDATE
-    `);
-    assert.equal(rows.length, 1);
+    const locked = await prisma.$transaction(tx => lockSchoolInstitution(tx, institutions[0].id));
+    assert.equal(locked, true);
     firstLocked.release();
     await releaseFirst.promise;
   });
   try {
     await firstLocked.promise;
     await withRlsContext(institutions[1].id, async () => {
-      const rows = await prisma.$transaction((tx) => tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM public.institutions WHERE id = ${institutions[1].id}::uuid FOR NO KEY UPDATE
-      `);
-      assert.equal(rows.length, 1);
+      const locked = await prisma.$transaction(tx => lockSchoolInstitution(tx, institutions[1].id));
+    assert.equal(locked, true);
     });
     await withRlsContext(institutions[0].id, async () => {
       let rejected = 0;
@@ -173,5 +172,6 @@ test('limit locks for different institutions are independent', async () => {
   } finally {
     releaseFirst.release();
     await first;
+    await admin.institution.deleteMany({ where: { id: { in: institutions.map(i => i.id) } } });
   }
 });

@@ -1,3 +1,4 @@
+import { checkAuthDatabase } from '../db/auth-runtime.repository';
 import { Response } from 'express';
 import { ContextRequest } from '../middleware/context';
 import { prisma } from '../db/prisma';
@@ -10,6 +11,7 @@ export async function getHealth(_req: ContextRequest, res: Response): Promise<an
 }
 
 export async function getReadiness(_req: ContextRequest, res: Response): Promise<any> {
+  try { await checkAuthDatabase(); } catch { return res.status(503).json({ status: 'not_ready' }); }
   const readiness = await checkDatabaseReadiness(prisma, platformPrisma);
   if (readiness.status === 'not_ready') {
     console.error('Readiness database dependency is unavailable.', readiness.services);

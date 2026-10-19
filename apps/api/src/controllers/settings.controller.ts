@@ -1,3 +1,5 @@
+import { schoolInstitution, updateSchoolInstitution } from '../db/school-runtime.repository';
+import type { Institution } from '@prisma/client';
 ﻿import { Response } from 'express';
 import { ContextRequest } from '../middleware/context';
 import { AuthRequest } from '../middleware/auth';
@@ -8,31 +10,22 @@ import type { InstitutionSettingsUpdate } from '../validation/institution-settin
 const isUuid = (value: unknown): value is string => typeof value === 'string'
   && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
-const institutionProfileSelect = {
-  id: true,
-  schoolCode: true,
-  slug: true,
-  nameAr: true,
-  nameHe: true,
-  phoneNumber: true,
-  email: true,
-  logoUrl: true,
-  regionId: true,
-  townId: true,
-  typeId: true,
-  statusId: true,
-  defaultLanguageId: true,
-  updatedAt: true,
-  status: { select: { id: true, nameAr: true, isActive: true, allowsWrites: true } },
-  region: { select: { id: true, nameAr: true } },
-  town: { select: { id: true, nameAr: true } },
-  type: { select: { id: true, nameAr: true } },
-} as const;
+async function institutionProfile(institution: Institution) {
+  const [status, region, town, type] = await Promise.all([
+    prisma.institutionStatus.findUnique({ where: { id: institution.statusId }, select: { id: true, nameAr: true, isActive: true, allowsWrites: true } }),
+    prisma.region.findUnique({ where: { id: institution.regionId }, select: { id: true, nameAr: true } }),
+    institution.townId ? prisma.town.findUnique({ where: { id: institution.townId }, select: { id: true, nameAr: true } }) : null,
+    prisma.educationType.findUnique({ where: { id: institution.typeId }, select: { id: true, nameAr: true } }),
+  ]);
+  const { id,schoolCode,slug,nameAr,nameHe,phoneNumber,email,logoUrl,regionId,townId,typeId,statusId,defaultLanguageId,updatedAt } = institution;
+  return { id,schoolCode,slug,nameAr,nameHe,phoneNumber,email,logoUrl,regionId,townId,typeId,statusId,defaultLanguageId,updatedAt,status,region,town,type };
+}
 
 export async function getInstitutionProfile(req: ContextRequest, res: Response): Promise<any> {
   const institutionId = req.context?.institutionId || '';
   if (!institutionId) return res.status(403).json({ error: 'Unauthorized institution access.' });
-  const institution = await prisma.institution.findFirst({ where: { id: institutionId, archivedAt: null }, select: institutionProfileSelect });
+  const record = await schoolInstitution(institutionId);
+  const institution = record ? await institutionProfile(record) : null;
   if (!institution) return res.status(404).json({ error: 'Institution not found.' });
   const academicYears = await prisma.academicYear.findMany({
     where: { institutionId, archivedAt: null },
@@ -46,19 +39,14 @@ export async function updateInstitutionProfile(req: ContextRequest, res: Respons
   const institutionId = req.context?.institutionId || '';
   if (!institutionId) return res.status(403).json({ error: 'Unauthorized institution access.' });
   const data = req.body as InstitutionSettingsUpdate;
-  const existing = await prisma.institution.findFirst({ where: { id: institutionId, archivedAt: null }, select: { id: true, status: { select: { allowsWrites: true } } } });
+  const record = await schoolInstitution(institutionId);
+  const existing = record ? await institutionProfile(record) : null;
   if (!existing) return res.status(404).json({ error: 'Institution not found.' });
-  if (!existing.status.allowsWrites) return res.status(403).json({ error: 'Institution settings are read-only.' });
+  if (!existing.status?.allowsWrites) return res.status(403).json({ error: 'Institution settings are read-only.' });
   const updated = await prisma.$transaction(async (tx) => {
-    const updateData = {
-      ...(data.nameAr !== undefined ? { nameAr: data.nameAr } : {}),
-      ...(data.nameHe !== undefined ? { nameHe: data.nameHe || null } : {}),
-      ...(data.phoneNumber !== undefined ? { phoneNumber: data.phoneNumber || null } : {}),
-      ...(data.email !== undefined ? { email: data.email || null } : {}),
-      ...(data.logoUrl !== undefined ? { logoUrl: data.logoUrl || null } : {}),
-      updatedAt: new Date(),
-    };
-    const result = await tx.institution.update({ where: { id: institutionId }, data: updateData, select: institutionProfileSelect });
+    const record = await updateSchoolInstitution(institutionId, data, tx);
+    if (!record) throw Object.assign(new Error('Institution not found.'), { statusCode: 404 });
+    const result = await institutionProfile(record);
     await recordAuditEvent(tx, { institutionId, actorUserId: req.user?.uid, action: 'UPDATE', entityType: 'Institution', entityId: institutionId, metadata: { changedFields: Object.keys(data) } });
     return result;
   });
@@ -143,19 +131,14 @@ export async function getInstitutions(req: ContextRequest, res: Response): Promi
   const institutionId = await trustedInstitutionId(req);
   if (!institutionId) return res.status(403).json({ error: 'No active institution membership found.' });
   const [insts, towns] = await Promise.all([
-    prisma.institution.findMany({
-      where: { id: institutionId },
-      orderBy: { nameAr: 'asc' },
-      include: {
-        _count: {
-          select: {
-            students: true,
-            classes: true,
-            staffMembers: true,
-          },
-        },
-      },
-    }),
+    (async () => {
+      const record = await schoolInstitution(institutionId);
+      if (!record) return [];
+      const [students, classes, staffMembers] = await Promise.all([
+        prisma.student.count({ where: { institutionId } }), prisma.class.count({ where: { institutionId } }), prisma.staffMember.count({ where: { institutionId } }),
+      ]);
+      return [{ ...record, _count: { students, classes, staffMembers } }];
+    })(),
     prisma.town.findMany(),
   ]);
   const townsById = new Map(towns.map((town) => [town.id, town]));

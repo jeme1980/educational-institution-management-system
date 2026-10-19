@@ -156,13 +156,14 @@ test('Phase 10B-2: school accounts use setup tokens and secure credential lifecy
     assert.equal(badCreate.body.code, 'TEMPORARY_PASSWORD_NOT_ALLOWED');
     await platformPrisma.staffMember.delete({ where: { id: badCreateStaff.id } });
 
-    const changeWrong = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId }, body: { currentPassword: 'WrongPass123', newPassword: 'NewValid123', confirmPassword: 'NewValid123' } });
+    const currentSessionId = JSON.parse(Buffer.from(activeLogin.body.token.split('.')[1], 'base64url').toString()).sid;
+    const changeWrong = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId, sid: currentSessionId }, body: { currentPassword: 'WrongPass123', newPassword: 'NewValid123', confirmPassword: 'NewValid123' } });
     assert.equal(changeWrong.statusCode, 401);
-    const changeWeak = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId }, body: { currentPassword: 'ValidPass123', newPassword: 'weak', confirmPassword: 'weak' } });
+    const changeWeak = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId, sid: currentSessionId }, body: { currentPassword: 'ValidPass123', newPassword: 'weak', confirmPassword: 'weak' } });
     assert.equal(changeWeak.statusCode, 400);
-    const changeSame = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId }, body: { currentPassword: 'ValidPass123', newPassword: 'ValidPass123', confirmPassword: 'ValidPass123' } });
+    const changeSame = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId, sid: currentSessionId }, body: { currentPassword: 'ValidPass123', newPassword: 'ValidPass123', confirmPassword: 'ValidPass123' } });
     assert.equal(changeSame.statusCode, 400);
-    const changed = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId }, body: { currentPassword: 'ValidPass123', newPassword: 'NewValid123', confirmPassword: 'NewValid123' } });
+    const changed = await invokeSchool(institutionA.id, createAuthChangePassword, { user: { uid: main.body.userId, sid: currentSessionId }, body: { currentPassword: 'ValidPass123', newPassword: 'NewValid123', confirmPassword: 'NewValid123' } });
     assert.equal(changed.statusCode, 200);
     assert.equal(changed.body.sessionsRevoked, true);
     const changedRecord = await platformPrisma.user.findUniqueOrThrow({ where: { id: main.body.userId } });

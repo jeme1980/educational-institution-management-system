@@ -8,7 +8,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   process.exitCode = 1;
 } else if (process.env['NODE_ENV'] === 'production' &&
   (process.env['MIGRATION_DATABASE_URL'] || process.env['DATABASE_URL'] ||
-    !process.env['RLS_RUNTIME_DATABASE_URL'] || !process.env['PLATFORM_DATABASE_URL'])) {
+    !process.env['RLS_RUNTIME_DATABASE_URL'] || !process.env['PLATFORM_DATABASE_URL'] || !process.env['AUTH_RUNTIME_DATABASE_URL'])) {
   console.error('Production API requires restricted runtime URLs and must not receive migration credentials.');
   process.exitCode = 1;
 } else {

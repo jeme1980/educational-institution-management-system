@@ -33,11 +33,13 @@ Copy the variable names from `.env.example` into the deployment secret store. Ne
 - `NODE_ENV=production`, `AUTH_JWT_SECRET`, token TTLs, `PORT`, `CORS_ORIGINS`, and `APP_URL`.
 - `RLS_RUNTIME_DATABASE_URL` for `school_app`.
 - `PLATFORM_DATABASE_URL` for `platform_app`.
+- `AUTH_RUNTIME_DATABASE_URL` for capability-only `school_auth_app`; `AUTH_RUNTIME_DB_PASSWORD` only for provisioning.
+- `REFRESH_TOKEN_TTL_DAYS` must be positive and at most 30.
 - `MIGRATION_DATABASE_URL` for migrations/bootstrap only.
 - `ACCOUNT_SETUP_URL_BASE` as a public HTTPS `/account/setup` page, without a token or localhost address.
 - `PLATFORM_ADMIN_EMAIL` and `PLATFORM_ADMIN_PASSWORD` only during the explicit bootstrap operation; remove or rotate them immediately afterward.
 
-`school_app` and `platform_app` must be `NOSUPERUSER`, `NOBYPASSRLS`, `NOINHERIT`, and must have no role memberships. Prisma's schema names `DATABASE_URL`; `apps/api/scripts/run-prisma-migration.ps1` maps `MIGRATION_DATABASE_URL` to it only within the Prisma child process for validate/status/deploy. The API supervisor must not receive `MIGRATION_DATABASE_URL` or a migration-valued `DATABASE_URL`. Its school and platform connections remain `RLS_RUNTIME_DATABASE_URL` and `PLATFORM_DATABASE_URL`.
+`school_app` and `platform_app` must be `NOSUPERUSER`, `NOBYPASSRLS`, `NOINHERIT`, and must have no role memberships. Prisma's schema names `DATABASE_URL`; `apps/api/scripts/run-prisma-migration.ps1` maps `MIGRATION_DATABASE_URL` to it only within the Prisma child process for validate/status/deploy. The API supervisor must not receive `MIGRATION_DATABASE_URL` or a migration-valued `DATABASE_URL`. Its connections are `RLS_RUNTIME_DATABASE_URL`, `AUTH_RUNTIME_DATABASE_URL`, and `PLATFORM_DATABASE_URL`, using separate school/auth/platform runtime roles.
 
 ## Fresh deployment order
 
@@ -47,9 +49,11 @@ Copy the variable names from `.env.example` into the deployment secret store. Ne
 4. It runs Prisma validate and migrate status through `run-prisma-migration.ps1`; a fresh database's *unapplied migrations* status is accepted. It then runs `prisma migrate deploy` with the migration credential and requires post-migration status success.
 5. It repeats both role-provisioning commands because new migration tables need their grants and policies.
 6. It installs Platform Metrics (`db:install-platform-metrics-api`), then Provider DELETE hardening (`db:install-provider-delete-hardening`), then final Platform privilege hardening (`db:install-platform-final-privilege-hardening`). These are mandatory on both fresh and upgrade runs. The deployment credential needs the role-management rights required by the Metrics installer.
-7. It runs idempotent production reference bootstrap and `scripts/verify-production-db.cjs`, which checks migration history, restricted role attributes/memberships, Provider DELETE denial, seven direct SELECT denials, and Metrics execute privileges. Do not start the new API if any step fails.
+The helper also runs `apps/api/scripts/install-school-runtime-api.ps1` to install the versioned school identity/session/tenant-lock capabilities. See [SCHOOL_RUNTIME_CAPABILITIES.md](SCHOOL_RUNTIME_CAPABILITIES.md) for the separate legacy-ACL cutover gate.
+
+7. It runs idempotent production reference bootstrap and `scripts/verify-production-db.cjs`, which checks migration history, restricted role attributes/memberships, Provider DELETE denial, seven direct SELECT denials, and Metrics execute privileges. The helper uses explicit pre-cutover mode, reports pending legacy grants, and stops on any capability-contract failure. This is preparation only, not deployment acceptance.
 8. Publish the validated release, including `apps/api/dist`, package metadata and compatible production dependencies, to `/opt/educational-institution-management-system/current`. Install/start `educational-institution-api.service` as described below; for an existing enabled service, invoke `sudo systemctl restart educational-institution-api.service` after release and database preparation succeeds. The service directly executes the built API, with no npm/shell wrapper, port cleanup, or migrations. On an occupied port the new API fails; coordinate rollout through systemd.
-9. Check `GET /api/health` and `GET /api/ready` for HTTP 200 before routing traffic to the new API. Readiness checks both restricted database clients.
+9. After switching runtime, run school/platform auth/session/password and plan smoke checks; execute the separately approved legacy revoke artifact, then require `node scripts/verify-production-db.cjs --mode post-cutover` before acceptance. See [SCHOOL_RUNTIME_CAPABILITIES.md](SCHOOL_RUNTIME_CAPABILITIES.md). Check `GET /api/health` and `GET /api/ready` for HTTP 200 before routing traffic to the new API. Readiness checks both restricted database clients.
 10. Publish `apps/web/dist/app/browser` and serve it via the HTTPS reverse proxy or `npm run start:web` behind that proxy. Confirm `/api` forwarding and SPA deep-link fallback; do not use Angular's development server in production.
 
 Do not use `migrate dev`, `db push`, `migrate reset`, or `db:seed:dev` in production.
@@ -153,14 +157,26 @@ Check `/`, `/api/health`, `/api/ready`, platform login, school login, a referenc
 
 ### Rollback
 
+The school/auth capability cutover has an ACL compatibility checkpoint independent of Prisma migration compatibility. Follow the [pre-revoke/post-revoke rules and decision table](SCHOOL_RUNTIME_CAPABILITIES.md#rollback-acl-compatibility-checkpoint) before selecting a rollback release.
+
+Before `school-runtime-legacy-revoke.sql`, the legacy grants remain and RC3 application rollback is technically possible if there is no other incompatible application/schema change: `PRE_REVOKE_ROLLBACK=APPLICATION_ROLLBACK_POSSIBLE`. This does not roll back migrations.
+
+After revoke, RC3/old direct-table runtime is incompatible with the hardened ACL contract. **Do not roll back application code alone to RC3.** Default recovery is roll forward/redeploy the new auth-capability runtime. `POST_REVOKE_OLD_RUNTIME_ROLLBACK=NOT_SAFE_WITHOUT_EXPLICIT_ACL_RESTORATION`. Any emergency restoration must be explicit, reviewed, authorized and limited to the precise old-runtime privileges, using the captured pre-revoke effective table/column ACL snapshot. There is no automatic blanket GRANT or restoration script.
+
+Immediately before revoke, capture the read-only ACL checkpoint described in the capability runbook. If emergency privileges are restored, POST_CUTOVER must fail by design: the environment is temporarily legacy, not final hardened production. Redeploy the capability runtime, revoke the reviewed obsolete grants again, require POST_CUTOVER success, and repeat runtime smoke checks before accepting hardened operation.
+
 1. Stop or drain writes and record the failing release.
-2. If the database migration is backward-compatible, restore the previous compatible API release at `/opt/educational-institution-management-system/current` and the compatible Web artifacts without changing runtime environment values. Run `sudo systemctl restart educational-institution-api.service`, then require HTTP 200 from both `/api/health` and `/api/ready` before returning traffic.
+2. Only if both schema and the current ACL checkpoint are compatible with the chosen release, restore that compatible API release at `/opt/educational-institution-management-system/current` and compatible Web artifacts without changing runtime environment values. After legacy revoke, choose a runtime that uses the auth-capability boundary; RC3 code alone is not a compatible recovery. Run `sudo systemctl restart educational-institution-api.service`, then require HTTP 200 from both `/api/health` and `/api/ready` and auth/session/plan smoke success before returning traffic. Health/readiness alone do not prove the old runtime has the required ACLs.
 3. Confirm database compatibility before rollback; never assume Prisma has down migrations.
 4. If a destructive migration is involved, restore the database backup to a replacement database, provision roles, validate readiness/RLS, and switch traffic only after smoke tests pass.
 
 The default database rollback policy is forward-fix. Destructive changes require a staged rollout and a tested restore path.
 
 Database recovery and restore validation remain governed by [BACKUP_RESTORE.md](BACKUP_RESTORE.md); runtime rollback does not introduce down migrations.
+
+### Canonical API release acceptance
+
+On the isolated PostgreSQL test environment described in [SCHOOL_RUNTIME_CAPABILITIES.md](SCHOOL_RUNTIME_CAPABILITIES.md#canonical-api-release-suite), run `npm run test:api:release` (`npm.cmd run test:api:release` on Windows). This single command builds API and includes the original API baseline and all four boundary tests in one sequential Node test invocation. The current RC4 expectation is 295 total, 293 PASS, 0 FAIL and the two known optional rollover SKIPs when `RUN_ROLLOVER_INTEGRATION` is disabled. Never run it against the real `school` database. Current canonical RLS selection is 7/7; historical 8/8 is documentation drift, not an extra required test.
 
 No Node/npm version pin exists in the repository; this remains separate non-blocking release debt. Review `npm audit --omit=dev` separately. Do not run `npm audit fix` as part of deployment preparation.
 

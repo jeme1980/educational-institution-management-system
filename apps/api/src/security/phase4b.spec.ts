@@ -41,6 +41,7 @@ const context = (institutionId: string, academicYearId = '') => ({
 });
 
 async function main() {
+  const fixtureProvider = await prisma.provider.create({ data: { providerCode: 'P4-'+crypto.randomUUID().slice(0,8), name: 'Phase4 reference fixture' } });
   const [type, region, status, language, gender, studentStatus] = await Promise.all([
     prisma.educationType.findFirst(),
     prisma.region.findFirst(),
@@ -132,6 +133,7 @@ async function main() {
     assert.ok(await prisma.town.findFirst(), 'Town remains a global lookup without institution scoping');
     assert.ok(await prisma.provider.findFirst(), 'Provider remains a global lookup without institution scoping');
   } finally {
+    await prisma.provider.delete({ where: { id: fixtureProvider.id } });
     await prisma.institutionUserRole.deleteMany({ where: { institutionId: institutionA.id, institutionUserId: memberA.id } });
     if (memberARoles.length) await prisma.institutionUserRole.createMany({ data: memberARoles.map(item => ({ institutionId: institutionA.id, institutionUserId: memberA.id, roleId: item.roleId })) });
     await prisma.student.delete({ where: { id: studentB.id } });

@@ -16,6 +16,8 @@ async function expectForeignKeyViolation(operation: Promise<unknown>, message: s
 }
 
 async function main() {
+  const baseInstitution = await prisma.institution.findFirstOrThrow();
+  const fixtureJobRole = await prisma.jobRole.create({ data: { institutionId: baseInstitution.id, nameAr: 'Phase7B3 base fixture' } });
   const [institutionA, type, region, status, language, stage, grade, classType, composition, jobRoleLookup, questionTypeLookup] = await Promise.all([
     prisma.institution.findFirst({ select: { id: true } }),
     prisma.educationType.findFirst(),
@@ -26,7 +28,7 @@ async function main() {
     prisma.gradeLevel.findFirst(),
     prisma.classType.findFirst(),
     prisma.compositionType.findFirst(),
-    prisma.jobRole.findFirst(),
+    Promise.resolve(fixtureJobRole),
     prisma.questionType.findFirst(),
   ]);
   assert.ok(institutionA && type && region && status && language && stage && grade && classType && composition && jobRoleLookup && questionTypeLookup, 'Required fixtures are missing');
@@ -97,6 +99,7 @@ async function main() {
       'ExamQuestion with a foreign-institution exam must be blocked',
     );
   } finally {
+    await prisma.jobRole.delete({ where: { id: fixtureJobRole.id } });
     if (questionId) await prisma.examQuestion.delete({ where: { id: questionId } });
     if (mismatchSubjectLinkId) await prisma.examStudyGroup.delete({ where: { id: mismatchSubjectLinkId } });
     if (mismatchYearLinkId) await prisma.examStudyGroup.delete({ where: { id: mismatchYearLinkId } });

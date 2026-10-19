@@ -1,7 +1,7 @@
+import { findAuthIdentityStateById, authSessionById } from '../db/auth-runtime.repository';
 import { Response, NextFunction } from 'express';
 import { tenantIsolationMiddleware } from './tenantIsolation.middleware';
 import { ContextRequest } from './context';
-import { prisma } from '../db/prisma';
 import { rlsRequestTransaction } from './rls-request.middleware';
 
 interface LocalAuthUser {
@@ -43,9 +43,9 @@ async function verifyLocalAccessToken(token: string): Promise<LocalAuthUser> {
   if (payload['tokenType'] !== 'access' || !payload.sub || !email) {
     throw new Error('Local access token is missing required claims');
   }
-  const user = await prisma.user.findUnique({ where: { id: payload.sub }, select: { id: true, isActive: true, isPlatformAdmin: true, securityStamp: true, mustChangePassword: true } });
+  const user = await findAuthIdentityStateById(payload.sub);
   const sessionId = typeof payload['sid'] === 'string' ? payload['sid'] : undefined;
-  const session = sessionId ? await prisma.userSession.findUnique({ where: { id: sessionId }, select: { userId: true, revokedAt: true, expiresAt: true } }) : null;
+  const session = sessionId ? await authSessionById(sessionId) : null;
   if (!user?.isActive || user.mustChangePassword || (payload['securityStamp'] && payload['securityStamp'] !== user.securityStamp)
     || (sessionId && (!session || session.userId !== user.id || session.revokedAt || session.expiresAt <= new Date()))) {
     throw new Error('The user session is no longer valid');

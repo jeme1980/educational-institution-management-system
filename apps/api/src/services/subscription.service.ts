@@ -1,3 +1,4 @@
+import { lockSchoolInstitution } from '../db/school-runtime.repository';
 import { NextFunction, Response } from 'express';
 import { getRequestTransaction, prisma } from '../db/prisma';
 import { platformPrisma } from '../db/platform-prisma';
@@ -105,13 +106,8 @@ export async function enforcePlanLimit(
   const tx = req.db || getRequestTransaction();
   if (!tx) throw new Error('Plan limit checks require a school request transaction.');
   // FOR NO KEY UPDATE serializes competing checks without blocking FK key-share locks.
-  const rows = await tx.$queryRaw<{ id: string }[]>`
-    SELECT id FROM public.institutions
-    WHERE id = ${institutionId}::uuid
-      AND id = NULLIF(current_setting('app.current_institution_id', true), '')::uuid
-    FOR NO KEY UPDATE
-  `;
-  if (rows.length !== 1) {
+  const locked = await lockSchoolInstitution(tx, institutionId);
+  if (!locked) {
     res.status(403).json({ error: 'Access denied.' });
     return false;
   }

@@ -1,34 +1,24 @@
+import { passwordIdentity, upgradePassword, changeOwnPassword, findAuthIdentityByEmail, findAuthIdentityStateById, identityMemberships, recordFailedLogin, recordSuccessfulLogin, createAuthSession, authSessionByHash, rotateAuthSession, revokeAuthSession, revokeCurrentIdentitySessions } from '../db/auth-runtime.repository';
 import { Response } from 'express';
 import { ContextRequest } from '../middleware/context';
-import crypto from 'node:crypto';
 import { prisma } from '../db/prisma';
 import { createLocalAccessToken, type AuthRequest } from '../middleware/auth';
 import { hashPassword, isLegacyPasswordHash, verifyPassword } from '../security/password';
 import { createRefreshToken, hashRefreshToken, refreshTokenExpiry } from '../security/session';
 import { withRlsContext } from '../middleware/rls-request.middleware';
 import { PASSWORD_POLICY_MESSAGE, validatePasswordPolicy } from '../security/password-policy';
-import { recordAuditEvent } from '../services/audit.service';
-import { recordPlatformAuditEvent } from '../services/platform-audit.service';
 import { clearRefreshCookie, hasTrustedOrigin, readRefreshCookie, setRefreshCookie } from '../security/refresh-cookie';
 type AuthenticatedUser = { name?: string; displayName?: string };
 
 async function createUserSession(user: any, req: ContextRequest) {
   const refreshToken = createRefreshToken();
-  const session = await prisma.userSession.create({
-    data: {
-      userId: user.id,
-      refreshTokenHash: hashRefreshToken(refreshToken),
-      expiresAt: refreshTokenExpiry(),
-      ipAddress: req.ip?.slice(0, 64),
-      userAgent: String(req.headers?.['user-agent'] || '').slice(0, 500) || null,
-    },
-  });
+  const session = await createAuthSession(user.id, hashRefreshToken(refreshToken), refreshTokenExpiry(), req.ip?.slice(0, 64) || null, String(req.headers?.['user-agent'] || '').slice(0, 500) || null);
   const token = await createLocalAccessToken(user.id, user.email, user.securityStamp, session.id);
   return { token, refreshToken };
 }
 
-export async function invalidateUserSessions(userId: string): Promise<void> {
-  await prisma.userSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+export async function invalidateUserSessions(sessionId: string): Promise<void> {
+  await revokeCurrentIdentitySessions(sessionId);
 }
 
 export async function buildUserContext(user: any, requestInstitutionId?: string) {
@@ -154,10 +144,8 @@ export async function getAuthMe(req: ContextRequest, res: Response): Promise<any
   const name = authUser.name || authUser.displayName || 'مستخدم النظام';
   const instId = req.context?.institutionId;
 
-  const userRecord: any = await prisma.user.findFirst({
-    where: { normalizedEmail: email.trim().toLowerCase(), isActive: true },
-    include: { institutionUsers: { include: { institution: { select: { archivedAt: true } } } } },
-  });
+  const identity = await findAuthIdentityStateById(req.user.uid);
+  const userRecord = identity?.isActive ? { ...identity, institutionUsers: await identityMemberships(identity.id) } : null;
 
   const membership = userRecord?.institutionUsers?.find((item: any) => item.institutionId === instId && item.isActive && !item.archivedAt)
     || userRecord?.institutionUsers?.find((item: any) => item.isActive && !item.archivedAt)
@@ -165,7 +153,7 @@ export async function getAuthMe(req: ContextRequest, res: Response): Promise<any
   if (!userRecord?.isPlatformAdmin && (!membership?.isActive || membership.archivedAt)) {
     return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' });
   }
-  if (!userRecord?.isPlatformAdmin && membership.institution.archivedAt) {
+  if (!userRecord?.isPlatformAdmin && membership?.institution.archivedAt) {
     return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' });
   }
 
@@ -187,7 +175,8 @@ export async function createAuthLogin(req: ContextRequest, res: Response): Promi
   const normEmail = String(email).trim().toLowerCase();
 
   // Local PostgreSQL/Prisma authentication is the only active login path.
-  const user: any = await prisma.user.findFirst({ where: { normalizedEmail: normEmail, isActive: true } });
+  const identity = await findAuthIdentityByEmail(normEmail);
+  const user = identity?.isActive ? identity : null;
 
   if (!user) {
     return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
@@ -198,10 +187,7 @@ export async function createAuthLogin(req: ContextRequest, res: Response): Promi
     return res.status(403).json({ error: 'هذا الحساب مجمد أو موقوف مؤقتاً، يرجى مراجعة إدارة النظام' });
   }
 
-  const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({
-    where: { userId: user.id, isActive: true, archivedAt: null },
-    select: { institutionId: true, institution: { select: { archivedAt: true } } },
-  });
+  const membership = user.isPlatformAdmin ? null : (await identityMemberships(user.id)).find(m => m.isActive && !m.archivedAt);
   if (!membership && !user.isPlatformAdmin) {
     return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' });
   }
@@ -227,11 +213,7 @@ export async function createAuthLogin(req: ContextRequest, res: Response): Promi
       lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 mins lock
     }
     
-    await prisma.user.update({ where: { id: user.id }, data: {
-        failedLoginAttempts: attempts,
-        lockedUntil: lockedUntil,
-        updatedAt: new Date()
-      } });
+    await recordFailedLogin(user.id, attempts, lockedUntil);
 
     if (attempts >= 5) {
       return res.status(423).json({ error: 'تم قفل الحساب لمدة 15 دقيقة بسبب تكرار إدخال كلمة المرور بشكل خاطئ.' });
@@ -241,16 +223,11 @@ export async function createAuthLogin(req: ContextRequest, res: Response): Promi
   }
 
   if (isLegacyPasswordHash(user.passwordHash)) {
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(password), updatedAt: new Date() } });
+    await upgradePassword(normEmail, user.passwordHash, await hashPassword(password));
   }
 
   // Success login - reset failed attempts
-  await prisma.user.update({ where: { id: user.id }, data: {
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      lastLoginAt: new Date(),
-      updatedAt: new Date()
-    } });
+  await recordSuccessfulLogin(user.id);
 
   const userContext = user.isPlatformAdmin
     ? await buildUserContext({ ...user, isPlatformAdmin: true })
@@ -280,22 +257,19 @@ export async function refreshAuthSession(req: ContextRequest, res: Response): Pr
   const refreshToken = readRefreshCookie(req);
   if (!refreshToken) { clearRefreshCookie(res); return res.status(401).json({ error: 'A refresh cookie is required.' }); }
   const oldHash = hashRefreshToken(refreshToken);
-  const session = await prisma.userSession.findUnique({ where: { refreshTokenHash: oldHash }, include: { user: true } });
+  const session = await authSessionByHash(oldHash);
   const now = new Date();
-  const user = session?.user;
+  const user = session ? await findAuthIdentityStateById(session.userId) : null;
   if (!session || session.revokedAt || session.expiresAt <= now || !user?.isActive || user.mustChangePassword || (user.lockedUntil && user.lockedUntil > now)) {
     clearRefreshCookie(res);
     return res.status(401).json({ error: 'The refresh cookie is invalid or expired.' });
   }
-  const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({ where: { userId: user.id, isActive: true, archivedAt: null }, select: { institutionId: true, institution: { select: { archivedAt: true } } } });
+  const membership = user.isPlatformAdmin ? null : (await identityMemberships(user.id)).find(m => m.isActive && !m.archivedAt);
   if (!membership && !user.isPlatformAdmin) { clearRefreshCookie(res); return res.status(403).json({ error: 'The authenticated user is not assigned to an active institution.' }); }
   if (membership?.institution.archivedAt) { clearRefreshCookie(res); return res.status(403).json({ error: 'This institution is archived and unavailable for school operations.', code: 'INSTITUTION_ARCHIVED' }); }
   const nextRefreshToken = createRefreshToken();
-  const rotated = await prisma.userSession.updateMany({
-    where: { id: session.id, refreshTokenHash: oldHash, revokedAt: null, expiresAt: { gt: now } },
-    data: { refreshTokenHash: hashRefreshToken(nextRefreshToken), expiresAt: refreshTokenExpiry(now), lastUsedAt: now, updatedAt: now },
-  });
-  if (rotated.count !== 1) { clearRefreshCookie(res); return res.status(401).json({ error: 'The refresh cookie is no longer valid.' }); }
+  const rotated = await rotateAuthSession(session.id, oldHash, hashRefreshToken(nextRefreshToken), refreshTokenExpiry(now));
+  if (rotated !== 1) { clearRefreshCookie(res); return res.status(401).json({ error: 'The refresh cookie is no longer valid.' }); }
   const token = await createLocalAccessToken(user.id, user.email, user.securityStamp, session.id);
   setRefreshCookie(res, nextRefreshToken);
   return res.json({ token, accessToken: token });
@@ -304,17 +278,14 @@ export async function refreshAuthSession(req: ContextRequest, res: Response): Pr
 export async function logoutAuthSession(req: AuthRequest, res: Response): Promise<any> {
   if (!hasTrustedOrigin(req)) return res.status(403).json({ error: 'The browser origin is not trusted.' });
   const refreshToken = readRefreshCookie(req);
-  const sessionId = refreshToken
-    ? (await prisma.userSession.findUnique({ where: { refreshTokenHash: hashRefreshToken(refreshToken) }, select: { id: true } }))?.id
-    : req.user?.sid;
-  if (sessionId) await prisma.userSession.updateMany({ where: { id: sessionId, revokedAt: null }, data: { revokedAt: new Date() } });
+  if (refreshToken) await revokeAuthSession(hashRefreshToken(refreshToken));
   clearRefreshCookie(res);
   return res.json({ message: 'Logged out successfully.' });
 }
 
 export async function logoutAllAuthSessions(req: AuthRequest, res: Response): Promise<any> {
-  if (!req.user?.uid) return res.status(401).json({ error: 'Authentication is required.' });
-  await invalidateUserSessions(req.user.uid);
+  if (!req.user?.uid || !req.user.sid) return res.status(401).json({ error: 'Authentication is required.' });
+  await invalidateUserSessions(req.user.sid!);
   clearRefreshCookie(res);
   return res.json({ message: 'All sessions were revoked.' });
 }
@@ -329,33 +300,20 @@ export async function createAuthChangePassword(req: ContextRequest, res: Respons
   if (newPassword !== confirmPassword) return res.status(400).json({ error: 'Passwords do not match.', code: 'PASSWORD_CONFIRMATION_MISMATCH' });
   if (!validatePasswordPolicy(newPassword)) return res.status(400).json({ error: PASSWORD_POLICY_MESSAGE, code: 'PASSWORD_POLICY_VIOLATION' });
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!req.user?.sid) return res.status(401).json({ error: 'A current session is required.' });
+  const state = await findAuthIdentityStateById(userId);
+  const credentials = await passwordIdentity(req.user.sid);
+  const user = state && credentials?.id === userId ? { ...state, passwordHash: credentials.passwordHash } : null;
   if (!user?.isActive || user.mustChangePassword) return res.status(403).json({ error: 'The account is not active.', code: 'ACCOUNT_NOT_ACTIVE' });
   if (!(await verifyPassword(currentPassword, user.passwordHash))) return res.status(401).json({ error: 'The current password is incorrect.', code: 'CURRENT_PASSWORD_INVALID' });
   if (await verifyPassword(newPassword, user.passwordHash)) return res.status(400).json({ error: 'The new password must differ from the current password.', code: 'PASSWORD_REUSE_NOT_ALLOWED' });
 
   const passwordHash = await hashPassword(newPassword);
-  const membership = user.isPlatformAdmin ? null : await prisma.institutionUser.findFirst({
-    where: { userId, isActive: true, archivedAt: null },
-    select: { institutionId: true },
-  });
+  const membership = user.isPlatformAdmin ? null : (await identityMemberships(user.id)).find(m => m.isActive && !m.archivedAt);
   if (!user.isPlatformAdmin && !membership) return res.status(403).json({ error: 'The account is not assigned to an active institution.' });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: userId }, data: {
-      passwordHash,
-      securityStamp: crypto.randomUUID(),
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      updatedAt: new Date(),
-    } });
-    await tx.userSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
-    if (membership) {
-      await recordAuditEvent(tx, { institutionId: membership.institutionId, actorUserId: userId, action: 'PASSWORD_CHANGED', entityType: 'User', entityId: userId });
-    } else {
-      await recordPlatformAuditEvent({ actorUserId: userId, action: 'PASSWORD_CHANGED', entityType: 'User', entityId: userId, metadata: { selfService: true } }, tx);
-    }
-  });
+  const changed = await changeOwnPassword(req.user.sid, user.passwordHash, passwordHash, membership?.institutionId || null);
+  if (!changed) return res.status(401).json({ error: 'The current session or password is no longer valid.' });
 
   clearRefreshCookie(res);
   return res.json({ message: 'Password changed successfully. Sign in again.', sessionsRevoked: true });

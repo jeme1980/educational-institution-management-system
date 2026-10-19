@@ -53,7 +53,7 @@ async function main() {
     const changed = await withRlsContext(institution.id, () => invoke(createAuthChangePassword, {
       body: { currentPassword: password, newPassword: 'Phase5A-new-password!', confirmPassword: 'Phase5A-new-password!' },
       context: { institutionId: institution.id, academicYearId: '' },
-      user: { uid: user.id, email: user.email },
+      user: { uid: user.id, email: user.email, sid: JSON.parse(Buffer.from(secondLogin.body.token.split('.')[1], 'base64url').toString()).sid },
     }));
     assert.equal(changed.statusCode, 200, 'Password change must succeed');
     const changedHash = await prisma.user.findUnique({ where: { id: user.id }, select: { passwordHash: true } });

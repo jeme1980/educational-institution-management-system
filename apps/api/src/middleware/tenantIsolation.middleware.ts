@@ -1,3 +1,4 @@
+import { findAuthIdentityStateById, identityMemberships } from '../db/auth-runtime.repository';
 import { Response, NextFunction } from 'express';
 import { ContextRequest } from './context';
 import { prisma } from '../db/prisma';
@@ -19,30 +20,14 @@ export async function tenantIsolationMiddleware(
 
   try {
     const requestedInstitutionId = req.institutionId || req.context?.institutionId || '';
-    const user = await prisma.user.findFirst({
-      where: {
-        id: req.user.uid,
-        normalizedEmail: String(req.user.email || '').trim().toLowerCase(),
-        isActive: true,
-      },
-      select: { id: true, email: true },
-    });
+    const identity = await findAuthIdentityStateById(req.user.uid);
+    const user = identity?.isActive && identity.normalizedEmail === String(req.user.email || '').trim().toLowerCase() ? identity : null;
 
     if (!user) {
       return res.status(401).json({ error: 'Authenticated user not found' });
     }
 
-    const membership = await prisma.institutionUser.findFirst({
-      where: {
-        userId: user.id,
-        isActive: true,
-        archivedAt: null,
-        ...(requestedInstitutionId && isUuid(requestedInstitutionId)
-          ? { institutionId: requestedInstitutionId }
-          : {}),
-      },
-      select: { id: true, institutionId: true, institution: { select: { archivedAt: true } } },
-    });
+    const membership = (await identityMemberships(user.id)).find(m => m.isActive && !m.archivedAt && (!requestedInstitutionId || !isUuid(requestedInstitutionId) || m.institutionId === requestedInstitutionId));
 
     if (!membership) {
       console.warn(`[Tenant Isolation Blocked] User ${user.email} has no active institution membership.`);

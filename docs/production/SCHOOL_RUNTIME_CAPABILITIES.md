@@ -52,6 +52,49 @@ School account creation/linking returns only id and mustChangePassword, retains 
 
 No real school install, ACL change, restart or cutover is authorized by this implementation.
 
+### Existing authentication credential recovery
+
+When `school_auth_app` already exists but its credential is lost or must change,
+use the explicit **rotation-only** entrypoint:
+
+```powershell
+# Supply MIGRATION_DATABASE_URL and a new AUTH_RUNTIME_DB_PASSWORD through the
+# secure deployment environment, never command-line arguments or a transcript.
+powershell.exe -NoProfile -File apps/api/scripts/install-school-runtime-api.ps1 -RotateAuthPassword
+```
+
+This path requires the existing exact role, verifies its canonical attributes,
+absence of memberships and object ownership, then changes only its password.
+It returns before all provisioning: no table/schema/function grants, ACL changes,
+role attribute changes, or School/Platform setup scripts run. Missing secret,
+missing role or unsafe role fails closed. Without the switch, normal installation
+continues to preserve an existing password.
+
+Rotation requires the approved `psql` client (`PSQL_PATH` when needed) and a
+deployment connection permitted to disable statement/error/duration logging for
+this session; inability to do so fails before SQL runs. Connection secrets are
+passed through child environment variables, SQL through stdin, and potentially
+sensitive PostgreSQL diagnostics are suppressed. Do not enable shell transcripts
+or external SQL/parameter capture during secret operations. Standard PostgreSQL
+connection options are derived from the deployment URL's host/port/database/user;
+URL query parameters are not used by the rotation-only path.
+
+Back up the intended secure local environment first. After successful rotation,
+immediately persist the new credential in its untracked `AUTH_RUNTIME_DATABASE_URL`
+without exposing it, verify connectivity, then follow the separately approved
+runtime switch. This command does not update environment files or restart services.
+Credential rotation **does not modify the ACL contract** and never authorizes
+legacy revocation or a real-database cutover by itself.
+
+For isolated regression verification, prepare canonical migrations/provisioning
+on `127.0.0.1:>=55006`, database `rotation_test_*`, set
+`TEST_ADMIN_DATABASE_URL`, `AUTH_RUNTIME_DB_PASSWORD` (synthetic initial credential)
+and `PSQL_PATH`, then run:
+
+```powershell
+node --test apps/api/scripts/test-auth-runtime-rotation.cjs
+```
+
 ## Rollback ACL compatibility checkpoint
 
 Before `school-runtime-legacy-revoke.sql`, legacy direct grants remain: both the capability runtime and the old RC3 runtime have their required DB privileges. Application rollback to RC3 remains technically possible only if no other incompatible application/schema change exists. `PRE_REVOKE_ROLLBACK=APPLICATION_ROLLBACK_POSSIBLE`. This is application rollback, not migration rollback.
